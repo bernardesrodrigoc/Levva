@@ -15,7 +15,7 @@ import mercadopago
 from database import (
     db, users_collection, trips_collection, shipments_collection,
     matches_collection, payments_collection, ratings_collection,
-    flag_collection, disputes_collection, init_indexes
+    flag_collection, disputes_collection, verifications_collection, init_indexes
 )
 from models import (
     UserRegister, UserLogin, UserResponse, TripCreate, TripResponse,
