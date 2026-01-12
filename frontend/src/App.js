@@ -15,6 +15,7 @@ import VerificationPage from '@/pages/VerificationPage';
 import AdminDashboard from '@/pages/AdminDashboard';
 import ProfilePage from '@/pages/ProfilePage';
 import MatchDetailPage from '@/pages/MatchDetailPage';
+import CreateMatchPage from '@/pages/CreateMatchPage';
 import '@/App.css';
 
 function App() {
