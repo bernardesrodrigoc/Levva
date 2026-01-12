@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { VerificationAlert } from '@/components/VerificationAlert';
+import TrustLevelCard from '@/components/TrustLevelCard';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 
