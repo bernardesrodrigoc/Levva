@@ -16,12 +16,13 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - **Backend:** FastAPI + MongoDB (motor async)
 - **Frontend:** React + Tailwind CSS + Shadcn UI
 - **Autenticação:** JWT
+- **Mapas/Roteamento:** OpenStreetMap + Leaflet + OSRM
+- **Pagamentos:** Mercado Pago
+- **Storage:** Cloudflare R2
 
 ## O Que Foi Implementado
 
-### Data: 12/01/2026
-
-#### Funcionalidades Core Concluídas:
+### Funcionalidades Core Concluídas:
 1. **Sistema de Autenticação**
    - Registro de usuário com roles (sender, carrier, both, admin)
    - Login com JWT
@@ -31,115 +32,135 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
    - Criar/listar viagens (transportadores)
    - Criar/listar envios (remetentes)
    - Filtros por origem/destino
+   - **Seleção de coordenadas via mapa interativo (LocationPicker)**
+   - **Geração de polyline via OSRM**
 
-3. **Sistema de Matching Manual**
-   - Página para criar combinações (/criar-combinacao)
-   - Cálculo automático de preço (preço por kg + comissão 15%)
-   - Status tracking (pending_payment, paid, in_transit, delivered)
+3. **Sistema de Matching Inteligente** ✅ CORRIGIDO (12/01/2026)
+   - Página de sugestões inteligentes (/sugestoes)
+   - Algoritmo de matching por corredor de rota
+   - **Fallback por proximidade de coordenadas quando não há polyline**
+   - Cálculo automático de score de match
+   - Ranking por relevância
 
-4. **Detalhes da Combinação**
+4. **Precificação Dinâmica** ✅ IMPLEMENTADO (12/01/2026)
+   - Endpoint POST /api/trips/calculate-price
+   - Preço sugerido baseado em distância
+   - Faixas de preço por distância (curta, média, longa)
+   - Exemplos de preço para diferentes pesos
+   - Comissão da plataforma: 15%
+
+5. **Rotas Recorrentes** ✅ IMPLEMENTADO (12/01/2026)
+   - Campo recurrence no modelo Trip
+   - UI para seleção de dias da semana
+   - Data final opcional
+   - Horário fixo
+
+6. **Detalhes da Combinação**
    - Página completa com rota, valores, timeline
    - Confirmação de coleta/entrega com foto
-   - **CORRIGIDO:** Erro de serialização de ObjectId
+   - Mapa com visualização da rota (Leaflet)
 
-5. **Sistema de Chat**
+7. **Sistema de Chat**
    - Chat em tempo real entre transportador e remetente
    - Polling a cada 5 segundos
    - Mensagens com timestamp
 
-6. **Verificação de Identidade**
+8. **Verificação de Identidade**
    - Formulário multi-step para verificação
    - Upload de foto de perfil, documento (frente/verso), selfie, CNH
-   - **IMPLEMENTADO:** Upload real para Cloudflare R2 usando presigned URLs
+   - Upload real para Cloudflare R2 usando presigned URLs
 
-7. **Painel Administrativo**
-   - Dashboard com estatísticas (usuários, viagens, envios, verificações)
+9. **Painel Administrativo**
+   - Dashboard com estatísticas
    - Lista de verificações pendentes
-   - Visualização de documentos do usuário
    - Aprovar/Rejeitar verificações
+   - Sistema de disputas com resolução
 
-8. **Sistema de Avaliações**
-   - Avaliar transportador/remetente após entrega
-   - Média de avaliação no perfil
+10. **Sistema de Avaliações**
+    - Avaliar transportador/remetente após entrega
+    - Média de avaliação no perfil
 
-### Correções Aplicadas Nesta Sessão:
-1. **Erro na página de detalhes do match** - Corrigido problema de serialização de ObjectId nos objetos aninhados (trip, shipment)
-2. **Erro ao criar combinação** - Corrigido tratamento de price_per_kg = None (default 5.0)
-3. **Texto "\n" no dashboard** - Removido caractere literal no código
+11. **Níveis Progressivos de Confiança**
+    - 5 níveis: Iniciante → Verificado → Confiável → Experiente → Elite
+    - Limites de valor/peso por nível
+    - Card de progresso no dashboard
+    - Upgrade automático baseado em entregas e avaliação
 
-## Backlog Priorizado
+12. **Pagamentos Mercado Pago**
+    - Integração completa com checkout redirect
+    - Webhook para confirmação de pagamento
+    - Sistema de escrow
 
-### P0 (Crítico - Próximos)
-1. ~~**Implementar Upload Real de Arquivos (Cloudflare R2)**~~ ✅ CONCLUÍDO
-   - Presigned URLs implementados
-   - Upload direto para R2 funcionando
-   - URLs temporárias para visualização
+## Correções Aplicadas (12/01/2026)
 
-2. ~~**Implementar Pagamentos Mercado Pago**~~ ✅ CONCLUÍDO
-   - Sistema de escrow implementado
-   - Checkout redirect funcionando
-   - Páginas de retorno criadas
+### Bug Fix: Sugestões Inteligentes
+- **Problema:** Query MongoDB buscava campo `available_capacity_kg` que não existia em documentos antigos
+- **Solução:** Usar $or para verificar `available_capacity_kg` OU `cargo_space.max_weight_kg`
+- **Melhoria:** Adicionado fallback por proximidade de coordenadas quando não há polyline
 
-### P1 (Alta Prioridade)
-3. ~~**Sistema de Avaliações e Reputação**~~ ✅ IMPLEMENTADO
-4. ~~**Rastreamento GPS com Leaflet**~~ ✅ IMPLEMENTADO - Mapa de rota na página de detalhes
+### Novo Feature: Precificação Dinâmica
+- Endpoint `POST /api/trips/calculate-price`
+- Faixas de preço:
+  - ≤50km: base R$3,00 + R$0,02/km
+  - 50-200km: base R$3,50 + R$0,015/km
+  - 200-500km: base R$4,00 + R$0,01/km
+  - >500km: base R$5,00 + R$0,008/km
+- Máximo: R$12,00/kg
 
-### P2 (Média Prioridade)
-5. ~~**Motor de Matching Automático**~~ ✅ IMPLEMENTADO - Página de sugestões inteligentes
-6. **Níveis Progressivos de Confiança** - Parcialmente implementado
-7. **Ferramentas de Resolução de Disputas** - Não iniciado
+### Novo Feature: Rotas Recorrentes
+- Campo `recurrence` no modelo `TripCreate`
+- Opções: dias da semana, horário, data final (opcional)
+- UI no frontend com toggle e seleção de dias
 
 ## Credenciais de Teste
 - **Admin:** admin@levva.com / adminpassword
-- **Usuário teste:** teste@levva.com / password123
+- **Usuário teste (carrier):** teste@levva.com / password123
+- **Usuário teste (sender):** remetente_sp_1768238849@levva.com / teste123
 
 ## Arquivos Principais
 ```
 /app/backend/
-├── server.py       # Todas as rotas da API
-├── models.py       # Modelos Pydantic
-├── database.py     # Conexão MongoDB
-└── auth.py         # JWT e senhas
+├── server.py         # Todas as rotas da API
+├── models.py         # Modelos Pydantic (inclui RecurrencePattern)
+├── database.py       # Conexão MongoDB
+├── auth.py           # JWT e senhas
+├── route_service.py  # OSRM routing, haversine, corridor matching
+└── trust_service.py  # Níveis de confiança
 
 /app/frontend/src/
 ├── pages/
 │   ├── DashboardPage.js
 │   ├── MatchDetailPage.js
-│   ├── CreateMatchPage.js
+│   ├── MatchSuggestionsPage.js  # Sugestões inteligentes
+│   ├── CreateTripPage.js        # Inclui recorrência e precificação
+│   ├── CreateShipmentPage.js
 │   ├── AdminDashboard.js
 │   └── VerificationPage.js
 ├── components/
+│   ├── LocationPicker.js       # Seletor de coordenadas via mapa
+│   ├── RouteMap.js             # Visualização de rota
+│   ├── TrustLevelCard.js       # Card de nível de confiança
 │   └── ChatBox.js
 └── context/
     └── AuthContext.js
 ```
 
 ## Status dos Testes
-- Iteration 1: Backend 14/14, Frontend 100%
-- Iteration 2: Backend 27/27, Frontend 100% (uploads R2 + pagamentos Mercado Pago)
-- Relatórios: /app/test_reports/iteration_1.json, /app/test_reports/iteration_2.json
+- **Iteration 1:** Backend 14/14, Frontend 100%
+- **Iteration 2:** Backend 27/27, Frontend 100% (uploads R2 + pagamentos MP)
+- **Iteration 3:** Backend 13/13, Frontend 100% (sugestões + precificação + recorrência)
 
-## Funcionalidades Implementadas Nesta Sessão (12/01/2026)
-1. ✅ **Correções de bugs** - Match detail, criar combinação, chat
-2. ✅ **Upload Cloudflare R2** - Presigned URLs funcionando
-3. ✅ **Pagamentos Mercado Pago** - Checkout redirect funcionando
-4. ✅ **Mapa de Rota (Leaflet)** - Visualização de rotas com OpenStreetMap
-5. ✅ **Matching Automático** - Sugestões inteligentes baseadas em rotas
-6. ✅ **Rotas Precisas com Coordenadas** - Implementação completa:
-   - LocationPicker com mapa interativo e autocomplete de endereços
-   - Polyline de rota via OSRM (Open Source Routing Machine)
-   - Matching por corredor configurável (2-20km)
-   - Algoritmo de proximidade para ranking de matches
-   - Armazenamento de lat/lng para todos os pontos
-   - Visualização do corredor no mapa de detalhes
-7. ✅ **Níveis Progressivos de Confiança** - Implementado:
-   - 5 níveis: Iniciante → Verificado → Confiável → Experiente → Elite
-   - Limites de valor/peso por nível
-   - Card de progresso no dashboard
-   - Upgrade automático baseado em entregas e avaliação
-8. ✅ **Ferramentas de Resolução de Disputas** - Implementado:
-   - Endpoints: criar disputa, listar, detalhes, adicionar nota, resolver
-   - Painel admin com lista de disputas
-   - Visualização de histórico de chat como contexto
-   - Opções de resolução: a favor do remetente/transportador/divisão/improcedente
-   - Sistema de notas do admin
+## Backlog
+
+### P1 (Alta Prioridade)
+- [ ] GPS Tracking em tempo real (WebSockets)
+- [ ] Notificações por email/push
+
+### P2 (Média Prioridade)
+- [ ] Preview visual da rota antes de publicar viagem
+- [ ] Estimativa de tempo de chegada (ETA)
+- [ ] Gamificação/badges para usuários
+
+### P3 (Baixa Prioridade)
+- [ ] App mobile nativo
+- [ ] Integração com mais meios de pagamento
