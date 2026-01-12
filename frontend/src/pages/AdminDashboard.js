@@ -26,42 +26,45 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAndFetch = async () => {
-      if (!user) {
-        return;
-      }
-      
-      if (user.role !== 'admin') {
-        navigate('/dashboard');
-        return;
-      }
-      
-      await fetchData();
-    };
+    // Check if admin
+    if (!user) {
+      console.log('No user yet, waiting...');
+      return;
+    }
     
-    checkAndFetch();
-  }, [user]);
+    console.log('User loaded:', user.email, 'Role:', user.role);
+    
+    if (user.role !== 'admin') {
+      console.log('Not admin, redirecting to dashboard');
+      navigate('/dashboard');
+      return;
+    }
+    
+    console.log('User is admin, fetching data...');
+    fetchData();
+  }, [user, navigate]);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      console.log('Fetching admin data...', { token: token?.substring(0, 20) });
+      console.log('Fetching admin data with token:', token?.substring(0, 30) + '...');
       
-      const [statsRes, verificationsRes] = await Promise.all([
-        axios.get(`${API}/admin/stats`, { headers }),
-        axios.get(`${API}/admin/verifications/pending`, { headers })
-      ]);
-
-      console.log('Stats:', statsRes.data);
-      console.log('Verifications:', verificationsRes.data);
-
+      const statsRes = await axios.get(`${API}/admin/stats`, { headers });
+      console.log('Stats received:', statsRes.data);
+      
+      const verificationsRes = await axios.get(`${API}/admin/verifications/pending`, { headers });
+      console.log('Verifications received:', verificationsRes.data.length, 'items');
+      
       setStats(statsRes.data);
       setPendingVerifications(verificationsRes.data);
+      
+      console.log('State updated with', verificationsRes.data.length, 'verifications');
     } catch (error) {
       console.error('Error fetching admin data:', error);
-      toast.error('Erro ao carregar dados');
-      console.error(error);
+      console.error('Error details:', error.response?.data);
+      toast.error('Erro ao carregar dados: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
