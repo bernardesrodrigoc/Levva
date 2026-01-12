@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Users, TruckIcon, ShieldCheck, Warning, Check, X } from '@phosphor-icons/react';
+import { Package, Users, TruckIcon, ShieldCheck, Warning, Check, X, Gavel, ChatCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -19,10 +22,16 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [pendingVerifications, setPendingVerifications] = useState([]);
+  const [disputes, setDisputes] = useState([]);
   const [selectedVerification, setSelectedVerification] = useState(null);
+  const [selectedDispute, setSelectedDispute] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
   const [reviewAction, setReviewAction] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [disputeNote, setDisputeNote] = useState('');
+  const [resolutionType, setResolutionType] = useState('');
+  const [refundAmount, setRefundAmount] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
