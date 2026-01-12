@@ -105,9 +105,9 @@ class TripResponse(BaseModel):
     departure_date: datetime
     vehicle_type: VehicleType
     cargo_space: CargoSpace
-    corridor_radius_km: float
+    corridor_radius_km: Optional[float] = 10.0  # Default 10km for backward compatibility
     route_polyline: Optional[List[List[float]]] = None  # [[lat, lng], ...]
-    price_per_kg: Optional[float]
+    price_per_kg: Optional[float] = None
     status: TripStatus
     created_at: datetime
 
