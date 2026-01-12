@@ -126,6 +126,13 @@ const DashboardPage = () => {
                 Painel Admin
               </Button>
             )}
+            <NotificationBell 
+              onNotificationClick={(notification) => {
+                if (notification.match_id) {
+                  navigate(`/match/${notification.match_id}`);
+                }
+              }}
+            />
             <div className="flex items-center gap-3">
               <div className="text-right cursor-pointer" onClick={() => navigate('/perfil')} data-testid="profile-link">
                 <p className="font-semibold text-sm">{user?.name}</p>
