@@ -190,19 +190,20 @@ class LevvaAPITester:
         return False
 
     def test_sender_login(self):
-        """Test sender login"""
+        """Test sender login with exact data from requirements"""
         success, response = self.run_test(
             "Sender Login",
             "POST",
             "auth/login",
             200,
             data={
-                "email": "remetente@levva.com",
+                "email": "remetente2@levva.com",
                 "password": "teste123"
             }
         )
         if success and 'token' in response:
             self.sender_token = response['token']
+            self.sender_user_id = response.get('user', {}).get('id')
             print(f"✅ Sender login token: {self.sender_token[:20]}...")
             return True
         return False
