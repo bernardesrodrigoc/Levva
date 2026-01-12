@@ -86,6 +86,12 @@ class CargoSpace(BaseModel):
     volume_m3: float
     max_weight_kg: float
 
+class RecurrencePattern(BaseModel):
+    is_recurring: bool = False
+    days_of_week: List[int] = []  # 0=Monday, 6=Sunday
+    time: str = "08:00"  # HH:MM format
+    end_date: Optional[datetime] = None
+
 class TripCreate(BaseModel):
     origin: LocationData
     destination: LocationData
@@ -94,6 +100,7 @@ class TripCreate(BaseModel):
     cargo_space: CargoSpace
     corridor_radius_km: float = 10.0  # Default 10km corridor
     price_per_kg: Optional[float] = None
+    recurrence: Optional[RecurrencePattern] = None
 
 class TripResponse(BaseModel):
     id: str
