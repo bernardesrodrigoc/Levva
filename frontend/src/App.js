@@ -14,6 +14,7 @@ import BrowseShipmentsPage from '@/pages/BrowseShipmentsPage';
 import VerificationPage from '@/pages/VerificationPage';
 import AdminDashboard from '@/pages/AdminDashboard';
 import ProfilePage from '@/pages/ProfilePage';
+import MatchDetailPage from '@/pages/MatchDetailPage';
 import '@/App.css';
 
 function App() {
