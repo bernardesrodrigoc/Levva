@@ -1,8 +1,9 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Removemos a barra extra caso exista na env var para evitar erros de URL (ex: .com//api)
+const API = `${BACKEND_URL?.replace(/\/$/, '')}/api`;
 
 const AuthContext = createContext(null);
 
@@ -19,37 +20,52 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('levva_token'));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      fetchCurrentUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
-
-  const fetchCurrentUser = async () => {
+  // Função para buscar usuário - useCallback para estabilidade
+  const fetchCurrentUser = useCallback(async (tokenToUse) => {
     try {
+      const currentToken = tokenToUse || token;
+      if (!currentToken) return;
+
       const response = await axios.get(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${currentToken}` }
       });
       setUser(response.data);
     } catch (error) {
       console.error('Failed to fetch user:', error);
-      logout();
+      // Só faz logout se for erro de autenticação (401/403)
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          logout();
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  // Efeito principal: Executa no load da página
+  useEffect(() => {
+    // Só busca se tiver token E (não tiver usuário OU estiver carregando)
+    // Isso evita que ele busque de novo logo após o login
+    if (token && !user) {
+      fetchCurrentUser(token);
+    } else {
+      setLoading(false);
+    }
+  }, [token, user, fetchCurrentUser]);
 
   const login = async (email, password) => {
-    const response = await axios.post(`${API}/auth/login`, { email, password });
-    const { token: newToken, user: userData } = response.data;
-    
-    localStorage.setItem('levva_token', newToken);
-    setToken(newToken);
-    setUser(userData);
-    
-    return userData;
+    try {
+      const response = await axios.post(`${API}/auth/login`, { email, password });
+      const { token: newToken, user: userData } = response.data;
+      
+      localStorage.setItem('levva_token', newToken);
+      setToken(newToken);
+      setUser(userData); // Já setamos o usuário aqui!
+      
+      return userData;
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
   };
 
   const register = async (userData) => {
