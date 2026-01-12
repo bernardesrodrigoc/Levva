@@ -511,7 +511,7 @@ async def initiate_payment(payment_data: PaymentInitiate, user_id: str = Depends
         "id": str(result.inserted_id),
         "match_id": payment_data.match_id,
         "amount": payment_data.amount,
-        "status": str(payment_doc["status"]),
+        "status": payment_doc["status"].value if hasattr(payment_doc["status"], 'value') else str(payment_doc["status"]),
         "checkout_url": payment_doc.get("checkout_url"),
         "mercadopago_preference_id": payment_doc.get("mercadopago_preference_id")
     }
