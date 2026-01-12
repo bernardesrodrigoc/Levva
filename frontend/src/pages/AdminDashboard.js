@@ -114,6 +114,64 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleViewDispute = async (dispute) => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.get(`${API}/admin/disputes/${dispute.id}`, { headers });
+      setSelectedDispute(res.data);
+      setShowDisputeDialog(true);
+    } catch (error) {
+      toast.error('Erro ao carregar detalhes da disputa');
+    }
+  };
+
+  const handleAddDisputeNote = async () => {
+    if (!selectedDispute || !disputeNote.trim()) return;
+
+    try {
+      await axios.post(
+        `${API}/admin/disputes/${selectedDispute.id}/add-note`,
+        { content: disputeNote },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Nota adicionada');
+      setDisputeNote('');
+      // Refresh dispute details
+      handleViewDispute({ id: selectedDispute.id });
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao adicionar nota');
+    }
+  };
+
+  const handleResolveDispute = async () => {
+    if (!selectedDispute || !resolutionType) {
+      toast.error('Selecione o tipo de resolução');
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${API}/admin/disputes/${selectedDispute.id}/resolve`,
+        {
+          resolution_type: resolutionType,
+          notes: disputeNote,
+          refund_amount: refundAmount ? parseFloat(refundAmount) : 0
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Disputa resolvida');
+      setShowDisputeDialog(false);
+      setSelectedDispute(null);
+      setResolutionType('');
+      setRefundAmount('');
+      setDisputeNote('');
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao resolver disputa');
+    }
+  };
+
   const openReviewDialog = (verification, action) => {
     setSelectedVerification(verification);
     setReviewAction(action);
