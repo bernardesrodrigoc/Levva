@@ -588,12 +588,18 @@ async def get_match_suggestions(user_id: str = Depends(get_current_user_id)):
     for trip in user_trips:
         route_polyline = trip.get("route_polyline")
         corridor_radius = trip.get("corridor_radius_km", 10.0)
+        trip_capacity = trip.get("available_capacity_kg") or trip.get("cargo_space", {}).get("max_weight_kg", 50)
+        
+        trip_origin_lat = trip["origin"].get("lat", 0)
+        trip_origin_lng = trip["origin"].get("lng", 0)
+        trip_dest_lat = trip["destination"].get("lat", 0)
+        trip_dest_lng = trip["destination"].get("lng", 0)
         
         # Find potential shipments from other users
         potential_shipments = await shipments_collection.find({
             "sender_id": {"$ne": user_id},
             "status": "published",
-            "package.weight_kg": {"$lte": trip.get("available_capacity_kg", 50)}
+            "package.weight_kg": {"$lte": trip_capacity}
         }).to_list(50)
         
         for shipment in potential_shipments:
@@ -603,13 +609,29 @@ async def get_match_suggestions(user_id: str = Depends(get_current_user_id)):
             dropoff_lng = shipment["destination"].get("lng", 0)
             
             if not route_polyline:
-                # Fallback: check if same origin/destination cities
-                if (trip["origin"]["city"].lower() == shipment["origin"]["city"].lower() and
-                    trip["destination"]["city"].lower() == shipment["destination"]["city"].lower()):
+                from route_service import haversine_distance
+                
+                # Check if origin/destination cities match (case-insensitive)
+                origin_city_match = trip["origin"]["city"].lower() == shipment["origin"]["city"].lower()
+                dest_city_match = trip["destination"]["city"].lower() == shipment["destination"]["city"].lower()
+                
+                if origin_city_match and dest_city_match:
                     matches = True
                     match_details = {"pickup_distance_km": 0, "dropoff_distance_km": 0, "total_deviation_km": 0}
                 else:
-                    continue
+                    # Fallback: check coordinate proximity
+                    pickup_distance = haversine_distance(pickup_lat, pickup_lng, trip_origin_lat, trip_origin_lng)
+                    dropoff_distance = haversine_distance(dropoff_lat, dropoff_lng, trip_dest_lat, trip_dest_lng)
+                    
+                    if pickup_distance <= corridor_radius and dropoff_distance <= corridor_radius:
+                        matches = True
+                        match_details = {
+                            "pickup_distance_km": round(pickup_distance, 2),
+                            "dropoff_distance_km": round(dropoff_distance, 2),
+                            "total_deviation_km": round(pickup_distance + dropoff_distance, 2)
+                        }
+                    else:
+                        continue
             else:
                 matches, match_details = check_shipment_matches_route(
                     pickup_lat, pickup_lng,
