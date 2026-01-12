@@ -304,6 +304,114 @@ async def get_my_shipments(user_id: str = Depends(get_current_user_id)):
     return shipments
 
 # ============= MATCHING ROUTES =============
+@api_router.get("/matches/suggestions")
+async def get_match_suggestions(user_id: str = Depends(get_current_user_id)):
+    """
+    Get smart match suggestions based on route overlap, capacity, and timing.
+    Returns trips that could carry user's shipments OR shipments that match user's trips.
+    """
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    suggestions = []
+    
+    # Get user's published shipments
+    user_shipments = await shipments_collection.find({
+        "sender_id": user_id,
+        "status": "published"
+    }).to_list(100)
+    
+    # Get user's published trips  
+    user_trips = await trips_collection.find({
+        "carrier_id": user_id,
+        "status": "published"
+    }).to_list(100)
+    
+    # For each shipment, find matching trips from other users
+    for shipment in user_shipments:
+        matching_trips = await trips_collection.find({
+            "carrier_id": {"$ne": user_id},
+            "status": "published",
+            "origin.city": shipment["origin"]["city"],
+            "destination.city": shipment["destination"]["city"],
+            "available_capacity_kg": {"$gte": shipment["package"]["weight_kg"]}
+        }).to_list(10)
+        
+        for trip in matching_trips:
+            carrier = await users_collection.find_one({"_id": ObjectId(trip["carrier_id"])})
+            price_per_kg = trip.get("price_per_kg") or 5.0
+            estimated_price = shipment["package"]["weight_kg"] * price_per_kg
+            
+            suggestions.append({
+                "type": "trip_for_shipment",
+                "shipment_id": str(shipment["_id"]),
+                "shipment_description": shipment.get("description", "Envio"),
+                "trip_id": str(trip["_id"]),
+                "carrier_name": carrier["name"] if carrier else "Transportador",
+                "carrier_rating": carrier.get("rating", 0) if carrier else 0,
+                "origin": shipment["origin"]["city"],
+                "destination": shipment["destination"]["city"],
+                "departure_time": trip.get("departure_time"),
+                "estimated_price": estimated_price,
+                "match_score": calculate_match_score(shipment, trip, carrier)
+            })
+    
+    # For each trip, find matching shipments from other users
+    for trip in user_trips:
+        matching_shipments = await shipments_collection.find({
+            "sender_id": {"$ne": user_id},
+            "status": "published",
+            "origin.city": trip["origin"]["city"],
+            "destination.city": trip["destination"]["city"],
+            "package.weight_kg": {"$lte": trip.get("available_capacity_kg", 50)}
+        }).to_list(10)
+        
+        for shipment in matching_shipments:
+            sender = await users_collection.find_one({"_id": ObjectId(shipment["sender_id"])})
+            price_per_kg = trip.get("price_per_kg") or 5.0
+            estimated_price = shipment["package"]["weight_kg"] * price_per_kg
+            
+            suggestions.append({
+                "type": "shipment_for_trip",
+                "trip_id": str(trip["_id"]),
+                "shipment_id": str(shipment["_id"]),
+                "shipment_description": shipment.get("description", "Envio"),
+                "sender_name": sender["name"] if sender else "Remetente",
+                "sender_rating": sender.get("rating", 0) if sender else 0,
+                "origin": trip["origin"]["city"],
+                "destination": trip["destination"]["city"],
+                "departure_time": trip.get("departure_time"),
+                "weight_kg": shipment["package"]["weight_kg"],
+                "estimated_price": estimated_price,
+                "match_score": calculate_match_score(shipment, trip, sender)
+            })
+    
+    # Sort by match score (highest first)
+    suggestions.sort(key=lambda x: x["match_score"], reverse=True)
+    
+    return suggestions[:20]  # Return top 20 suggestions
+
+def calculate_match_score(shipment, trip, other_user):
+    """Calculate a match score based on various factors"""
+    score = 50  # Base score
+    
+    # Rating bonus (up to 25 points)
+    if other_user:
+        score += min(other_user.get("rating", 0) * 5, 25)
+    
+    # Trust level bonus (up to 15 points)
+    if other_user:
+        trust_levels = {"level_1": 5, "level_2": 10, "level_3": 15}
+        score += trust_levels.get(other_user.get("trust_level", "level_1"), 5)
+    
+    # Capacity match bonus (up to 10 points)
+    weight = shipment["package"]["weight_kg"]
+    capacity = trip.get("available_capacity_kg", 50)
+    if weight <= capacity * 0.5:
+        score += 10  # Perfect fit
+    elif weight <= capacity * 0.8:
+        score += 5
+    
+    return min(score, 100)
+
 @api_router.post("/matches/create")
 async def create_match(
     trip_id: str,
