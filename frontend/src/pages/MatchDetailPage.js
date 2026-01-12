@@ -265,7 +265,18 @@ const MatchDetailPage = () => {
           <CardContent>
             <RouteMap
               originCity={match.trip?.origin.city}
+              originLat={match.trip?.origin.lat}
+              originLng={match.trip?.origin.lng}
+              originAddress={match.trip?.origin.address}
               destinationCity={match.trip?.destination.city}
+              destinationLat={match.trip?.destination.lat}
+              destinationLng={match.trip?.destination.lng}
+              destinationAddress={match.trip?.destination.address}
+              routePolyline={match.trip?.route_polyline}
+              corridorRadiusKm={match.trip?.corridor_radius_km || 10}
+              showCorridor={true}
+              pickupLocation={match.shipment?.origin}
+              dropoffLocation={match.shipment?.destination}
               status={match.status}
               height="350px"
             />
