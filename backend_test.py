@@ -214,14 +214,12 @@ class LevvaAPITester:
             "origin": {
                 "city": "Belo Horizonte",
                 "state": "MG",
-                "address": "Belo Horizonte, MG",
                 "lat": -19.9191,
                 "lng": -43.9386
             },
             "destination": {
                 "city": "São Paulo", 
                 "state": "SP",
-                "address": "São Paulo, SP",
                 "lat": -23.5505,
                 "lng": -46.6333
             },
@@ -231,14 +229,15 @@ class LevvaAPITester:
                 "height_cm": 20,
                 "weight_kg": 8,
                 "category": "Livros",
-                "description": "Coleção de livros raros",
-                "declared_value": 800.00,
-                "photos": [
-                    "https://example.com/photo1.jpg",
-                    "https://example.com/photo2.jpg",
-                    "https://example.com/photo3.jpg"
-                ]
-            }
+                "description": "Coleção de livros raros"
+            },
+            "declared_value": 800.00,
+            "photos": {
+                "item_visible": "https://example.com/photo1.jpg",
+                "packaging_open": "https://example.com/photo2.jpg",
+                "packaging_sealed": "https://example.com/photo3.jpg"
+            },
+            "legal_acceptance": True
         }
         
         success, response = self.run_test(
