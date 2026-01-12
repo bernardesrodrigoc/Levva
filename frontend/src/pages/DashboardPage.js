@@ -169,7 +169,7 @@ const DashboardPage = () => {
                   <div>
                     <p className="text-lg font-semibold text-jungle">Painel Administrativo</p>
                     <p className="text-sm text-muted-foreground">
-                      {stats?.myTrips.length || 0} verificações pendentes • Gerenciar plataforma
+                      {adminStats?.pending_verifications || 0} verificações pendentes • {adminStats?.total_users || 0} usuários
                     </p>
                   </div>
                 </div>
