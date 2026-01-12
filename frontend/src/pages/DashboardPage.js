@@ -20,9 +20,11 @@ const DashboardPage = () => {
     myMatches: []
   });
   const [loading, setLoading] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState(null);
 
   useEffect(() => {
     fetchData();
+    fetchVerificationStatus();
   }, []);
 
   const fetchData = async () => {
