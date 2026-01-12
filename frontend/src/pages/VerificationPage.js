@@ -357,7 +357,7 @@ const VerificationPage = () => {
                     <Input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => handleFileChange('idBack', 'idBackPreview', e.target.files[0]))}
+                      onChange={(e) => handleFileChange('idBack', 'idBackPreview', e.target.files[0])}
                       data-testid="id-back-input"
                     />
                   </div>
