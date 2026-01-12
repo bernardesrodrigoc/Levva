@@ -132,3 +132,8 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
    - Algoritmo de proximidade para ranking de matches
    - Armazenamento de lat/lng para todos os pontos
    - Visualização do corredor no mapa de detalhes
+7. ✅ **Níveis Progressivos de Confiança** - Implementado:
+   - 5 níveis: Iniciante → Verificado → Confiável → Experiente → Elite
+   - Limites de valor/peso por nível
+   - Card de progresso no dashboard
+   - Upgrade automático baseado em entregas e avaliação
