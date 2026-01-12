@@ -82,19 +82,20 @@ class LevvaAPITester:
         return False
 
     def test_carrier_login(self):
-        """Test carrier login"""
+        """Test carrier login with exact data from requirements"""
         success, response = self.run_test(
             "Carrier Login",
             "POST",
             "auth/login",
             200,
             data={
-                "email": "transportador@levva.com",
+                "email": "transportador2@levva.com",
                 "password": "teste123"
             }
         )
         if success and 'token' in response:
             self.carrier_token = response['token']
+            self.carrier_user_id = response.get('user', {}).get('id')
             print(f"✅ Carrier login token: {self.carrier_token[:20]}...")
             return True
         return False
