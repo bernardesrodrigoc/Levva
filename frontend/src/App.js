@@ -71,6 +71,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<LandingPage />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
