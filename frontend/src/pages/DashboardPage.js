@@ -63,6 +63,16 @@ const DashboardPage = () => {
     }
   };
 
+  const fetchAdminStats = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API}/admin/stats`, { headers });
+      setAdminStats(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar stats admin:', error);
+    }
+  };
+
   const handleCreateAction = (path) => {
     if (verificationStatus !== 'verified') {
       navigate('/verificacao');
