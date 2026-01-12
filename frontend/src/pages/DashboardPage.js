@@ -101,6 +101,15 @@ const DashboardPage = () => {
             <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
           <div className="flex items-center gap-4">
+            {user?.role === 'admin' && (
+              <Button 
+                onClick={() => navigate('/admin')} 
+                className="bg-jungle hover:bg-jungle-800"
+                data-testid="admin-panel-btn"
+              >
+                Painel Admin
+              </Button>
+            )}
             <div className="flex items-center gap-3">
               <div className="text-right cursor-pointer" onClick={() => navigate('/perfil')} data-testid="profile-link">
                 <p className="font-semibold text-sm">{user?.name}</p>
