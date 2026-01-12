@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TruckIcon, Calendar, Cube, Path } from '@phosphor-icons/react';
+import { Package, TruckIcon, Calendar, Cube, Path, Repeat, CurrencyDollar, Info } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import LocationPicker from '@/components/LocationPicker';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -15,12 +18,23 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+const DAYS_OF_WEEK = [
+  { id: 0, label: 'Seg' },
+  { id: 1, label: 'Ter' },
+  { id: 2, label: 'Qua' },
+  { id: 3, label: 'Qui' },
+  { id: 4, label: 'Sex' },
+  { id: 5, label: 'Sáb' },
+  { id: 6, label: 'Dom' }
+];
+
 const CreateTripPage = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
+  const [priceInfo, setPriceInfo] = useState(null);
   const [formData, setFormData] = useState({
     departureDate: '',
     departureTime: '08:00',
@@ -28,11 +42,50 @@ const CreateTripPage = () => {
     volumeM3: '',
     maxWeightKg: '',
     corridorRadiusKm: 10,
-    pricePerKg: ''
+    pricePerKg: '',
+    isRecurring: false,
+    recurringDays: [],
+    recurringEndDate: ''
   });
+
+  // Calculate suggested price when origin/destination change
+  useEffect(() => {
+    if (origin?.lat && destination?.lat) {
+      calculatePrice();
+    }
+  }, [origin, destination]);
+
+  const calculatePrice = async () => {
+    try {
+      const response = await axios.post(`${API}/trips/calculate-price`, null, {
+        params: {
+          origin_lat: origin.lat,
+          origin_lng: origin.lng,
+          dest_lat: destination.lat,
+          dest_lng: destination.lng
+        }
+      });
+      setPriceInfo(response.data);
+      // Auto-fill suggested price if empty
+      if (!formData.pricePerKg) {
+        setFormData(prev => ({ ...prev, pricePerKg: response.data.suggested_price_per_kg.toString() }));
+      }
+    } catch (error) {
+      console.error('Error calculating price:', error);
+    }
+  };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const toggleRecurringDay = (dayId) => {
+    setFormData(prev => ({
+      ...prev,
+      recurringDays: prev.recurringDays.includes(dayId)
+        ? prev.recurringDays.filter(d => d !== dayId)
+        : [...prev.recurringDays, dayId]
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -45,6 +98,11 @@ const CreateTripPage = () => {
     
     if (!destination?.lat || !destination?.lng) {
       toast.error('Selecione o ponto de destino no mapa');
+      return;
+    }
+
+    if (formData.isRecurring && formData.recurringDays.length === 0) {
+      toast.error('Selecione pelo menos um dia da semana para viagens recorrentes');
       return;
     }
 
@@ -73,14 +131,20 @@ const CreateTripPage = () => {
           max_weight_kg: parseFloat(formData.maxWeightKg)
         },
         corridor_radius_km: formData.corridorRadiusKm,
-        price_per_kg: formData.pricePerKg ? parseFloat(formData.pricePerKg) : null
+        price_per_kg: formData.pricePerKg ? parseFloat(formData.pricePerKg) : null,
+        recurrence: formData.isRecurring ? {
+          is_recurring: true,
+          days_of_week: formData.recurringDays,
+          time: formData.departureTime,
+          end_date: formData.recurringEndDate ? `${formData.recurringEndDate}T23:59:59Z` : null
+        } : null
       };
 
       await axios.post(`${API}/trips`, tripData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      toast.success('Viagem criada com sucesso!');
+      toast.success(formData.isRecurring ? 'Rota recorrente criada com sucesso!' : 'Viagem criada com sucesso!');
       navigate('/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Erro ao criar viagem');
@@ -180,18 +244,85 @@ const CreateTripPage = () => {
             </CardContent>
           </Card>
 
+          {/* Recurring Trip Option */}
+          <Card data-testid="recurring-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Repeat size={24} weight="duotone" className="text-jungle" />
+                Rota Recorrente
+              </CardTitle>
+              <CardDescription>
+                Faça o mesmo trajeto regularmente? Configure uma rota recorrente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="isRecurring" className="font-medium">Ativar rota recorrente</Label>
+                  <p className="text-xs text-muted-foreground">Ideal para quem faz o mesmo trajeto frequentemente</p>
+                </div>
+                <Switch
+                  id="isRecurring"
+                  checked={formData.isRecurring}
+                  onCheckedChange={(checked) => handleChange('isRecurring', checked)}
+                />
+              </div>
+
+              {formData.isRecurring && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div>
+                    <Label className="mb-3 block">Dias da semana</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {DAYS_OF_WEEK.map(day => (
+                        <Button
+                          key={day.id}
+                          type="button"
+                          variant={formData.recurringDays.includes(day.id) ? "default" : "outline"}
+                          className={formData.recurringDays.includes(day.id) ? "bg-jungle hover:bg-jungle-800" : ""}
+                          size="sm"
+                          onClick={() => toggleRecurringDay(day.id)}
+                        >
+                          {day.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="recurringEndDate">Data final (opcional)</Label>
+                    <Input
+                      id="recurringEndDate"
+                      type="date"
+                      value={formData.recurringEndDate}
+                      onChange={(e) => handleChange('recurringEndDate', e.target.value)}
+                      className="h-12 mt-2"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Deixe em branco para rota sem data de término
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Date & Time */}
           <Card data-testid="datetime-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar size={24} weight="duotone" className="text-jungle" />
-                Data e Hora
+                {formData.isRecurring ? 'Horário e Primeira Viagem' : 'Data e Hora'}
               </CardTitle>
-              <CardDescription>Quando você pretende viajar?</CardDescription>
+              <CardDescription>
+                {formData.isRecurring 
+                  ? 'Defina o horário das viagens e a data da primeira' 
+                  : 'Quando você pretende viajar?'
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="departureDate">Data de Partida</Label>
+                <Label htmlFor="departureDate">{formData.isRecurring ? 'Data da primeira viagem' : 'Data de Partida'}</Label>
                 <Input
                   id="departureDate"
                   type="date"
@@ -242,9 +373,9 @@ const CreateTripPage = () => {
                 </Select>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="volumeM3">Volume (m³)</Label>
+                  <Label htmlFor="volumeM3">Volume disponível (m³)</Label>
                   <Input
                     id="volumeM3"
                     type="number"
@@ -258,7 +389,7 @@ const CreateTripPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="maxWeightKg">Peso Máx. (kg)</Label>
+                  <Label htmlFor="maxWeightKg">Peso máximo (kg)</Label>
                   <Input
                     id="maxWeightKg"
                     type="number"
@@ -270,19 +401,53 @@ const CreateTripPage = () => {
                     data-testid="max-weight-input"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="pricePerKg">Preço/kg (R$)</Label>
-                  <Input
-                    id="pricePerKg"
-                    type="number"
-                    step="0.01"
-                    placeholder="5.00"
-                    value={formData.pricePerKg}
-                    onChange={(e) => handleChange('pricePerKg', e.target.value)}
-                    className="h-12 mt-2"
-                    data-testid="price-per-kg-input"
-                  />
-                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pricing */}
+          <Card data-testid="pricing-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CurrencyDollar size={24} weight="duotone" className="text-jungle" />
+                Precificação
+              </CardTitle>
+              <CardDescription>Defina quanto você cobra por kg transportado</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {priceInfo && (
+                <Alert className="bg-jungle/5 border-jungle/30">
+                  <Info size={16} className="text-jungle" />
+                  <AlertDescription>
+                    <div className="flex items-center justify-between">
+                      <span>Distância estimada: <strong>{priceInfo.distance_km} km</strong></span>
+                      <span>Preço sugerido: <strong>R$ {priceInfo.suggested_price_per_kg}/kg</strong></span>
+                    </div>
+                    <div className="mt-2 text-xs">
+                      Exemplos: 1kg = R$ {priceInfo.examples['1kg']} | 5kg = R$ {priceInfo.examples['5kg']} | 10kg = R$ {priceInfo.examples['10kg']}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Comissão Levva: {priceInfo.platform_fee_percent}% • Você recebe: {priceInfo.carrier_receives_percent}%
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div>
+                <Label htmlFor="pricePerKg">Preço por kg (R$)</Label>
+                <Input
+                  id="pricePerKg"
+                  type="number"
+                  step="0.01"
+                  placeholder={priceInfo?.suggested_price_per_kg?.toString() || "5.00"}
+                  value={formData.pricePerKg}
+                  onChange={(e) => handleChange('pricePerKg', e.target.value)}
+                  className="h-12 mt-2"
+                  data-testid="price-per-kg-input"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deixe em branco para usar o preço sugerido automaticamente
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -303,7 +468,7 @@ const CreateTripPage = () => {
               disabled={loading}
               data-testid="submit-trip-btn"
             >
-              {loading ? 'Publicando...' : 'Publicar Viagem'}
+              {loading ? 'Publicando...' : (formData.isRecurring ? 'Criar Rota Recorrente' : 'Publicar Viagem')}
             </Button>
           </div>
         </form>
