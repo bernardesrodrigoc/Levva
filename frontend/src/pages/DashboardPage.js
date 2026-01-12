@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, TruckIcon, User, SignOut, Plus, MapTrifold } from '@phosphor-icons/react';
+import { Package, TruckIcon, User, SignOut, Plus, MapTrifold, Lightning } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
