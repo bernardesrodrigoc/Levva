@@ -125,3 +125,9 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 3. ✅ **Pagamentos Mercado Pago** - Checkout redirect funcionando
 4. ✅ **Mapa de Rota (Leaflet)** - Visualização de rotas com OpenStreetMap
 5. ✅ **Matching Automático** - Sugestões inteligentes baseadas em rotas
+6. ✅ **Rotas Precisas com Coordenadas** - Implementação completa:
+   - LocationPicker com mapa interativo e autocomplete de endereços
+   - Polyline de rota via OSRM (Open Source Routing Machine)
+   - Matching por corredor configurável (2-20km)
+   - Algoritmo de proximidade para ranking de matches
+   - Armazenamento de lat/lng para todos os pontos
