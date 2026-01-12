@@ -167,23 +167,25 @@ class LevvaAPITester:
         return False
 
     def test_sender_registration(self):
-        """Test sender registration"""
+        """Test sender registration with exact data from requirements"""
         success, response = self.run_test(
             "Sender Registration",
             "POST",
             "auth/register",
             200,
             data={
-                "email": "remetente@levva.com",
+                "email": "remetente2@levva.com",
                 "password": "teste123",
-                "name": "Pedro Costa",
-                "phone": "(11) 97777-6666",
+                "name": "Ana Costa",
+                "phone": "(11) 98888-7777",
                 "role": "sender"
             }
         )
         if success and 'token' in response:
             self.sender_token = response['token']
+            self.sender_user_id = response.get('user', {}).get('id')
             print(f"✅ Sender token obtained: {self.sender_token[:20]}...")
+            print(f"✅ Sender user ID: {self.sender_user_id}")
             return True
         return False
 
