@@ -233,7 +233,12 @@ const DashboardPage = () => {
             <h2 className="text-2xl font-heading font-bold mb-4">Atividades Recentes</h2>
             <div className="space-y-4">
               {stats.myMatches.slice(0, 3).map((match) => (
-                <Card key={match.id} className="card-hover" data-testid={`match-card-${match.id}`}>
+                <Card 
+                  key={match.id} 
+                  className="card-hover cursor-pointer" 
+                  onClick={() => navigate(`/match/${match.id}`)}
+                  data-testid={`match-card-${match.id}`}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
