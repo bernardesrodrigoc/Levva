@@ -46,14 +46,20 @@ const AdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
+      console.log('Fetching admin data...', { token: token?.substring(0, 20) });
+      
       const [statsRes, verificationsRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/verifications/pending`, { headers })
       ]);
 
+      console.log('Stats:', statsRes.data);
+      console.log('Verifications:', verificationsRes.data);
+
       setStats(statsRes.data);
       setPendingVerifications(verificationsRes.data);
     } catch (error) {
+      console.error('Error fetching admin data:', error);
       toast.error('Erro ao carregar dados');
       console.error(error);
     } finally {
