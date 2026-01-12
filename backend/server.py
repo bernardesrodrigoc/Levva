@@ -197,6 +197,13 @@ async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_
     if user["role"] not in [UserRole.CARRIER, UserRole.BOTH]:
         raise HTTPException(status_code=403, detail="Apenas transportadores podem criar viagens")
     
+    # Check verification status
+    if user.get("verification_status") != VerificationStatus.VERIFIED:
+        raise HTTPException(
+            status_code=403, 
+            detail="Você precisa verificar sua identidade antes de criar viagens"
+        )
+    
     trip_doc = {
         "carrier_id": user_id,
         "carrier_name": user["name"],
