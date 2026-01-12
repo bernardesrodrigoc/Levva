@@ -98,9 +98,7 @@ const VerificationPage = () => {
 
   const handleFinalSubmit = async () => {
     setLoading(true);
-    try {
-      // In production, upload to Cloudflare R2
-      // For now, we'll use placeholder URLs
+    try {\n      // Use real Unsplash URLs as placeholders until R2 is implemented
       const verificationData = {
         cpf: formData.cpf,
         birth_date: formData.birthDate,
@@ -111,11 +109,11 @@ const VerificationPage = () => {
           zip_code: formData.zipCode
         },
         documents: {
-          profile_photo: 'https://via.placeholder.com/300x300?text=Profile',
-          id_front: 'https://via.placeholder.com/400x300?text=ID+Front',
-          id_back: 'https://via.placeholder.com/400x300?text=ID+Back',
-          selfie: 'https://via.placeholder.com/300x300?text=Selfie',
-          driver_license: formData.driverLicense ? 'https://via.placeholder.com/400x300?text=CNH' : null
+          profile_photo: formData.profilePhotoPreview || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300&h=300&fit=crop',
+          id_front: formData.idFrontPreview || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=300&fit=crop',
+          id_back: formData.idBackPreview || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=300&fit=crop',
+          selfie: formData.selfiePreview || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop',
+          driver_license: formData.driverLicense ? (formData.driverLicensePreview || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=300&fit=crop') : null
         }
       };
 
