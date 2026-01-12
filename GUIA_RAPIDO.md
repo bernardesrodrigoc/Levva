@@ -3,8 +3,8 @@
 ## 🚀 Acesso Rápido
 
 ### URLs
-- **Frontend**: https://routeshare-5.preview.emergentagent.com
-- **Backend API**: https://routeshare-5.preview.emergentagent.com/api
+- **Frontend**: https://shipmate-115.preview.emergentagent.com
+- **Backend API**: https://shipmate-115.preview.emergentagent.com/api
 
 ### Credenciais Admin
 ```
