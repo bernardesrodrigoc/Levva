@@ -590,7 +590,7 @@ async def get_admin_stats(user_id: str = Depends(get_current_user_id)):
     active_trips = await trips_collection.count_documents({"status": TripStatus.PUBLISHED})
     active_shipments = await shipments_collection.count_documents({"status": ShipmentStatus.PUBLISHED})
     total_matches = await matches_collection.count_documents({})
-    pending_verifications = await users_collection.count_documents({"verification_status": VerificationStatus.PENDING})
+    pending_verifications = await verifications_collection.count_documents({"status": "pending"})
     flagged_items = await flag_collection.count_documents({"status": "pending"})
     
     return {
@@ -601,6 +601,92 @@ async def get_admin_stats(user_id: str = Depends(get_current_user_id)):
         "pending_verifications": pending_verifications,
         "flagged_items": flagged_items
     }
+
+@api_router.get("/admin/verifications/pending")
+async def get_pending_verifications(user_id: str = Depends(get_current_user_id)):
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    if user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    verifications = await verifications_collection.find({"status": "pending"}).to_list(100)
+    
+    # Enrich with user data
+    result = []
+    for verification in verifications:
+        user_data = await users_collection.find_one({"_id": ObjectId(verification["user_id"])})
+        if user_data:
+            verification["id"] = str(verification.pop("_id"))
+            verification["user_name"] = user_data["name"]
+            verification["user_email"] = user_data["email"]
+            verification["user_role"] = user_data["role"]
+            result.append(verification)
+    
+    return result
+
+@api_router.post("/admin/verifications/{verification_id}/review")
+async def review_verification(
+    verification_id: str,
+    review_data: dict,
+    user_id: str = Depends(get_current_user_id)
+):
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    if user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    verification = await verifications_collection.find_one({"_id": ObjectId(verification_id)})
+    if not verification:
+        raise HTTPException(status_code=404, detail="Verificação não encontrada")
+    
+    action = review_data.get("action")
+    notes = review_data.get("notes", "")
+    
+    if action == "approve":
+        # Update verification
+        await verifications_collection.update_one(
+            {"_id": ObjectId(verification_id)},
+            {
+                "$set": {
+                    "status": "approved",
+                    "reviewed_at": datetime.now(timezone.utc),
+                    "reviewed_by": user_id,
+                    "notes": notes
+                }
+            }
+        )
+        
+        # Update user status
+        await users_collection.update_one(
+            {"_id": ObjectId(verification["user_id"])},
+            {"$set": {"verification_status": VerificationStatus.VERIFIED}}
+        )
+        
+        return {"message": "Verificação aprovada"}
+    
+    elif action == "reject":
+        # Update verification
+        await verifications_collection.update_one(
+            {"_id": ObjectId(verification_id)},
+            {
+                "$set": {
+                    "status": "rejected",
+                    "reviewed_at": datetime.now(timezone.utc),
+                    "reviewed_by": user_id,
+                    "notes": notes
+                }
+            }
+        )
+        
+        # Update user status
+        await users_collection.update_one(
+            {"_id": ObjectId(verification["user_id"])},
+            {"$set": {"verification_status": VerificationStatus.REJECTED}}
+        )
+        
+        return {"message": "Verificação rejeitada"}
+    
+    raise HTTPException(status_code=400, detail="Ação inválida")
 
 @api_router.post("/admin/flags")
 async def create_flag(flag_data: FlagCreate, user_id: str = Depends(get_current_user_id)):
