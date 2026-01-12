@@ -74,6 +74,48 @@ def get_r2_client():
 mp_access_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
 mp_sdk = mercadopago.SDK(mp_access_token) if mp_access_token else None
 
+# ============= USER VERIFICATION ROUTES =============
+@api_router.post("/users/verify")
+async def submit_verification(
+    verification_data: dict,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Submit user verification documents"""
+    verification_doc = {
+        "user_id": user_id,
+        "cpf": verification_data.get("cpf"),
+        "birth_date": verification_data.get("birth_date"),
+        "address": verification_data.get("address"),
+        "documents": verification_data.get("documents"),
+        "status": "pending",
+        "submitted_at": datetime.now(timezone.utc),
+        "reviewed_at": None,
+        "reviewed_by": None
+    }
+    
+    await verifications_collection.insert_one(verification_doc)
+    
+    # Update user verification status
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"verification_status": VerificationStatus.PENDING}}
+    )
+    
+    return {"message": "Documentos enviados para verificação", "status": "pending"}
+
+@api_router.get("/users/verification-status")
+async def get_verification_status(user_id: str = Depends(get_current_user_id)):
+    """Get user verification status"""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    verification = await verifications_collection.find_one({"user_id": user_id})
+    
+    return {
+        "verification_status": user.get("verification_status", "pending"),
+        "has_submitted": verification is not None,
+        "can_create_trips": user.get("verification_status") == "verified",
+        "can_create_shipments": user.get("verification_status") == "verified"
+    }
+
 # ============= AUTH ROUTES =============
 @api_router.post("/auth/register")
 async def register(user_data: UserRegister):
