@@ -107,6 +107,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/payment/success" element={<PaymentSuccessPage />} />
+          <Route path="/payment/failure" element={<PaymentFailurePage />} />
+          <Route path="/payment/pending" element={<PaymentPendingPage />} />
           <Route path="*" element={<LandingPage />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
