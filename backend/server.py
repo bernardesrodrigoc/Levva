@@ -488,29 +488,63 @@ async def get_match_suggestions(user_id: str = Depends(get_current_user_id)):
         pickup_lng = shipment["origin"].get("lng", 0)
         dropoff_lat = shipment["destination"].get("lat", 0)
         dropoff_lng = shipment["destination"].get("lng", 0)
+        shipment_weight = shipment["package"]["weight_kg"]
         
         # Find all published trips from other users with sufficient capacity
+        # Use $or to handle both available_capacity_kg and cargo_space.max_weight_kg
         potential_trips = await trips_collection.find({
             "carrier_id": {"$ne": user_id},
             "status": "published",
-            "available_capacity_kg": {"$gte": shipment["package"]["weight_kg"]}
+            "$or": [
+                {"available_capacity_kg": {"$gte": shipment_weight}},
+                {"cargo_space.max_weight_kg": {"$gte": shipment_weight}},
+                # Include trips without capacity info for legacy data
+                {"available_capacity_kg": {"$exists": False}, "cargo_space": {"$exists": False}}
+            ]
         }).to_list(50)
         
         for trip in potential_trips:
             route_polyline = trip.get("route_polyline")
             corridor_radius = trip.get("corridor_radius_km", 10.0)
             
-            # If no polyline, generate one or use simple distance check
+            # Check capacity (with fallback)
+            trip_capacity = trip.get("available_capacity_kg") or trip.get("cargo_space", {}).get("max_weight_kg", 50)
+            if trip_capacity < shipment_weight:
+                continue
+            
+            # If no polyline, use distance-based matching
             if not route_polyline:
-                # Fallback: check if same origin/destination cities
-                if (trip["origin"]["city"].lower() == shipment["origin"]["city"].lower() and
-                    trip["destination"]["city"].lower() == shipment["destination"]["city"].lower()):
+                from route_service import haversine_distance
+                
+                # Check if origin/destination cities match (case-insensitive)
+                origin_city_match = trip["origin"]["city"].lower() == shipment["origin"]["city"].lower()
+                dest_city_match = trip["destination"]["city"].lower() == shipment["destination"]["city"].lower()
+                
+                if origin_city_match and dest_city_match:
                     matches = True
                     match_details = {"pickup_distance_km": 0, "dropoff_distance_km": 0, "total_deviation_km": 0}
                 else:
-                    continue
+                    # Fallback: check coordinate proximity
+                    trip_origin_lat = trip["origin"].get("lat", 0)
+                    trip_origin_lng = trip["origin"].get("lng", 0)
+                    trip_dest_lat = trip["destination"].get("lat", 0)
+                    trip_dest_lng = trip["destination"].get("lng", 0)
+                    
+                    # Check if pickup is near trip origin and dropoff is near trip destination
+                    pickup_distance = haversine_distance(pickup_lat, pickup_lng, trip_origin_lat, trip_origin_lng)
+                    dropoff_distance = haversine_distance(dropoff_lat, dropoff_lng, trip_dest_lat, trip_dest_lng)
+                    
+                    if pickup_distance <= corridor_radius and dropoff_distance <= corridor_radius:
+                        matches = True
+                        match_details = {
+                            "pickup_distance_km": round(pickup_distance, 2),
+                            "dropoff_distance_km": round(dropoff_distance, 2),
+                            "total_deviation_km": round(pickup_distance + dropoff_distance, 2)
+                        }
+                    else:
+                        continue
             else:
-                # Check corridor matching
+                # Check corridor matching using polyline
                 matches, match_details = check_shipment_matches_route(
                     pickup_lat, pickup_lng,
                     dropoff_lat, dropoff_lng,
