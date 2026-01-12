@@ -589,7 +589,7 @@ async def get_presigned_url(upload_data: UploadInitiate, user_id: str = Depends(
     r2_client = get_r2_client()
     
     if not r2_client:
-        raise HTTPException(status_code=503, detail="Servi\u00e7o de upload n\u00e3o configurado")
+        raise HTTPException(status_code=503, detail="Serviço de upload não configurado")
     
     upload_id = str(uuid.uuid4())
     file_extension = upload_data.content_type.split('/')[-1]
@@ -599,21 +599,81 @@ async def get_presigned_url(upload_data: UploadInitiate, user_id: str = Depends(
         presigned_url = r2_client.generate_presigned_url(
             ClientMethod="put_object",
             Params={
-                "Bucket": os.getenv("R2_BUCKET_NAME", "levva-uploads"),
+                "Bucket": os.getenv("R2_BUCKET_NAME"),
                 "Key": file_key,
                 "ContentType": upload_data.content_type
             },
-            ExpiresIn=3600
+            ExpiresIn=600  # 10 minutes
         )
         
         return {
             "presigned_url": presigned_url,
             "file_key": file_key,
-            "upload_id": upload_id
+            "upload_id": upload_id,
+            "content_type": upload_data.content_type
         }
     except Exception as e:
-        logger.error(f"Erro ao gerar URL pr\u00e9-assinada: {e}")
+        logger.error(f"Erro ao gerar URL pré-assinada: {e}")
         raise HTTPException(status_code=500, detail="Erro ao gerar URL de upload")
+
+@api_router.post("/uploads/confirm")
+async def confirm_upload(
+    upload_data: dict,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Confirma upload e retorna URL pública do arquivo"""
+    file_key = upload_data.get("file_key")
+    file_type = upload_data.get("file_type")  # profile, id_front, id_back, selfie, license
+    
+    if not file_key:
+        raise HTTPException(status_code=400, detail="file_key é obrigatório")
+    
+    # Gerar URL pública para acesso ao arquivo
+    # Usando presigned URL para GET com longa validade
+    r2_client = get_r2_client()
+    if not r2_client:
+        raise HTTPException(status_code=503, detail="Serviço de upload não configurado")
+    
+    try:
+        # Generate a presigned URL for reading (valid for 7 days)
+        public_url = r2_client.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": os.getenv("R2_BUCKET_NAME"),
+                "Key": file_key
+            },
+            ExpiresIn=604800  # 7 days
+        )
+        
+        return {
+            "file_key": file_key,
+            "file_url": public_url,
+            "file_type": file_type
+        }
+    except Exception as e:
+        logger.error(f"Erro ao confirmar upload: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao confirmar upload")
+
+@api_router.get("/uploads/file-url/{file_key:path}")
+async def get_file_url(file_key: str, user_id: str = Depends(get_current_user_id)):
+    """Gera URL temporária para visualizar um arquivo"""
+    r2_client = get_r2_client()
+    if not r2_client:
+        raise HTTPException(status_code=503, detail="Serviço de upload não configurado")
+    
+    try:
+        presigned_url = r2_client.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": os.getenv("R2_BUCKET_NAME"),
+                "Key": file_key
+            },
+            ExpiresIn=3600  # 1 hour
+        )
+        return {"url": presigned_url}
+    except Exception as e:
+        logger.error(f"Erro ao gerar URL de visualização: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar URL")
 
 # ============= ADMIN ROUTES =============
 @api_router.get("/admin/stats")
