@@ -101,7 +101,7 @@ class LevvaAPITester:
         return False
 
     def test_auth_me(self):
-        """Test GET /api/auth/me with token"""
+        """Test GET /api/auth/me with token and verify trust_level"""
         success, response = self.run_test(
             "Get Current User",
             "GET",
@@ -110,8 +110,15 @@ class LevvaAPITester:
             token=self.carrier_token
         )
         if success:
+            trust_level = response.get('trust_level')
             print(f"✅ User info: {response.get('name')} - {response.get('role')}")
-        return success
+            print(f"✅ Trust level: {trust_level}")
+            if trust_level == "level_1":
+                print("✅ Trust level verification passed")
+                return True
+            else:
+                print(f"❌ Expected trust_level 'level_1', got '{trust_level}'")
+        return False
 
     def test_create_trip(self):
         """Create a trip from Belo Horizonte to Salvador"""
