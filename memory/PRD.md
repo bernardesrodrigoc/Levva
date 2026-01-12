@@ -50,7 +50,7 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 6. **Verificação de Identidade**
    - Formulário multi-step para verificação
    - Upload de foto de perfil, documento (frente/verso), selfie, CNH
-   - **MOCKED:** Usa URLs placeholder (Unsplash) ao invés de R2 real
+   - **IMPLEMENTADO:** Upload real para Cloudflare R2 usando presigned URLs
 
 7. **Painel Administrativo**
    - Dashboard com estatísticas (usuários, viagens, envios, verificações)
