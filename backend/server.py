@@ -351,6 +351,17 @@ async def create_shipment(shipment_data: ShipmentCreate, user_id: str = Depends(
             detail="Você precisa verificar sua identidade antes de criar envios"
         )
     
+    # Check trust level limits
+    trust_level = user.get("trust_level", TrustLevel.LEVEL_1)
+    allowed, reason = check_shipment_allowed(
+        trust_level,
+        shipment_data.declared_value,
+        shipment_data.package.weight_kg
+    )
+    
+    if not allowed:
+        raise HTTPException(status_code=403, detail=reason)
+    
     shipment_doc = {
         "sender_id": user_id,
         "sender_name": user["name"],
