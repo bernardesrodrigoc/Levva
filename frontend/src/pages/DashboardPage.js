@@ -184,7 +184,8 @@ const DashboardPage = () => {
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {(user?.role === 'carrier' || user?.role === 'both') && (
-            <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-viagem')} data-testid="create-trip-card">\n              <CardHeader>
+            <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-viagem')} data-testid="create-trip-card">
+              <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-jungle/10 rounded-xl flex items-center justify-center">
