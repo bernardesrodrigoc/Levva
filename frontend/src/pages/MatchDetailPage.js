@@ -248,6 +248,30 @@ const MatchDetailPage = () => {
           </CardContent>
         </Card>
 
+        {/* Route Map */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapTrifold size={24} weight="duotone" className="text-jungle" />
+              Mapa da Rota
+            </CardTitle>
+            <CardDescription>
+              {match.status === 'in_transit' 
+                ? 'Acompanhe a entrega em tempo real'
+                : 'Visualize o trajeto da entrega'
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RouteMap
+              originCity={match.trip?.origin.city}
+              destinationCity={match.trip?.destination.city}
+              status={match.status}
+              height="350px"
+            />
+          </CardContent>
+        </Card>
+
         {/* Payment Card */}
         <Card className="mb-6">
           <CardHeader>
