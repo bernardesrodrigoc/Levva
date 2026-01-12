@@ -131,3 +131,4 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
    - Matching por corredor configurável (2-20km)
    - Algoritmo de proximidade para ranking de matches
    - Armazenamento de lat/lng para todos os pontos
+   - Visualização do corredor no mapa de detalhes
