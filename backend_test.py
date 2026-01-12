@@ -209,29 +209,34 @@ class LevvaAPITester:
         return False
 
     def test_create_shipment(self):
-        """Create a shipment from Belo Horizonte to Salvador"""
+        """Create a shipment with exact data from requirements"""
         shipment_data = {
             "origin": {
                 "city": "Belo Horizonte",
                 "state": "MG",
-                "address": "Centro, Belo Horizonte, MG"
+                "address": "Belo Horizonte, MG",
+                "lat": -19.9191,
+                "lng": -43.9386
             },
             "destination": {
-                "city": "Salvador", 
-                "state": "BA",
-                "address": "Centro, Salvador, BA"
+                "city": "São Paulo", 
+                "state": "SP",
+                "address": "São Paulo, SP",
+                "lat": -23.5505,
+                "lng": -46.6333
             },
             "package": {
-                "length_cm": 40,
-                "width_cm": 30,
-                "height_cm": 25,
-                "weight_kg": 15,
-                "category": "Documentos",
-                "description": "Contratos importantes",
-                "declared_value": 500,
+                "length_cm": 35,
+                "width_cm": 25,
+                "height_cm": 20,
+                "weight_kg": 8,
+                "category": "Livros",
+                "description": "Coleção de livros raros",
+                "declared_value": 800.00,
                 "photos": [
                     "https://example.com/photo1.jpg",
-                    "https://example.com/photo2.jpg"
+                    "https://example.com/photo2.jpg",
+                    "https://example.com/photo3.jpg"
                 ]
             }
         }
@@ -246,8 +251,14 @@ class LevvaAPITester:
         )
         if success and 'id' in response:
             self.shipment_id = response['id']
+            status = response.get('status')
             print(f"✅ Shipment created with ID: {self.shipment_id}")
-            return True
+            print(f"✅ Shipment status: {status}")
+            if status == "published":
+                print("✅ Shipment status verification passed")
+                return True
+            else:
+                print(f"❌ Expected status 'published', got '{status}'")
         return False
 
     def test_create_match(self):
