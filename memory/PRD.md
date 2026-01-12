@@ -70,14 +70,15 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 ## Backlog Priorizado
 
 ### P0 (Crítico - Próximos)
-1. **Implementar Upload Real de Arquivos (Cloudflare R2)**
-   - Requer credenciais do usuário
-   - Substituir placeholders por upload real
+1. ~~**Implementar Upload Real de Arquivos (Cloudflare R2)**~~ ✅ CONCLUÍDO
+   - Presigned URLs implementados
+   - Upload direto para R2 funcionando
+   - URLs temporárias para visualização
 
 2. **Implementar Pagamentos Mercado Pago**
    - Sistema de escrow
    - Webhook para confirmação
-   - Requer Access Token do usuário
+   - Credenciais já configuradas no backend
 
 ### P1 (Alta Prioridade)
 3. **Sistema de Avaliações e Reputação** - Parcialmente implementado
