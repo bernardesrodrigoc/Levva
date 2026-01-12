@@ -367,6 +367,35 @@ async def get_my_matches(user_id: str = Depends(get_current_user_id)):
     
     return matches
 
+@api_router.get("/matches/{match_id}")
+async def get_match_details(match_id: str, user_id: str = Depends(get_current_user_id)):
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    # Check if user is part of this match
+    if user_id not in [match["carrier_id"], match["sender_id"]]:
+        raise HTTPException(status_code=403, detail="Você não tem acesso a esta combinação")
+    
+    # Enrich with trip and shipment data
+    trip = await trips_collection.find_one({"_id": ObjectId(match["trip_id"])})
+    shipment = await shipments_collection.find_one({"_id": ObjectId(match["shipment_id"])})
+    
+    # Get user names and ratings
+    carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
+    sender = await users_collection.find_one({"_id": ObjectId(match["sender_id"])})
+    
+    match["id"] = str(match.pop("_id"))
+    match["trip"] = trip
+    match["shipment"] = shipment
+    match["carrier_name"] = carrier["name"] if carrier else "Unknown"
+    match["carrier_rating"] = carrier.get("rating", 0.0) if carrier else 0.0
+    match["sender_name"] = sender["name"] if sender else "Unknown"
+    match["sender_rating"] = sender.get("rating", 0.0) if sender else 0.0
+    
+    return match
+
 @api_router.post("/matches/{match_id}/confirm-pickup")
 async def confirm_pickup(match_id: str, photo_url: str, user_id: str = Depends(get_current_user_id)):
     match = await matches_collection.find_one({"_id": ObjectId(match_id)})
