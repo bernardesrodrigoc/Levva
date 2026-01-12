@@ -78,6 +78,7 @@ class UserResponse(BaseModel):
 class LocationData(BaseModel):
     city: str
     state: str
+    address: Optional[str] = None
     lat: float
     lng: float
 
@@ -91,7 +92,7 @@ class TripCreate(BaseModel):
     departure_date: datetime
     vehicle_type: VehicleType
     cargo_space: CargoSpace
-    max_deviation_km: int = 10
+    corridor_radius_km: float = 10.0  # Default 10km corridor
     price_per_kg: Optional[float] = None
 
 class TripResponse(BaseModel):
@@ -104,7 +105,8 @@ class TripResponse(BaseModel):
     departure_date: datetime
     vehicle_type: VehicleType
     cargo_space: CargoSpace
-    max_deviation_km: int
+    corridor_radius_km: float
+    route_polyline: Optional[List[List[float]]] = None  # [[lat, lng], ...]
     price_per_kg: Optional[float]
     status: TripStatus
     created_at: datetime
