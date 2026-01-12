@@ -1521,7 +1521,266 @@ async def get_messages(match_id: str, user_id: str = Depends(get_current_user_id
     
     return messages
 
+# ============= NOTIFICATION ROUTES =============
+@api_router.get("/notifications")
+async def get_notifications(
+    unread_only: bool = False,
+    limit: int = 50,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Get user notifications"""
+    notifications = await get_user_notifications(user_id, unread_only, limit)
+    return notifications
+
+@api_router.get("/notifications/unread-count")
+async def get_notifications_unread_count(user_id: str = Depends(get_current_user_id)):
+    """Get count of unread notifications"""
+    count = await get_unread_count(user_id)
+    return {"count": count}
+
+@api_router.post("/notifications/{notification_id}/read")
+async def mark_notification_as_read(notification_id: str, user_id: str = Depends(get_current_user_id)):
+    """Mark a notification as read"""
+    success = await mark_notification_read(notification_id, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Notificação não encontrada")
+    return {"message": "Notificação marcada como lida"}
+
+@api_router.post("/notifications/read-all")
+async def mark_all_as_read(user_id: str = Depends(get_current_user_id)):
+    """Mark all notifications as read"""
+    count = await mark_all_notifications_read(user_id)
+    return {"message": f"{count} notificações marcadas como lidas", "count": count}
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_user_notification(notification_id: str, user_id: str = Depends(get_current_user_id)):
+    """Delete a notification"""
+    success = await delete_notification(notification_id, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Notificação não encontrada")
+    return {"message": "Notificação excluída"}
+
+# ============= GPS TRACKING ROUTES =============
+@api_router.get("/tracking/{match_id}/status")
+async def get_tracking_status(match_id: str, user_id: str = Depends(get_current_user_id)):
+    """Get tracking status for a delivery"""
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    if user_id not in [match["carrier_id"], match["sender_id"]]:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    is_active = manager.is_tracking_active(match_id)
+    watchers_count = manager.get_active_watchers_count(match_id)
+    
+    # Get last location
+    last_location = await location_tracking_collection.find_one(
+        {"match_id": match_id},
+        sort=[("timestamp", -1)]
+    )
+    
+    return {
+        "match_id": match_id,
+        "is_tracking_active": is_active,
+        "watchers_count": watchers_count,
+        "last_location": {
+            "lat": last_location["lat"],
+            "lng": last_location["lng"],
+            "accuracy": last_location.get("accuracy", 0),
+            "speed": last_location.get("speed", 0),
+            "timestamp": last_location["timestamp"].isoformat()
+        } if last_location else None
+    }
+
+@api_router.get("/tracking/{match_id}/history")
+async def get_tracking_history(
+    match_id: str,
+    limit: int = 100,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Get tracking history (route points) for a delivery"""
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    if user_id not in [match["carrier_id"], match["sender_id"]]:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    # Get route from delivery_routes collection
+    route = await delivery_routes_collection.find_one({"match_id": match_id})
+    
+    if route and route.get("route_points"):
+        points = route["route_points"][-limit:]
+        return {
+            "match_id": match_id,
+            "route_points": [
+                {"lat": p["lat"], "lng": p["lng"], "timestamp": p.get("timestamp", "").isoformat() if hasattr(p.get("timestamp", ""), "isoformat") else str(p.get("timestamp", ""))}
+                for p in points
+            ],
+            "total_points": len(route["route_points"]),
+            "carrier_id": route.get("carrier_id"),
+            "created_at": route.get("created_at").isoformat() if route.get("created_at") else None
+        }
+    
+    return {
+        "match_id": match_id,
+        "route_points": [],
+        "total_points": 0
+    }
+
+@api_router.post("/tracking/{match_id}/start")
+async def start_tracking(
+    match_id: str,
+    interval_seconds: int = 15,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Start tracking for a delivery (carrier only)"""
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    if user_id != match["carrier_id"]:
+        raise HTTPException(status_code=403, detail="Apenas o transportador pode iniciar o rastreamento")
+    
+    # Check if delivery is in correct status
+    if match.get("status") not in ["paid", "in_transit"]:
+        raise HTTPException(status_code=400, detail="O rastreamento só pode ser iniciado para entregas pagas ou em trânsito")
+    
+    # Update match status to in_transit if paid
+    if match.get("status") == "paid":
+        await matches_collection.update_one(
+            {"_id": ObjectId(match_id)},
+            {"$set": {"status": "in_transit", "tracking_started_at": datetime.now(timezone.utc)}}
+        )
+        
+        # Notify sender
+        await create_notification(
+            match["sender_id"],
+            NotificationType.DELIVERY_IN_TRANSIT,
+            {"route": f"{match.get('origin_city', 'Origem')} → {match.get('destination_city', 'Destino')}"},
+            match_id
+        )
+    
+    return {
+        "message": "Rastreamento iniciado. Conecte via WebSocket para enviar atualizações.",
+        "websocket_url": f"/ws/tracking/{match_id}/carrier",
+        "interval_seconds": max(10, min(30, interval_seconds))
+    }
+
+@api_router.post("/tracking/{match_id}/stop")
+async def stop_tracking(match_id: str, user_id: str = Depends(get_current_user_id)):
+    """Stop tracking for a delivery (carrier only)"""
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    if user_id != match["carrier_id"]:
+        raise HTTPException(status_code=403, detail="Apenas o transportador pode parar o rastreamento")
+    
+    # Disconnect carrier if connected
+    if manager.is_tracking_active(match_id):
+        await manager.disconnect_carrier(user_id, match_id)
+    
+    return {"message": "Rastreamento parado"}
+
 app.include_router(api_router)
+
+# ============= WEBSOCKET ENDPOINTS =============
+@app.websocket("/ws/tracking/{match_id}/carrier")
+async def websocket_carrier_tracking(websocket: WebSocket, match_id: str, token: str = Query(...)):
+    """
+    WebSocket endpoint for carrier to send location updates.
+    Connect with: ws://host/ws/tracking/{match_id}/carrier?token=JWT_TOKEN
+    
+    Send messages:
+    - {"type": "location_update", "lat": -23.5, "lng": -46.6, "accuracy": 10, "speed": 30, "heading": 90}
+    - {"type": "pause_tracking"}
+    - {"type": "resume_tracking"}
+    - {"type": "set_interval", "interval": 20}
+    - {"type": "ping"}
+    """
+    try:
+        # Validate token
+        payload = decode_token(token)
+        user_id = payload.get("user_id")
+        
+        if not user_id:
+            await websocket.close(code=4001, reason="Token inválido")
+            return
+        
+        # Validate match and carrier
+        match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+        if not match:
+            await websocket.close(code=4004, reason="Combinação não encontrada")
+            return
+        
+        if user_id != match["carrier_id"]:
+            await websocket.close(code=4003, reason="Apenas o transportador pode enviar localização")
+            return
+        
+        if match.get("status") not in ["paid", "in_transit"]:
+            await websocket.close(code=4000, reason="Rastreamento não permitido para este status")
+            return
+        
+        # Connect and handle messages
+        await manager.connect_carrier(websocket, user_id, match_id)
+        await handle_carrier_messages(websocket, user_id, match_id, {})
+        
+    except Exception as e:
+        logger.error(f"Carrier WebSocket error: {e}")
+        try:
+            await websocket.close(code=4000, reason=str(e))
+        except:
+            pass
+
+@app.websocket("/ws/tracking/{match_id}/watch")
+async def websocket_watch_tracking(websocket: WebSocket, match_id: str, token: str = Query(...)):
+    """
+    WebSocket endpoint for sender to watch carrier location.
+    Connect with: ws://host/ws/tracking/{match_id}/watch?token=JWT_TOKEN
+    
+    Receives messages:
+    - {"type": "location_update", "location": {...}, "timestamp": "..."}
+    - {"type": "tracking_started", ...}
+    - {"type": "tracking_stopped", ...}
+    - {"type": "tracking_paused", ...}
+    - {"type": "tracking_resumed", ...}
+    
+    Send messages:
+    - {"type": "ping"}
+    - {"type": "get_last_location"}
+    - {"type": "get_route_history"}
+    """
+    try:
+        # Validate token
+        payload = decode_token(token)
+        user_id = payload.get("user_id")
+        
+        if not user_id:
+            await websocket.close(code=4001, reason="Token inválido")
+            return
+        
+        # Validate match and access
+        match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+        if not match:
+            await websocket.close(code=4004, reason="Combinação não encontrada")
+            return
+        
+        if user_id not in [match["sender_id"], match["carrier_id"]]:
+            await websocket.close(code=4003, reason="Acesso negado")
+            return
+        
+        # Connect and handle messages
+        await manager.connect_watcher(websocket, match_id, user_id)
+        await handle_watcher_messages(websocket, user_id, match_id)
+        
+    except Exception as e:
+        logger.error(f"Watcher WebSocket error: {e}")
+        try:
+            await websocket.close(code=4000, reason=str(e))
+        except:
+            pass
 
 @app.on_event("startup")
 async def startup_event():
