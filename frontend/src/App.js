@@ -11,6 +11,7 @@ import CreateTripPage from '@/pages/CreateTripPage';
 import CreateShipmentPage from '@/pages/CreateShipmentPage';
 import BrowseTripsPage from '@/pages/BrowseTripsPage';
 import BrowseShipmentsPage from '@/pages/BrowseShipmentsPage';
+import VerificationPage from '@/pages/VerificationPage';
 import '@/App.css';
 
 function App() {
