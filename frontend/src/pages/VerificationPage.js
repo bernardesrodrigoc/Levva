@@ -207,7 +207,7 @@ const VerificationPage = () => {
         {isUploading && (
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
             <div className="flex flex-col items-center">
-              <Loader2 className="w-8 h-8 animate-spin text-jungle" />
+              <SpinnerGap className="w-8 h-8 animate-spin text-jungle" />
               <span className="text-sm mt-2">Enviando...</span>
             </div>
           </div>
@@ -387,7 +387,7 @@ const VerificationPage = () => {
                   <div className="relative mb-4">
                     {uploadingFile === 'profile' && (
                       <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-full">
-                        <Loader2 className="w-8 h-8 animate-spin text-jungle" />
+                        <SpinnerGap className="w-8 h-8 animate-spin text-jungle" />
                       </div>
                     )}
                     {formData.profilePhotoPreview ? (
