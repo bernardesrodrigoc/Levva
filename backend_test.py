@@ -262,7 +262,7 @@ class LevvaAPITester:
         return False
 
     def test_create_match(self):
-        """Create a match between trip and shipment"""
+        """Create a match between trip and shipment and verify calculations"""
         if not self.trip_id or not self.shipment_id:
             print("❌ Cannot create match - missing trip_id or shipment_id")
             return False
@@ -276,8 +276,27 @@ class LevvaAPITester:
         )
         if success and 'id' in response:
             self.match_id = response['id']
+            estimated_price = response.get('estimated_price')
+            platform_commission = response.get('platform_commission')
+            carrier_earnings = response.get('carrier_earnings')
+            
             print(f"✅ Match created with ID: {self.match_id}")
-            return True
+            print(f"✅ Estimated price: {estimated_price}")
+            print(f"✅ Platform commission (15%): {platform_commission}")
+            print(f"✅ Carrier earnings: {carrier_earnings}")
+            
+            # Verify calculations (8kg * 7.5 = 60, commission = 9, earnings = 51)
+            expected_price = 8 * 7.5  # 60
+            expected_commission = expected_price * 0.15  # 9
+            expected_earnings = expected_price - expected_commission  # 51
+            
+            if (abs(estimated_price - expected_price) < 0.01 and 
+                abs(platform_commission - expected_commission) < 0.01 and
+                abs(carrier_earnings - expected_earnings) < 0.01):
+                print("✅ Price calculations verified correctly")
+                return True
+            else:
+                print(f"❌ Price calculation mismatch. Expected: {expected_price}, {expected_commission}, {expected_earnings}")
         return False
 
     def test_list_matches(self):
