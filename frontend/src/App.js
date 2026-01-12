@@ -7,6 +7,8 @@ import LandingPage from '@/pages/LandingPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
+import CreateTripPage from '@/pages/CreateTripPage';
+import CreateShipmentPage from '@/pages/CreateShipmentPage';
 import '@/App.css';
 
 function App() {
@@ -22,6 +24,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/criar-viagem"
+            element={
+              <ProtectedRoute>
+                <CreateTripPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/criar-envio"
+            element={
+              <ProtectedRoute>
+                <CreateShipmentPage />
               </ProtectedRoute>
             }
           />
