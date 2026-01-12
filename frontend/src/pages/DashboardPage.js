@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { VerificationAlert } from '@/components/VerificationAlert';
 import TrustLevelCard from '@/components/TrustLevelCard';
+import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 
