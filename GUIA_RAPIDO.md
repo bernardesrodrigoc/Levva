@@ -3,8 +3,8 @@
 ## 🚀 Acesso Rápido
 
 ### URLs
-- **Frontend**: https://levvaexpress.preview.emergentagent.com
-- **Backend API**: https://levvaexpress.preview.emergentagent.com/api
+- **Frontend**: https://routeshare-5.preview.emergentagent.com
+- **Backend API**: https://routeshare-5.preview.emergentagent.com/api
 
 ### Credenciais Admin
 ```

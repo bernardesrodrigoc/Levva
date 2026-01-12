@@ -7,7 +7,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://levvaexpress.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://routeshare-5.preview.emergentagent.com')
 
 # Test credentials
 TEST_USER_EMAIL = "teste@levva.com"

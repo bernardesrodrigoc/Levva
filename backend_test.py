@@ -4,7 +4,7 @@ from datetime import datetime, date
 import json
 
 class LevvaAPITester:
-    def __init__(self, base_url="https://levvaexpress.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://routeshare-5.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.carrier_token = None
         self.sender_token = None
