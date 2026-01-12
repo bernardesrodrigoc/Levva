@@ -270,6 +270,41 @@ const MatchDetailPage = () => {
           </CardContent>
         </Card>
 
+        {/* Payment Action Card - Only for sender when pending payment */}
+        {canPay && (
+          <Card className="mb-6 border-jungle bg-jungle/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard size={24} weight="duotone" className="text-jungle" />
+                Pagamento Pendente
+              </CardTitle>
+              <CardDescription>
+                Para confirmar a entrega, realize o pagamento. O valor ficará em escrow até a entrega ser concluída.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={handlePayment}
+                disabled={paymentLoading}
+                className="w-full h-12 bg-jungle hover:bg-jungle-800 text-lg"
+                data-testid="pay-btn"
+              >
+                {paymentLoading ? (
+                  'Processando...'
+                ) : (
+                  <>
+                    <CreditCard size={20} className="mr-2" />
+                    Pagar R$ {match.estimated_price?.toFixed(2)}
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground mt-3">
+                Pagamento seguro via Mercado Pago
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Users Card */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           <Card>
