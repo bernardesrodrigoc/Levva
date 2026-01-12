@@ -23,6 +23,9 @@ flag_collection = db.flags
 disputes_collection = db.disputes
 verifications_collection = db.verifications
 messages_collection = db.messages
+notifications_collection = db.notifications
+location_tracking_collection = db.location_tracking
+delivery_routes_collection = db.delivery_routes
 
 async def init_indexes():
     """Initialize database indexes"""
