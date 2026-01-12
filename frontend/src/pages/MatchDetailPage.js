@@ -149,7 +149,7 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
         </div>
         {watcherTracking.isTracking && (
           <Badge className="bg-green-100 text-green-700">
-            <Navigation size={12} className="mr-1" />
+            <NavigationArrow size={12} className="mr-1" />
             Em movimento
           </Badge>
         )}
