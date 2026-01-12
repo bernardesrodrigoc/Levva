@@ -108,6 +108,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/sugestoes"
+            element={
+              <ProtectedRoute>
+                <MatchSuggestionsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/payment/failure" element={<PaymentFailurePage />} />
           <Route path="/payment/pending" element={<PaymentPendingPage />} />
