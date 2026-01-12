@@ -30,6 +30,10 @@ from auth import (
     hash_password, verify_password, create_access_token,
     get_current_user_id
 )
+from route_service import (
+    get_route_polyline, check_shipment_matches_route,
+    calculate_corridor_match_score, get_city_coordinates, geocode_address
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
