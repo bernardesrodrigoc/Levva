@@ -377,6 +377,67 @@ const AdminDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Disputes Section */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gavel size={24} weight="duotone" className="text-jungle" />
+              Disputas
+            </CardTitle>
+            <CardDescription>Gerencie conflitos entre usuários</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {disputes.length === 0 ? (
+              <div className="text-center py-12">
+                <Gavel size={48} className="mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">Nenhuma disputa aberta</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {disputes.map((dispute) => (
+                  <Card key={dispute.id} className="border-2" data-testid={`dispute-${dispute.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Badge 
+                              className={
+                                dispute.status === 'open' ? 'bg-red-100 text-red-700' :
+                                dispute.status === 'under_review' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
+                              }
+                            >
+                              {dispute.status === 'open' ? 'Aberta' :
+                               dispute.status === 'under_review' ? 'Em Análise' :
+                               'Resolvida'}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {dispute.created_at && new Date(dispute.created_at).toLocaleDateString('pt-BR')}
+                            </span>
+                          </div>
+                          <p className="font-semibold">{dispute.reason}</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Aberta por: {dispute.opened_by_name} ({dispute.opened_by_role === 'sender' ? 'Remetente' : 'Transportador'})
+                          </p>
+                          <p className="text-sm mt-1">
+                            <span className="text-muted-foreground">Partes:</span> {dispute.sender_name} ↔ {dispute.carrier_name}
+                          </p>
+                          <p className="text-sm">
+                            <span className="text-muted-foreground">Valor:</span> R$ {dispute.match_value?.toFixed(2)}
+                          </p>
+                        </div>
+                        <Button onClick={() => handleViewDispute(dispute)} className="bg-jungle hover:bg-jungle-800">
+                          Ver Detalhes
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Review Dialog */}
