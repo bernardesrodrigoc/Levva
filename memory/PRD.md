@@ -137,3 +137,9 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
    - Limites de valor/peso por nível
    - Card de progresso no dashboard
    - Upgrade automático baseado em entregas e avaliação
+8. ✅ **Ferramentas de Resolução de Disputas** - Implementado:
+   - Endpoints: criar disputa, listar, detalhes, adicionar nota, resolver
+   - Painel admin com lista de disputas
+   - Visualização de histórico de chat como contexto
+   - Opções de resolução: a favor do remetente/transportador/divisão/improcedente
+   - Sistema de notas do admin
