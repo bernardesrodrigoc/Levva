@@ -45,6 +45,22 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/viagens"
+            element={
+              <ProtectedRoute>
+                <BrowseTripsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/envios"
+            element={
+              <ProtectedRoute>
+                <BrowseShipmentsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<LandingPage />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
