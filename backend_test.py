@@ -299,18 +299,51 @@ class LevvaAPITester:
                 print(f"❌ Price calculation mismatch. Expected: {expected_price}, {expected_commission}, {expected_earnings}")
         return False
 
-    def test_list_matches(self):
-        """List all matches for the carrier"""
+    def test_verify_trip_status_changed(self):
+        """Verify trip status changed to 'matched' after match creation"""
         success, response = self.run_test(
-            "List Carrier Matches",
+            "Get My Trips",
             "GET",
-            "matches/my-matches",
+            "trips/my-trips",
             200,
             token=self.carrier_token
         )
-        if success:
-            print(f"✅ Found {len(response)} matches for carrier")
-        return success
+        if success and response:
+            for trip in response:
+                if trip.get('id') == self.trip_id:
+                    status = trip.get('status')
+                    print(f"✅ Trip status: {status}")
+                    if status == "matched":
+                        print("✅ Trip status changed to 'matched' correctly")
+                        return True
+                    else:
+                        print(f"❌ Expected trip status 'matched', got '{status}'")
+                        return False
+        print("❌ Trip not found in my-trips")
+        return False
+
+    def test_verify_shipment_status_changed(self):
+        """Verify shipment status changed to 'matched' after match creation"""
+        success, response = self.run_test(
+            "Get My Shipments",
+            "GET",
+            "shipments/my-shipments",
+            200,
+            token=self.sender_token
+        )
+        if success and response:
+            for shipment in response:
+                if shipment.get('id') == self.shipment_id:
+                    status = shipment.get('status')
+                    print(f"✅ Shipment status: {status}")
+                    if status == "matched":
+                        print("✅ Shipment status changed to 'matched' correctly")
+                        return True
+                    else:
+                        print(f"❌ Expected shipment status 'matched', got '{status}'")
+                        return False
+        print("❌ Shipment not found in my-shipments")
+        return False
 
     def test_ratings_endpoint(self):
         """Test ratings endpoint structure"""
