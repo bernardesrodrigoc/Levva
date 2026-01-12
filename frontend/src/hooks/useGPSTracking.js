@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
  * Custom hook for GPS tracking via WebSocket
- * @param {string} matchId - The match ID to track
- * @param {string} token - JWT token for authentication
- * @param {boolean} isCarrier - Whether the current user is the carrier
+ * Inclui lógica de Wake Lock para manter o dispositivo ativo durante o rastreamento
  */
 export const useGPSTracking = (matchId, token, isCarrier = false) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -15,11 +13,16 @@ export const useGPSTracking = (matchId, token, isCarrier = false) => {
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000'; // Fallback de segurança
   const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
   const connect = useCallback(() => {
     if (!matchId || !token) return;
+
+    // Evita múltiplas conexões
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
 
     const endpoint = isCarrier ? 'carrier' : 'watch';
     const wsUrl = `${WS_URL}/ws/tracking/${matchId}/${endpoint}?token=${token}`;
@@ -29,7 +32,7 @@ export const useGPSTracking = (matchId, token, isCarrier = false) => {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log(`[GPS] WebSocket connected as ${endpoint}`);
         setIsConnected(true);
         setError(null);
       };
@@ -39,45 +42,59 @@ export const useGPSTracking = (matchId, token, isCarrier = false) => {
           const data = JSON.parse(event.data);
           handleMessage(data);
         } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
+          console.error('[GPS] Error parsing WebSocket message:', e);
         }
       };
 
       ws.onclose = (event) => {
-        console.log('WebSocket closed:', event.code, event.reason);
+        console.log('[GPS] WebSocket closed:', event.code, event.reason);
         setIsConnected(false);
-        setIsTracking(false);
+        
+        // Se a conexão cair, não necessariamente paramos o tracking (ex: túnel), 
+        // mas avisamos a UI se for crítico.
+        // O isTracking aqui refere-se ao estado "Lógico" da entrega, não apenas da conexão.
 
-        // Reconnect after 3 seconds if not intentionally closed
+        // Reconnect logic
         if (event.code !== 1000 && event.code !== 4000) {
           reconnectTimeoutRef.current = setTimeout(() => {
+            console.log('[GPS] Attempting to reconnect...');
             connect();
           }, 3000);
+        } else {
+            // Se foi fechamento intencional (ex: entrega finalizada), paramos o tracking
+            setIsTracking(false);
         }
       };
 
       ws.onerror = (event) => {
-        console.error('WebSocket error:', event);
-        setError('Erro de conexão');
+        console.error('[GPS] WebSocket error:', event);
+        // Não setamos erro fatal imediatamente para permitir tentativas de reconexão
       };
     } catch (e) {
-      console.error('Error creating WebSocket:', e);
-      setError('Erro ao conectar');
+      console.error('[GPS] Error creating WebSocket:', e);
+      setError('Erro ao conectar ao serviço de rastreamento');
     }
   }, [matchId, token, isCarrier, WS_URL]);
 
   const handleMessage = (data) => {
     switch (data.type) {
       case 'connection_status':
-        setIsTracking(data.is_tracking_active);
+        // Apenas atualiza se tivermos certeza do estado
+        if (data.is_tracking_active !== undefined) setIsTracking(data.is_tracking_active);
         break;
 
       case 'location_update':
         setCurrentLocation(data.location);
-        setRouteHistory(prev => [...prev, data.location]);
+        // Otimização: Limitar histórico para evitar estouro de memória em viagens longas (ex: max 1000 pontos)
+        setRouteHistory(prev => {
+            const newHistory = [...prev, data.location];
+            if (newHistory.length > 2000) return newHistory.slice(-2000);
+            return newHistory;
+        });
         break;
 
       case 'tracking_started':
+      case 'tracking_resumed':
         setIsTracking(true);
         break;
 
@@ -86,30 +103,16 @@ export const useGPSTracking = (matchId, token, isCarrier = false) => {
         setIsTracking(false);
         break;
 
-      case 'tracking_resumed':
-        setIsTracking(true);
-        break;
-
       case 'last_location':
-        if (data.location) {
-          setCurrentLocation(data.location);
-        }
+        if (data.location) setCurrentLocation(data.location);
         break;
 
       case 'route_history':
         setRouteHistory(data.route_points || []);
         break;
 
-      case 'location_ack':
-        // Acknowledgment received
-        break;
-
-      case 'pong':
-        // Keep-alive response
-        break;
-
       default:
-        console.log('Unknown message type:', data.type);
+        break;
     }
   };
 
@@ -139,35 +142,14 @@ export const useGPSTracking = (matchId, token, isCarrier = false) => {
     }
   }, []);
 
-  const pauseTracking = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'pause_tracking' }));
-    }
-  }, []);
+  // Comandos de controle
+  const pauseTracking = useCallback(() => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'pause_tracking' })), []);
+  const resumeTracking = useCallback(() => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'resume_tracking' })), []);
+  const requestLastLocation = useCallback(() => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'get_last_location' })), []);
+  const requestRouteHistory = useCallback(() => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'get_route_history' })), []);
 
-  const resumeTracking = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'resume_tracking' }));
-    }
-  }, []);
-
-  const requestLastLocation = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'get_last_location' }));
-    }
-  }, []);
-
-  const requestRouteHistory = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'get_route_history' }));
-    }
-  }, []);
-
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      disconnect();
-    };
+    return () => disconnect();
   }, [disconnect]);
 
   return {
@@ -188,9 +170,7 @@ export const useGPSTracking = (matchId, token, isCarrier = false) => {
 
 /**
  * Custom hook for carrier to send their GPS location
- * @param {string} matchId - The match ID
- * @param {string} token - JWT token
- * @param {number} intervalSeconds - Update interval in seconds (10-30)
+ * Inclui Wake Lock API para impedir que a tela desligue.
  */
 export const useCarrierGPS = (matchId, token, intervalSeconds = 15) => {
   const [isTracking, setIsTracking] = useState(false);
@@ -201,52 +181,79 @@ export const useCarrierGPS = (matchId, token, intervalSeconds = 15) => {
   const gpsTracking = useGPSTracking(matchId, token, true);
   const watchIdRef = useRef(null);
   const lastSendTimeRef = useRef(0);
+  const wakeLockRef = useRef(null);
+
+  // --- WAKE LOCK LOGIC ---
+  const requestWakeLock = useCallback(async () => {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLockRef.current = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Screen Wake Lock active');
+        
+        wakeLockRef.current.addEventListener('release', () => {
+          console.log('[WakeLock] Screen Wake Lock released');
+        });
+      }
+    } catch (err) {
+      console.warn(`[WakeLock] Failed to request Wake Lock: ${err.name}, ${err.message}`);
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(async () => {
+    if (wakeLockRef.current) {
+      try {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      } catch (err) {
+        console.error('[WakeLock] Error releasing:', err);
+      }
+    }
+  }, []);
+
+  // Re-request wake lock if visibility changes (app comes to foreground)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isTracking) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isTracking, requestWakeLock]);
+  // -----------------------
 
   const requestLocationPermission = useCallback(async () => {
-    try {
-      if (!navigator.geolocation) {
-        setError('Geolocalização não suportada');
-        setPermissionStatus('unavailable');
-        return false;
-      }
-
-      const permission = await navigator.permissions.query({ name: 'geolocation' });
-      setPermissionStatus(permission.state);
-
-      permission.onchange = () => {
-        setPermissionStatus(permission.state);
-      };
-
-      return permission.state === 'granted' || permission.state === 'prompt';
-    } catch (e) {
-      console.error('Error checking permission:', e);
-      return true; // Assume we can try
+    if (!navigator.geolocation) {
+      setError('Geolocalização não suportada neste navegador.');
+      setPermissionStatus('unavailable');
+      return false;
     }
+    // Simplificado pois nem todos browsers suportam query detalhada
+    return true; 
   }, []);
 
   const startTracking = useCallback(async () => {
     const hasPermission = await requestLocationPermission();
-    if (!hasPermission) {
-      setError('Permissão de localização negada');
-      return;
-    }
+    if (!hasPermission) return;
 
     gpsTracking.connect();
+    await requestWakeLock();
 
-    // Start watching position
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const now = Date.now();
         const interval = intervalSeconds * 1000;
 
-        // Only send if enough time has passed
+        // Throttling de envio (Data Saving)
         if (now - lastSendTimeRef.current >= interval) {
           const location = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
             speed: position.coords.speed,
-            heading: position.coords.heading
+            heading: position.coords.heading,
+            // Opcional: pegar nível da bateria se disponível
+            // battery_level: ...
           };
 
           gpsTracking.sendLocation(location);
@@ -255,32 +262,19 @@ export const useCarrierGPS = (matchId, token, intervalSeconds = 15) => {
         }
       },
       (err) => {
-        console.error('Geolocation error:', err);
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            setError('Permissão de localização negada');
-            setPermissionStatus('denied');
-            break;
-          case err.POSITION_UNAVAILABLE:
-            setError('Localização indisponível');
-            break;
-          case err.TIMEOUT:
-            setError('Tempo limite excedido');
-            break;
-          default:
-            setError('Erro ao obter localização');
-        }
+        console.error('[GPS] Geolocation error:', err);
+        setError('Erro ao obter localização: ' + err.message);
       },
       {
-        enableHighAccuracy: true,
+        enableHighAccuracy: true, // Necessário para rotas precisas
         timeout: 10000,
-        maximumAge: 5000
+        maximumAge: 0 // Força leitura fresca do hardware
       }
     );
 
     setIsTracking(true);
     setError(null);
-  }, [gpsTracking, intervalSeconds, requestLocationPermission]);
+  }, [gpsTracking, intervalSeconds, requestLocationPermission, requestWakeLock]);
 
   const stopTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
@@ -288,17 +282,17 @@ export const useCarrierGPS = (matchId, token, intervalSeconds = 15) => {
       watchIdRef.current = null;
     }
     gpsTracking.disconnect();
+    releaseWakeLock(); // Solta a tela para economizar bateria
     setIsTracking(false);
-  }, [gpsTracking]);
+  }, [gpsTracking, releaseWakeLock]);
 
-  // Cleanup
+  // Cleanup final
   useEffect(() => {
     return () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+      releaseWakeLock();
     };
-  }, []);
+  }, [releaseWakeLock]);
 
   return {
     isTracking,
