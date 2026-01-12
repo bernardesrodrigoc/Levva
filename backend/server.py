@@ -253,6 +253,13 @@ async def create_shipment(shipment_data: ShipmentCreate, user_id: str = Depends(
     if user["role"] not in [UserRole.SENDER, UserRole.BOTH]:
         raise HTTPException(status_code=403, detail="Apenas remetentes podem criar envios")
     
+    # Check verification status
+    if user.get("verification_status") != VerificationStatus.VERIFIED:
+        raise HTTPException(
+            status_code=403, 
+            detail="Você precisa verificar sua identidade antes de criar envios"
+        )
+    
     shipment_doc = {
         "sender_id": user_id,
         "sender_name": user["name"],
