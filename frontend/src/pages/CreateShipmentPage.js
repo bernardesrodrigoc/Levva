@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, MapPin, Cube, CurrencyDollar, Camera } from '@phosphor-icons/react';
+import { Package, Cube, CurrencyDollar, Camera, Warning } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import LocationPicker from '@/components/LocationPicker';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -20,15 +22,9 @@ const CreateShipmentPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [legalAcceptance, setLegalAcceptance] = useState(false);
+  const [pickup, setPickup] = useState(null);
+  const [dropoff, setDropoff] = useState(null);
   const [formData, setFormData] = useState({
-    originCity: '',
-    originState: '',
-    originLat: -23.5505,
-    originLng: -46.6333,
-    destinationCity: '',
-    destinationState: '',
-    destinationLat: -22.9068,
-    destinationLng: -43.1729,
     lengthCm: '',
     widthCm: '',
     heightCm: '',
@@ -53,21 +49,33 @@ const CreateShipmentPage = () => {
       return;
     }
 
+    if (!pickup?.lat || !pickup?.lng) {
+      toast.error('Selecione o ponto de coleta no mapa');
+      return;
+    }
+
+    if (!dropoff?.lat || !dropoff?.lng) {
+      toast.error('Selecione o ponto de entrega no mapa');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const shipmentData = {
         origin: {
-          city: formData.originCity,
-          state: formData.originState,
-          lat: parseFloat(formData.originLat),
-          lng: parseFloat(formData.originLng)
+          city: pickup.city || 'Cidade não identificada',
+          state: pickup.state || 'BR',
+          address: pickup.address,
+          lat: pickup.lat,
+          lng: pickup.lng
         },
         destination: {
-          city: formData.destinationCity,
-          state: formData.destinationState,
-          lat: parseFloat(formData.destinationLat),
-          lng: parseFloat(formData.destinationLng)
+          city: dropoff.city || 'Cidade não identificada',
+          state: dropoff.state || 'BR',
+          address: dropoff.address,
+          lat: dropoff.lat,
+          lng: dropoff.lng
         },
         package: {
           length_cm: parseFloat(formData.lengthCm),
@@ -83,7 +91,7 @@ const CreateShipmentPage = () => {
           packaging_open: formData.photoPackagingOpen,
           packaging_sealed: formData.photoPackagingSealed
         },
-        legal_acceptance: true
+        legal_acceptance: legalAcceptance
       };
 
       await axios.post(`${API}/shipments`, shipmentData, {
@@ -120,83 +128,43 @@ const CreateShipmentPage = () => {
             <Package size={40} weight="duotone" className="text-lime" />
             Criar Novo Envio
           </h1>
-          <p className="text-muted-foreground">Cadastre seu pacote e encontre um transportador</p>
+          <p className="text-muted-foreground">Defina os pontos de coleta e entrega no mapa</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Origin */}
-          <Card data-testid="origin-card">
+          {/* Pickup Location */}
+          <Card data-testid="pickup-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin size={24} weight="duotone" className="text-jungle" />
-                Origem
-              </CardTitle>
-              <CardDescription>De onde o pacote será coletado?</CardDescription>
+              <CardTitle className="text-jungle">Ponto de Coleta</CardTitle>
+              <CardDescription>Onde o transportador deve buscar o pacote</CardDescription>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="originCity">Cidade</Label>
-                <Input
-                  id="originCity"
-                  placeholder="São Paulo"
-                  value={formData.originCity}
-                  onChange={(e) => handleChange('originCity', e.target.value)}
-                  required
-                  className="h-12 mt-2"
-                  data-testid="origin-city-input"
-                />
-              </div>
-              <div>
-                <Label htmlFor="originState">Estado</Label>
-                <Input
-                  id="originState"
-                  placeholder="SP"
-                  value={formData.originState}
-                  onChange={(e) => handleChange('originState', e.target.value)}
-                  required
-                  maxLength={2}
-                  className="h-12 mt-2"
-                  data-testid="origin-state-input"
-                />
-              </div>
+            <CardContent>
+              <LocationPicker
+                label="Local de Coleta"
+                value={pickup}
+                onChange={setPickup}
+                markerColor="green"
+                placeholder="Buscar endereço de coleta..."
+                testIdPrefix="pickup"
+              />
             </CardContent>
           </Card>
 
-          {/* Destination */}
-          <Card data-testid="destination-card">
+          {/* Dropoff Location */}
+          <Card data-testid="dropoff-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin size={24} weight="duotone" className="text-lime" />
-                Destino
-              </CardTitle>
-              <CardDescription>Para onde o pacote vai?</CardDescription>
+              <CardTitle className="text-lime">Ponto de Entrega</CardTitle>
+              <CardDescription>Onde o pacote deve ser entregue</CardDescription>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="destinationCity">Cidade</Label>
-                <Input
-                  id="destinationCity"
-                  placeholder="Rio de Janeiro"
-                  value={formData.destinationCity}
-                  onChange={(e) => handleChange('destinationCity', e.target.value)}
-                  required
-                  className="h-12 mt-2"
-                  data-testid="destination-city-input"
-                />
-              </div>
-              <div>
-                <Label htmlFor="destinationState">Estado</Label>
-                <Input
-                  id="destinationState"
-                  placeholder="RJ"
-                  value={formData.destinationState}
-                  onChange={(e) => handleChange('destinationState', e.target.value)}
-                  required
-                  maxLength={2}
-                  className="h-12 mt-2"
-                  data-testid="destination-state-input"
-                />
-              </div>
+            <CardContent>
+              <LocationPicker
+                label="Local de Entrega"
+                value={dropoff}
+                onChange={setDropoff}
+                markerColor="red"
+                placeholder="Buscar endereço de entrega..."
+                testIdPrefix="dropoff"
+              />
             </CardContent>
           </Card>
 
@@ -207,10 +175,10 @@ const CreateShipmentPage = () => {
                 <Cube size={24} weight="duotone" className="text-jungle" />
                 Detalhes do Pacote
               </CardTitle>
-              <CardDescription>Dimensões e descrição</CardDescription>
+              <CardDescription>Informações sobre o item a ser enviado</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="lengthCm">Comprimento (cm)</Label>
                   <Input
@@ -250,13 +218,16 @@ const CreateShipmentPage = () => {
                     data-testid="height-input"
                   />
                 </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="weightKg">Peso (kg)</Label>
                   <Input
                     id="weightKg"
                     type="number"
                     step="0.1"
-                    placeholder="5"
+                    placeholder="2.5"
                     value={formData.weightKg}
                     onChange={(e) => handleChange('weightKg', e.target.value)}
                     required
@@ -264,107 +235,96 @@ const CreateShipmentPage = () => {
                     data-testid="weight-input"
                   />
                 </div>
+                <div>
+                  <Label htmlFor="category">Categoria</Label>
+                  <Select value={formData.category} onValueChange={(value) => handleChange('category', value)}>
+                    <SelectTrigger className="h-12 mt-2" data-testid="category-select">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="documents">Documentos</SelectItem>
+                      <SelectItem value="electronics">Eletrônicos</SelectItem>
+                      <SelectItem value="clothing">Roupas</SelectItem>
+                      <SelectItem value="food">Alimentos (não perecíveis)</SelectItem>
+                      <SelectItem value="gifts">Presentes</SelectItem>
+                      <SelectItem value="other">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div>
-                <Label htmlFor="category">Categoria</Label>
-                <Input
-                  id="category"
-                  placeholder="Eletrônicos, Documentos, Alimentos, etc."
-                  value={formData.category}
-                  onChange={(e) => handleChange('category', e.target.value)}
-                  required
-                  className="h-12 mt-2"
-                  data-testid="category-input"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description">Descrição do Item</Label>
                 <Textarea
                   id="description"
-                  placeholder="Descreva o conteúdo do pacote"
+                  placeholder="Descreva o conteúdo do pacote..."
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
                   required
-                  rows={3}
                   className="mt-2"
+                  rows={3}
                   data-testid="description-input"
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Value */}
+          {/* Value & Photos */}
           <Card data-testid="value-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CurrencyDollar size={24} weight="duotone" className="text-jungle" />
-                Valor Declarado
+                Valor e Fotos
               </CardTitle>
-              <CardDescription>Qual o valor do conteúdo?</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Label htmlFor="declaredValue">Valor (R$)</Label>
-              <Input
-                id="declaredValue"
-                type="number"
-                step="0.01"
-                placeholder="500.00"
-                value={formData.declaredValue}
-                onChange={(e) => handleChange('declaredValue', e.target.value)}
-                required
-                className="h-12 mt-2"
-                data-testid="declared-value-input"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Photos */}
-          <Card data-testid="photos-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Camera size={24} weight="duotone" className="text-jungle" />
-                Fotos Obrigatórias
-              </CardTitle>
-              <CardDescription>3 fotos são necessárias para segurança</CardDescription>
+              <CardDescription>Valor declarado e fotos do item</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Alert>
-                <AlertDescription>
-                  No MVP, use URLs de placeholder. Na próxima fase, implementaremos upload real com Cloudflare R2.
-                </AlertDescription>
-              </Alert>
+              <div>
+                <Label htmlFor="declaredValue">Valor Declarado (R$)</Label>
+                <Input
+                  id="declaredValue"
+                  type="number"
+                  step="0.01"
+                  placeholder="100.00"
+                  value={formData.declaredValue}
+                  onChange={(e) => handleChange('declaredValue', e.target.value)}
+                  required
+                  className="h-12 mt-2"
+                  data-testid="declared-value-input"
+                />
+              </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
-                <div>
-                  <Label>1. Item visível</Label>
-                  <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center">
-                    <Camera size={32} className="mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Placeholder URL</p>
+              {/* Photo placeholders */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-2">
+                    <Camera size={32} className="text-muted-foreground" />
                   </div>
+                  <span className="text-xs text-muted-foreground">Item visível</span>
                 </div>
-                <div>
-                  <Label>2. Embalagem aberta</Label>
-                  <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center">
-                    <Camera size={32} className="mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Placeholder URL</p>
+                <div className="text-center">
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-2">
+                    <Camera size={32} className="text-muted-foreground" />
                   </div>
+                  <span className="text-xs text-muted-foreground">Embalagem aberta</span>
                 </div>
-                <div>
-                  <Label>3. Embalagem fechada</Label>
-                  <div className="mt-2 border-2 border-dashed border-border rounded-lg p-4 text-center">
-                    <Camera size={32} className="mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Placeholder URL</p>
+                <div className="text-center">
+                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-2">
+                    <Camera size={32} className="text-muted-foreground" />
                   </div>
+                  <span className="text-xs text-muted-foreground">Embalagem fechada</span>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Upload de fotos em breve. Por enquanto, fotos de exemplo serão usadas.
+              </p>
             </CardContent>
           </Card>
 
-          {/* Legal */}
-          <Card data-testid="legal-card">
-            <CardContent className="pt-6">
+          {/* Legal Acceptance */}
+          <Alert className="border-yellow-500 bg-yellow-50">
+            <Warning size={20} className="text-yellow-600" />
+            <AlertDescription className="text-yellow-800">
               <div className="flex items-start gap-3">
                 <Checkbox
                   id="legalAcceptance"
@@ -372,17 +332,12 @@ const CreateShipmentPage = () => {
                   onCheckedChange={setLegalAcceptance}
                   data-testid="legal-acceptance-checkbox"
                 />
-                <div>
-                  <Label htmlFor="legalAcceptance" className="cursor-pointer">
-                    Aceito total responsabilidade pelo conteúdo deste pacote
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Declaro que o conteúdo é legal, não contém itens proibidos e cumpre todas as leis aplicáveis.
-                  </p>
-                </div>
+                <label htmlFor="legalAcceptance" className="text-sm cursor-pointer">
+                  Declaro que o conteúdo é legal, não perecível e de baixo risco. Assumo total responsabilidade pelo item enviado e suas consequências.
+                </label>
               </div>
-            </CardContent>
-          </Card>
+            </AlertDescription>
+          </Alert>
 
           <div className="flex gap-4">
             <Button
@@ -396,7 +351,7 @@ const CreateShipmentPage = () => {
             </Button>
             <Button
               type="submit"
-              className="flex-1 h-12 bg-jungle hover:bg-jungle-800"
+              className="flex-1 h-12 bg-lime hover:bg-lime/90 text-black"
               disabled={loading || !legalAcceptance}
               data-testid="submit-shipment-btn"
             >
