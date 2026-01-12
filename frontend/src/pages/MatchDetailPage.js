@@ -20,6 +20,166 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Live Tracking Section Component
+const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
+  const [trackingStatus, setTrackingStatus] = useState(null);
+  
+  // For sender watching
+  const watcherTracking = useGPSTracking(matchId, token, false);
+  
+  // For carrier sending location
+  const carrierGPS = useCarrierGPS(matchId, token, 15);
+
+  useEffect(() => {
+    // Fetch initial tracking status
+    const fetchStatus = async () => {
+      try {
+        const response = await axios.get(`${API}/tracking/${matchId}/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setTrackingStatus(response.data);
+      } catch (error) {
+        console.error('Error fetching tracking status:', error);
+      }
+    };
+    fetchStatus();
+  }, [matchId, token]);
+
+  // Connect watcher when component mounts (for sender)
+  useEffect(() => {
+    if (!isCarrier) {
+      watcherTracking.connect();
+      watcherTracking.requestLastLocation();
+      watcherTracking.requestRouteHistory();
+    }
+    
+    return () => {
+      if (!isCarrier) {
+        watcherTracking.disconnect();
+      }
+    };
+  }, [isCarrier]);
+
+  if (isCarrier) {
+    // Carrier view - controls to start/stop tracking
+    return (
+      <div className="space-y-4">
+        {/* Permission Alert */}
+        {carrierGPS.permissionStatus === 'denied' && (
+          <Alert className="border-red-200 bg-red-50">
+            <AlertDescription className="text-red-700">
+              Permissão de localização negada. Habilite nas configurações do navegador para usar o rastreamento.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Tracking Controls */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div>
+            <h4 className="font-medium">Rastreamento GPS</h4>
+            <p className="text-sm text-muted-foreground">
+              {carrierGPS.isTracking 
+                ? 'Sua localização está sendo enviada ao remetente'
+                : 'Inicie o rastreamento para que o remetente acompanhe a entrega'
+              }
+            </p>
+          </div>
+          
+          {carrierGPS.isTracking ? (
+            <Button
+              variant="outline"
+              onClick={carrierGPS.stopTracking}
+              className="gap-2"
+              data-testid="stop-tracking-btn"
+            >
+              <Pause size={18} />
+              Parar
+            </Button>
+          ) : (
+            <Button
+              onClick={carrierGPS.startTracking}
+              className="gap-2 bg-jungle hover:bg-jungle-800"
+              data-testid="start-tracking-btn"
+            >
+              <Play size={18} />
+              Iniciar Rastreamento
+            </Button>
+          )}
+        </div>
+
+        {/* Status Info */}
+        {carrierGPS.isTracking && carrierGPS.lastSentLocation && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 text-green-700">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium">Rastreamento ativo</span>
+            </div>
+            <p className="text-xs text-green-600 mt-1">
+              Última atualização: {new Date().toLocaleTimeString('pt-BR')}
+            </p>
+          </div>
+        )}
+
+        {/* Map showing current route */}
+        <LiveTrackingMap
+          carrierLocation={carrierGPS.lastSentLocation ? {
+            lat: carrierGPS.lastSentLocation.latitude,
+            lng: carrierGPS.lastSentLocation.longitude
+          } : null}
+          pickupLocation={match.shipment?.origin}
+          dropoffLocation={match.shipment?.destination}
+          routePolyline={match.trip?.route_polyline}
+          isTracking={carrierGPS.isTracking}
+          height="350px"
+        />
+      </div>
+    );
+  }
+
+  // Sender view - watch carrier location
+  return (
+    <div className="space-y-4">
+      {/* Connection Status */}
+      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${watcherTracking.isConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
+          <span className="text-sm">
+            {watcherTracking.isConnected ? 'Conectado' : 'Conectando...'}
+          </span>
+        </div>
+        {watcherTracking.isTracking && (
+          <Badge className="bg-green-100 text-green-700">
+            <Navigation size={12} className="mr-1" />
+            Em movimento
+          </Badge>
+        )}
+      </div>
+
+      {/* Live Map */}
+      <LiveTrackingMap
+        carrierLocation={watcherTracking.currentLocation}
+        pickupLocation={match.shipment?.origin}
+        dropoffLocation={match.shipment?.destination}
+        routePolyline={match.trip?.route_polyline}
+        routeHistory={watcherTracking.routeHistory}
+        isTracking={watcherTracking.isTracking}
+        followCarrier={true}
+        height="350px"
+      />
+
+      {/* Last Update Info */}
+      {watcherTracking.currentLocation && (
+        <div className="text-xs text-muted-foreground text-center">
+          Última atualização: {watcherTracking.currentLocation.timestamp 
+            ? new Date(watcherTracking.currentLocation.timestamp).toLocaleTimeString('pt-BR')
+            : 'Agora'
+          }
+        </div>
+      )}
+    </div>
+  );
+};
+
 const MatchDetailPage = () => {
   const { matchId } = useParams();
   const { token, user } = useAuth();
