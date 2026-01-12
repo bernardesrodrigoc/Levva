@@ -287,6 +287,18 @@ async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_
         trip_data.destination.lat, trip_data.destination.lng
     )
     
+    # Calculate suggested price if not provided
+    suggested_price = trip_data.price_per_kg
+    if not suggested_price:
+        # Base price calculation: R$3-8 per kg depending on distance
+        from route_service import haversine_distance
+        distance_km = haversine_distance(
+            trip_data.origin.lat, trip_data.origin.lng,
+            trip_data.destination.lat, trip_data.destination.lng
+        )
+        # Price formula: base R$3 + R$0.01 per km (max R$8)
+        suggested_price = min(8.0, max(3.0, 3.0 + (distance_km * 0.01)))
+    
     trip_doc = {
         "carrier_id": user_id,
         "carrier_name": user["name"],
@@ -294,6 +306,8 @@ async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_
         **trip_data.model_dump(),
         "route_polyline": route_polyline,
         "available_capacity_kg": trip_data.cargo_space.max_weight_kg,
+        "price_per_kg": suggested_price,
+        "is_recurring": trip_data.recurrence.is_recurring if trip_data.recurrence else False,
         "status": TripStatus.PUBLISHED,
         "created_at": datetime.now(timezone.utc)
     }
