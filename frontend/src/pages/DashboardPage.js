@@ -139,6 +139,34 @@ const DashboardPage = () => {
           </div>
         )}
 
+        {/* Admin Quick Access */}
+        {user?.role === 'admin' && (
+          <Card 
+            className="mb-8 border-2 border-jungle bg-jungle/5 cursor-pointer card-hover"
+            onClick={() => navigate('/admin')}
+            data-testid="admin-access-card"
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-jungle rounded-full flex items-center justify-center">
+                    <User size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-jungle">Painel Administrativo</p>
+                    <p className="text-sm text-muted-foreground">
+                      {stats?.myTrips.length || 0} verificações pendentes • Gerenciar plataforma
+                    </p>
+                  </div>
+                </div>
+                <Button className="bg-jungle hover:bg-jungle-800">
+                  Acessar Painel Admin
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {(user?.role === 'carrier' || user?.role === 'both') && (
