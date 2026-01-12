@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TruckIcon, MapPin, Calendar, Cube } from '@phosphor-icons/react';
+import { Package, TruckIcon, Calendar, Cube, Path } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Slider } from '@/components/ui/slider';
+import LocationPicker from '@/components/LocationPicker';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -17,21 +19,15 @@ const CreateTripPage = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [origin, setOrigin] = useState(null);
+  const [destination, setDestination] = useState(null);
   const [formData, setFormData] = useState({
-    originCity: '',
-    originState: '',
-    originLat: -23.5505,
-    originLng: -46.6333,
-    destinationCity: '',
-    destinationState: '',
-    destinationLat: -22.9068,
-    destinationLng: -43.1729,
     departureDate: '',
     departureTime: '08:00',
     vehicleType: 'car',
     volumeM3: '',
     maxWeightKg: '',
-    maxDeviationKm: 10,
+    corridorRadiusKm: 10,
     pricePerKg: ''
   });
 
@@ -41,21 +37,34 @@ const CreateTripPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!origin?.lat || !origin?.lng) {
+      toast.error('Selecione o ponto de origem no mapa');
+      return;
+    }
+    
+    if (!destination?.lat || !destination?.lng) {
+      toast.error('Selecione o ponto de destino no mapa');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const tripData = {
         origin: {
-          city: formData.originCity,
-          state: formData.originState,
-          lat: parseFloat(formData.originLat),
-          lng: parseFloat(formData.originLng)
+          city: origin.city || 'Cidade não identificada',
+          state: origin.state || 'BR',
+          address: origin.address,
+          lat: origin.lat,
+          lng: origin.lng
         },
         destination: {
-          city: formData.destinationCity,
-          state: formData.destinationState,
-          lat: parseFloat(formData.destinationLat),
-          lng: parseFloat(formData.destinationLng)
+          city: destination.city || 'Cidade não identificada',
+          state: destination.state || 'BR',
+          address: destination.address,
+          lat: destination.lat,
+          lng: destination.lng
         },
         departure_date: `${formData.departureDate}T${formData.departureTime}:00Z`,
         vehicle_type: formData.vehicleType,
@@ -63,7 +72,7 @@ const CreateTripPage = () => {
           volume_m3: parseFloat(formData.volumeM3),
           max_weight_kg: parseFloat(formData.maxWeightKg)
         },
-        max_deviation_km: parseInt(formData.maxDeviationKm),
+        corridor_radius_km: formData.corridorRadiusKm,
         price_per_kg: formData.pricePerKg ? parseFloat(formData.pricePerKg) : null
       };
 
@@ -101,83 +110,73 @@ const CreateTripPage = () => {
             <TruckIcon size={40} weight="duotone" className="text-jungle" />
             Criar Nova Viagem
           </h1>
-          <p className="text-muted-foreground">Publique sua rota e encontre pacotes para transportar</p>
+          <p className="text-muted-foreground">Defina sua rota no mapa e encontre pacotes para transportar</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Origin */}
+          {/* Origin with Map */}
           <Card data-testid="origin-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin size={24} weight="duotone" className="text-jungle" />
-                Origem
-              </CardTitle>
-              <CardDescription>De onde você vai partir?</CardDescription>
+              <CardTitle className="text-jungle">Ponto de Partida</CardTitle>
+              <CardDescription>Clique no mapa ou busque o endereço de onde você vai partir</CardDescription>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="originCity">Cidade</Label>
-                <Input
-                  id="originCity"
-                  placeholder="São Paulo"
-                  value={formData.originCity}
-                  onChange={(e) => handleChange('originCity', e.target.value)}
-                  required
-                  className="h-12 mt-2"
-                  data-testid="origin-city-input"
-                />
-              </div>
-              <div>
-                <Label htmlFor="originState">Estado</Label>
-                <Input
-                  id="originState"
-                  placeholder="SP"
-                  value={formData.originState}
-                  onChange={(e) => handleChange('originState', e.target.value)}
-                  required
-                  maxLength={2}
-                  className="h-12 mt-2"
-                  data-testid="origin-state-input"
-                />
-              </div>
+            <CardContent>
+              <LocationPicker
+                label="Origem"
+                value={origin}
+                onChange={setOrigin}
+                markerColor="green"
+                placeholder="Buscar endereço de partida..."
+                testIdPrefix="origin"
+              />
             </CardContent>
           </Card>
 
-          {/* Destination */}
+          {/* Destination with Map */}
           <Card data-testid="destination-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin size={24} weight="duotone" className="text-lime" />
-                Destino
-              </CardTitle>
-              <CardDescription>Para onde você vai?</CardDescription>
+              <CardTitle className="text-lime">Ponto de Chegada</CardTitle>
+              <CardDescription>Clique no mapa ou busque o endereço de destino</CardDescription>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="destinationCity">Cidade</Label>
-                <Input
-                  id="destinationCity"
-                  placeholder="Rio de Janeiro"
-                  value={formData.destinationCity}
-                  onChange={(e) => handleChange('destinationCity', e.target.value)}
-                  required
-                  className="h-12 mt-2"
-                  data-testid="destination-city-input"
-                />
+            <CardContent>
+              <LocationPicker
+                label="Destino"
+                value={destination}
+                onChange={setDestination}
+                markerColor="red"
+                placeholder="Buscar endereço de destino..."
+                testIdPrefix="destination"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Route Corridor */}
+          <Card data-testid="corridor-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Path size={24} weight="duotone" className="text-jungle" />
+                Raio do Corredor
+              </CardTitle>
+              <CardDescription>
+                Distância máxima que você aceita desviar da rota para coleta/entrega
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Raio do corredor</span>
+                <span className="font-bold text-jungle">{formData.corridorRadiusKm} km</span>
               </div>
-              <div>
-                <Label htmlFor="destinationState">Estado</Label>
-                <Input
-                  id="destinationState"
-                  placeholder="RJ"
-                  value={formData.destinationState}
-                  onChange={(e) => handleChange('destinationState', e.target.value)}
-                  required
-                  maxLength={2}
-                  className="h-12 mt-2"
-                  data-testid="destination-state-input"
-                />
-              </div>
+              <Slider
+                value={[formData.corridorRadiusKm]}
+                onValueChange={([value]) => handleChange('corridorRadiusKm', value)}
+                min={2}
+                max={20}
+                step={1}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Envios com pontos de coleta e entrega dentro de {formData.corridorRadiusKm}km da sua rota serão sugeridos
+              </p>
             </CardContent>
           </Card>
 
@@ -272,31 +271,18 @@ const CreateTripPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="maxDeviationKm">Desvio Máx. (km)</Label>
+                  <Label htmlFor="pricePerKg">Preço/kg (R$)</Label>
                   <Input
-                    id="maxDeviationKm"
+                    id="pricePerKg"
                     type="number"
-                    value={formData.maxDeviationKm}
-                    onChange={(e) => handleChange('maxDeviationKm', e.target.value)}
-                    required
+                    step="0.01"
+                    placeholder="5.00"
+                    value={formData.pricePerKg}
+                    onChange={(e) => handleChange('pricePerKg', e.target.value)}
                     className="h-12 mt-2"
-                    data-testid="max-deviation-input"
+                    data-testid="price-per-kg-input"
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="pricePerKg">Preço por kg (R$) - Opcional</Label>
-                <Input
-                  id="pricePerKg"
-                  type="number"
-                  step="0.01"
-                  placeholder="5.00"
-                  value={formData.pricePerKg}
-                  onChange={(e) => handleChange('pricePerKg', e.target.value)}
-                  className="h-12 mt-2"
-                  data-testid="price-per-kg-input"
-                />
               </div>
             </CardContent>
           </Card>
