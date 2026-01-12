@@ -222,6 +222,29 @@ const DashboardPage = () => {
           )}
         </div>
 
+        {/* Smart Suggestions Card */}
+        <Card className="card-hover cursor-pointer mb-8 border-jungle/30 bg-gradient-to-r from-jungle/5 to-lime/5" onClick={() => navigate('/sugestoes')} data-testid="suggestions-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-jungle rounded-xl flex items-center justify-center">
+                  <Lightning size={24} weight="fill" className="text-white" />
+                </div>
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    Sugestões Inteligentes
+                    <Badge className="bg-jungle/20 text-jungle">Novo</Badge>
+                  </CardTitle>
+                  <CardDescription>Combinações automáticas baseadas nas suas rotas</CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" className="text-jungle">
+                Ver Sugestões →
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
         {/* Browse Section */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Card className="card-hover cursor-pointer" onClick={() => navigate('/viagens')} data-testid="browse-trips-card">
