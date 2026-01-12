@@ -1,74 +1,50 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from pathlib import Path
 import os
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
 from datetime import datetime, timezone
+from typing import List, Optional
+from bson import ObjectId
+import boto3
+from botocore.config import Config
+import uuid
+import mercadopago
 
+from database import (
+    db, users_collection, trips_collection, shipments_collection,
+    matches_collection, payments_collection, ratings_collection,
+    flag_collection, disputes_collection, init_indexes
+)
+from models import (
+    UserRegister, UserLogin, UserResponse, TripCreate, TripResponse,
+    ShipmentCreate, ShipmentResponse, MatchResponse, PaymentInitiate,
+    PaymentResponse, RatingCreate, RatingResponse, UploadInitiate,
+    UploadResponse, AdminStats, FlagCreate, DisputeCreate,
+    UserRole, TrustLevel, VerificationStatus, TripStatus, ShipmentStatus,
+    PaymentStatus
+)
+from auth import (
+    hash_password, verify_password, create_access_token,
+    get_current_user_id
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-# Create the main app without a prefix
-app = FastAPI()
-
-# Create a router with the /api prefix
+# FastAPI app
+app = FastAPI(title="Levva API")
 api_router = APIRouter(prefix="/api")
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
-
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -77,13 +53,514 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Cloudflare R2 setup (optional, for image storage)
+def get_r2_client():
+    r2_access_key = os.getenv("R2_ACCESS_KEY")
+    r2_secret_key = os.getenv("R2_SECRET_KEY")
+    r2_endpoint = os.getenv("R2_ENDPOINT_URL")
+    
+    if r2_access_key and r2_secret_key and r2_endpoint:
+        return boto3.client(
+            "s3",
+            endpoint_url=r2_endpoint,
+            aws_access_key_id=r2_access_key,
+            aws_secret_access_key=r2_secret_key,
+            region_name="auto",
+            config=Config(signature_version="s3v4")
+        )
+    return None
+
+# Mercado Pago setup
+mp_access_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN")
+mp_sdk = mercadopago.SDK(mp_access_token) if mp_access_token else None
+
+# ============= AUTH ROUTES =============
+@api_router.post("/auth/register")
+async def register(user_data: UserRegister):
+    existing = await users_collection.find_one({"email": user_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email j\u00e1 cadastrado")
+    
+    user_doc = {
+        "email": user_data.email,
+        "password_hash": hash_password(user_data.password),
+        "name": user_data.name,
+        "phone": user_data.phone,
+        "role": user_data.role,
+        "trust_level": TrustLevel.LEVEL_1,
+        "verification_status": VerificationStatus.PENDING,
+        "profile_photo_url": None,
+        "rating": 0.0,
+        "total_deliveries": 0,
+        "created_at": datetime.now(timezone.utc),
+        "email_verified": False
+    }
+    
+    result = await users_collection.insert_one(user_doc)
+    token = create_access_token({"user_id": str(result.inserted_id)})\n    \n    return {\n        "token": token,\n        "user": {\n            "id": str(result.inserted_id),\n            "email": user_data.email,\n            "name": user_data.name,\n            "role": user_data.role\n        }\n    }
+
+@api_router.post("/auth/login")
+async def login(credentials: UserLogin):
+    user = await users_collection.find_one({"email": credentials.email})
+    if not user or not verify_password(credentials.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Credenciais inv\u00e1lidas")
+    
+    token = create_access_token({"user_id": str(user["_id"])})
+    
+    return {
+        "token": token,
+        "user": {
+            "id": str(user["_id"]),
+            "email": user["email"],
+            "name": user["name"],
+            "role": user["role"],
+            "trust_level": user["trust_level"],
+            "verification_status": user["verification_status"]
+        }
+    }
+
+@api_router.get("/auth/me")
+async def get_current_user(user_id: str = Depends(get_current_user_id)):
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usu\u00e1rio n\u00e3o encontrado")
+    
+    return {
+        "id": str(user["_id"]),
+        "email": user["email"],
+        "name": user["name"],
+        "phone": user["phone"],
+        "role": user["role"],
+        "trust_level": user["trust_level"],
+        "verification_status": user["verification_status"],
+        "profile_photo_url": user.get("profile_photo_url"),
+        "rating": user.get("rating", 0.0),
+        "total_deliveries": user.get("total_deliveries", 0)
+    }
+
+# ============= TRIP ROUTES =============
+@api_router.post("/trips", response_model=TripResponse)
+async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_user_id)):
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if user["role"] not in [UserRole.CARRIER, UserRole.BOTH]:
+        raise HTTPException(status_code=403, detail="Apenas transportadores podem criar viagens")
+    
+    trip_doc = {
+        "carrier_id": user_id,
+        "carrier_name": user["name"],
+        "carrier_rating": user.get("rating", 0.0),
+        **trip_data.model_dump(),
+        "status": TripStatus.PUBLISHED,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    result = await trips_collection.insert_one(trip_doc)
+    trip_doc["id"] = str(result.inserted_id)
+    
+    return trip_doc
+
+@api_router.get("/trips", response_model=List[TripResponse])
+async def list_trips(
+    origin_city: Optional[str] = None,
+    destination_city: Optional[str] = None,
+    status: Optional[TripStatus] = TripStatus.PUBLISHED
+):
+    query = {"status": status}
+    if origin_city:
+        query["origin.city"] = {"$regex": origin_city, "$options": "i"}
+    if destination_city:
+        query["destination.city"] = {"$regex": destination_city, "$options": "i"}
+    
+    trips = await trips_collection.find(query).to_list(100)
+    
+    for trip in trips:
+        trip["id"] = str(trip.pop("_id"))
+    
+    return trips
+
+@api_router.get("/trips/my-trips")
+async def get_my_trips(user_id: str = Depends(get_current_user_id)):
+    trips = await trips_collection.find({"carrier_id": user_id}).to_list(100)
+    
+    for trip in trips:
+        trip["id"] = str(trip.pop("_id"))
+    
+    return trips
+
+# ============= SHIPMENT ROUTES =============
+@api_router.post("/shipments", response_model=ShipmentResponse)
+async def create_shipment(shipment_data: ShipmentCreate, user_id: str = Depends(get_current_user_id)):
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if user["role"] not in [UserRole.SENDER, UserRole.BOTH]:
+        raise HTTPException(status_code=403, detail="Apenas remetentes podem criar envios")
+    
+    shipment_doc = {
+        "sender_id": user_id,
+        "sender_name": user["name"],
+        "sender_rating": user.get("rating", 0.0),
+        **shipment_data.model_dump(),
+        "status": ShipmentStatus.PUBLISHED,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    result = await shipments_collection.insert_one(shipment_doc)
+    shipment_doc["id"] = str(result.inserted_id)
+    
+    return shipment_doc
+
+@api_router.get("/shipments", response_model=List[ShipmentResponse])
+async def list_shipments(
+    origin_city: Optional[str] = None,
+    destination_city: Optional[str] = None,
+    status: Optional[ShipmentStatus] = ShipmentStatus.PUBLISHED
+):
+    query = {"status": status}
+    if origin_city:
+        query["origin.city"] = {"$regex": origin_city, "$options": "i"}
+    if destination_city:
+        query["destination.city"] = {"$regex": destination_city, "$options": "i"}
+    
+    shipments = await shipments_collection.find(query).to_list(100)
+    
+    for shipment in shipments:
+        shipment["id"] = str(shipment.pop("_id"))
+    
+    return shipments
+
+@api_router.get("/shipments/my-shipments")
+async def get_my_shipments(user_id: str = Depends(get_current_user_id)):
+    shipments = await shipments_collection.find({"sender_id": user_id}).to_list(100)
+    
+    for shipment in shipments:
+        shipment["id"] = str(shipment.pop("_id"))
+    
+    return shipments
+
+# ============= MATCHING ROUTES =============
+@api_router.post("/matches/create")
+async def create_match(
+    trip_id: str,
+    shipment_id: str,
+    user_id: str = Depends(get_current_user_id)
+):
+    trip = await trips_collection.find_one({"_id": ObjectId(trip_id)})
+    shipment = await shipments_collection.find_one({"_id": ObjectId(shipment_id)})
+    
+    if not trip or not shipment:
+        raise HTTPException(status_code=404, detail="Viagem ou envio n\u00e3o encontrado")
+    
+    # Calculate price (simple algorithm)
+    base_price = shipment["package"]["weight_kg"] * trip.get("price_per_kg", 5.0)
+    platform_commission = base_price * 0.15
+    carrier_earnings = base_price - platform_commission
+    
+    match_doc = {
+        "trip_id": trip_id,
+        "shipment_id": shipment_id,
+        "carrier_id": trip["carrier_id"],
+        "sender_id": shipment["sender_id"],
+        "estimated_price": base_price,
+        "platform_commission": platform_commission,
+        "carrier_earnings": carrier_earnings,
+        "status": "pending_payment",
+        "pickup_confirmed_at": None,
+        "delivery_confirmed_at": None,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    result = await matches_collection.insert_one(match_doc)
+    
+    # Update statuses
+    await trips_collection.update_one(
+        {"_id": ObjectId(trip_id)},
+        {"$set": {"status": TripStatus.MATCHED}}
+    )
+    await shipments_collection.update_one(
+        {"_id": ObjectId(shipment_id)},
+        {"$set": {"status": ShipmentStatus.MATCHED}}
+    )
+    
+    return {
+        "id": str(result.inserted_id),
+        "estimated_price": base_price,
+        "carrier_earnings": carrier_earnings,
+        "platform_commission": platform_commission
+    }
+
+@api_router.get("/matches/my-matches")
+async def get_my_matches(user_id: str = Depends(get_current_user_id)):
+    matches = await matches_collection.find({
+        "$or": [
+            {"carrier_id": user_id},
+            {"sender_id": user_id}
+        ]
+    }).to_list(100)
+    
+    for match in matches:
+        match["id"] = str(match.pop("_id"))
+    
+    return matches
+
+@api_router.post("/matches/{match_id}/confirm-pickup")
+async def confirm_pickup(match_id: str, photo_url: str, user_id: str = Depends(get_current_user_id)):
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+    
+    if match["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Apenas o transportador pode confirmar coleta")
+    
+    await matches_collection.update_one(
+        {"_id": ObjectId(match_id)},
+        {
+            "$set": {
+                "pickup_confirmed_at": datetime.now(timezone.utc),
+                "pickup_photo_url": photo_url,
+                "status": "in_transit"
+            }
+        }
+    )
+    
+    return {"message": "Coleta confirmada com sucesso"}
+
+@api_router.post("/matches/{match_id}/confirm-delivery")
+async def confirm_delivery(match_id: str, photo_url: str, user_id: str = Depends(get_current_user_id)):
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+    
+    if match["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Apenas o transportador pode confirmar entrega")
+    
+    await matches_collection.update_one(
+        {"_id": ObjectId(match_id)},
+        {
+            "$set": {
+                "delivery_confirmed_at": datetime.now(timezone.utc),
+                "delivery_photo_url": photo_url,
+                "status": "delivered"
+            }
+        }
+    )
+    
+    # Release payment from escrow
+    payment = await payments_collection.find_one({"match_id": match_id})
+    if payment:
+        await payments_collection.update_one(
+            {"match_id": match_id},
+            {"$set": {"status": PaymentStatus.RELEASED}}
+        )
+    
+    return {"message": "Entrega confirmada com sucesso"}
+
+# ============= PAYMENT ROUTES =============
+@api_router.post("/payments/initiate")
+async def initiate_payment(payment_data: PaymentInitiate, user_id: str = Depends(get_current_user_id)):
+    match = await matches_collection.find_one({"_id": ObjectId(payment_data.match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+    
+    if match["sender_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Apenas o remetente pode iniciar pagamento")
+    
+    payment_doc = {
+        "match_id": payment_data.match_id,
+        "sender_id": user_id,
+        "amount": payment_data.amount,
+        "status": PaymentStatus.PENDING,
+        "mercadopago_preference_id": None,
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    # Create Mercado Pago preference if SDK is configured
+    if mp_sdk:
+        try:
+            preference_data = {
+                "items": [{
+                    "title": f"Entrega Levva - {match['shipment_id']}",
+                    "quantity": 1,
+                    "unit_price": float(payment_data.amount),
+                    "currency_id": "BRL"
+                }],
+                "external_reference": payment_data.match_id,
+                "back_urls": {
+                    "success": os.getenv("FRONTEND_URL", "") + "/payment/success",
+                    "failure": os.getenv("FRONTEND_URL", "") + "/payment/failure"
+                }
+            }
+            
+            preference = mp_sdk.preference().create(preference_data)
+            payment_doc["mercadopago_preference_id"] = preference["response"]["id"]
+            payment_doc["checkout_url"] = preference["response"]["init_point"]
+        except Exception as e:
+            logger.error(f"Erro ao criar prefer\u00eancia Mercado Pago: {e}")
+    
+    result = await payments_collection.insert_one(payment_doc)
+    payment_doc["id"] = str(result.inserted_id)
+    
+    return payment_doc
+
+@api_router.post("/payments/webhook")
+async def mercadopago_webhook(data: dict):
+    if data.get("type") == "payment":
+        payment_id = data.get("data", {}).get("id")
+        
+        if mp_sdk and payment_id:
+            try:
+                payment_info = mp_sdk.payment().get(payment_id)
+                if payment_info["response"]["status"] == "approved":
+                    external_ref = payment_info["response"]["external_reference"]
+                    
+                    await payments_collection.update_one(
+                        {"match_id": external_ref},
+                        {"$set": {"status": PaymentStatus.ESCROWED}}
+                    )
+                    
+                    await matches_collection.update_one(
+                        {"_id": ObjectId(external_ref)},
+                        {"$set": {"status": "paid"}}
+                    )
+            except Exception as e:
+                logger.error(f"Erro ao processar webhook: {e}")
+    
+    return {"status": "ok"}
+
+# ============= RATING ROUTES =============
+@api_router.post("/ratings")
+async def create_rating(rating_data: RatingCreate, user_id: str = Depends(get_current_user_id)):
+    match = await matches_collection.find_one({"_id": ObjectId(rating_data.match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+    
+    # Check if user is part of this match
+    if user_id not in [match["carrier_id"], match["sender_id"]]:
+        raise HTTPException(status_code=403, detail="Voc\u00ea n\u00e3o pode avaliar esta transa\u00e7\u00e3o")
+    
+    # Check if rating already exists
+    existing = await ratings_collection.find_one({
+        "match_id": rating_data.match_id,
+        "rater_id": user_id
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Voc\u00ea j\u00e1 avaliou esta transa\u00e7\u00e3o")
+    
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    rating_doc = {
+        **rating_data.model_dump(),
+        "rater_id": user_id,
+        "rater_name": user["name"],
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await ratings_collection.insert_one(rating_doc)
+    
+    # Update user rating
+    user_ratings = await ratings_collection.find({"rated_user_id": rating_data.rated_user_id}).to_list(1000)
+    avg_rating = sum(r["rating"] for r in user_ratings) / len(user_ratings) if user_ratings else 0
+    
+    await users_collection.update_one(
+        {"_id": ObjectId(rating_data.rated_user_id)},
+        {"$set": {"rating": round(avg_rating, 2)}}
+    )
+    
+    return {"message": "Avalia\u00e7\u00e3o criada com sucesso"}
+
+@api_router.get("/ratings/{user_id}")
+async def get_user_ratings(user_id: str):
+    ratings = await ratings_collection.find({"rated_user_id": user_id}).to_list(100)
+    
+    for rating in ratings:
+        rating["id"] = str(rating.pop("_id"))
+    
+    return ratings
+
+# ============= UPLOAD ROUTES =============
+@api_router.post("/uploads/presigned-url")
+async def get_presigned_url(upload_data: UploadInitiate, user_id: str = Depends(get_current_user_id)):
+    r2_client = get_r2_client()
+    
+    if not r2_client:
+        raise HTTPException(status_code=503, detail="Servi\u00e7o de upload n\u00e3o configurado")
+    
+    upload_id = str(uuid.uuid4())
+    file_extension = upload_data.content_type.split('/')[-1]
+    file_key = f"{upload_data.file_type}/{user_id}/{upload_id}.{file_extension}"
+    
+    try:
+        presigned_url = r2_client.generate_presigned_url(
+            ClientMethod="put_object",
+            Params={
+                "Bucket": os.getenv("R2_BUCKET_NAME", "levva-uploads"),
+                "Key": file_key,
+                "ContentType": upload_data.content_type
+            },
+            ExpiresIn=3600
+        )
+        
+        return {
+            "presigned_url": presigned_url,
+            "file_key": file_key,
+            "upload_id": upload_id
+        }
+    except Exception as e:
+        logger.error(f"Erro ao gerar URL pr\u00e9-assinada: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao gerar URL de upload")
+
+# ============= ADMIN ROUTES =============
+@api_router.get("/admin/stats")
+async def get_admin_stats(user_id: str = Depends(get_current_user_id)):
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    if user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    total_users = await users_collection.count_documents({})
+    active_trips = await trips_collection.count_documents({"status": TripStatus.PUBLISHED})
+    active_shipments = await shipments_collection.count_documents({"status": ShipmentStatus.PUBLISHED})
+    total_matches = await matches_collection.count_documents({})
+    pending_verifications = await users_collection.count_documents({"verification_status": VerificationStatus.PENDING})
+    flagged_items = await flag_collection.count_documents({"status": "pending"})
+    
+    return {
+        "total_users": total_users,
+        "active_trips": active_trips,
+        "active_shipments": active_shipments,
+        "total_matches": total_matches,
+        "pending_verifications": pending_verifications,
+        "flagged_items": flagged_items
+    }
+
+@api_router.post("/admin/flags")
+async def create_flag(flag_data: FlagCreate, user_id: str = Depends(get_current_user_id)):
+    flag_doc = {
+        **flag_data.model_dump(),
+        "reporter_id": user_id,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await flag_collection.insert_one(flag_doc)
+    
+    return {"message": "Denúncia criada com sucesso"}
+
+# ============= HEALTH CHECK =============
+@api_router.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "Levva API"}
+
+app.include_router(api_router)
+
+@app.on_event("startup")
+async def startup_event():
+    await init_indexes()
+    logger.info("Levva API started successfully")
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+async def shutdown_event():
+    logger.info("Levva API shutting down")
