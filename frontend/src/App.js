@@ -9,6 +9,8 @@ import RegisterPage from '@/pages/RegisterPage';
 import DashboardPage from '@/pages/DashboardPage';
 import CreateTripPage from '@/pages/CreateTripPage';
 import CreateShipmentPage from '@/pages/CreateShipmentPage';
+import BrowseTripsPage from '@/pages/BrowseTripsPage';
+import BrowseShipmentsPage from '@/pages/BrowseShipmentsPage';
 import '@/App.css';
 
 function App() {
