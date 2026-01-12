@@ -60,13 +60,19 @@ const AdminDashboard = () => {
       
       console.log('Fetching admin data with token:', token?.substring(0, 30) + '...');
       
-      const statsRes = await axios.get(`${API}/admin/stats`, { headers });
-      console.log('Stats received:', statsRes.data);
+      const [statsRes, verificationsRes, disputesRes] = await Promise.all([
+        axios.get(`${API}/admin/stats`, { headers }),
+        axios.get(`${API}/admin/verifications/pending`, { headers }),
+        axios.get(`${API}/admin/disputes`, { headers }).catch(() => ({ data: [] }))
+      ]);
       
-      const verificationsRes = await axios.get(`${API}/admin/verifications/pending`, { headers });
+      console.log('Stats received:', statsRes.data);
       console.log('Verifications received:', verificationsRes.data.length, 'items');
+      console.log('Disputes received:', disputesRes.data.length, 'items');
       
       setStats(statsRes.data);
+      setPendingVerifications(verificationsRes.data);
+      setDisputes(disputesRes.data);
       setPendingVerifications(verificationsRes.data);
       
       console.log('State updated with', verificationsRes.data.length, 'verifications');
