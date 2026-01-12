@@ -373,6 +373,14 @@ const MatchDetailPage = () => {
             </Button>
           )}
         </div>
+
+        {/* Chat Section */}
+        <div className="mt-8">
+          <ChatBox 
+            matchId={matchId} 
+            recipientName={isCarrier ? match.sender_name : match.carrier_name}
+          />
+        </div>
       </div>
 
       {/* Photo Dialog */}
