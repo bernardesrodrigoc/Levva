@@ -464,7 +464,7 @@ async def initiate_payment(payment_data: PaymentInitiate, user_id: str = Depends
     match = await matches_collection.find_one({"_id": ObjectId(payment_data.match_id)})
     
     if not match:
-        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
     
     if match["sender_id"] != user_id:
         raise HTTPException(status_code=403, detail="Apenas o remetente pode iniciar pagamento")
@@ -475,6 +475,7 @@ async def initiate_payment(payment_data: PaymentInitiate, user_id: str = Depends
         "amount": payment_data.amount,
         "status": PaymentStatus.PENDING,
         "mercadopago_preference_id": None,
+        "checkout_url": None,
         "created_at": datetime.now(timezone.utc)
     }
     
@@ -491,15 +492,46 @@ async def initiate_payment(payment_data: PaymentInitiate, user_id: str = Depends
                 "external_reference": payment_data.match_id,
                 "back_urls": {
                     "success": os.getenv("FRONTEND_URL", "") + "/payment/success",
-                    "failure": os.getenv("FRONTEND_URL", "") + "/payment/failure"
-                }
+                    "failure": os.getenv("FRONTEND_URL", "") + "/payment/failure",
+                    "pending": os.getenv("FRONTEND_URL", "") + "/payment/pending"
+                },
+                "auto_return": "approved"
             }
             
             preference = mp_sdk.preference().create(preference_data)
             payment_doc["mercadopago_preference_id"] = preference["response"]["id"]
             payment_doc["checkout_url"] = preference["response"]["init_point"]
         except Exception as e:
-            logger.error(f"Erro ao criar prefer\u00eancia Mercado Pago: {e}")
+            logger.error(f"Erro ao criar preferência Mercado Pago: {e}")
+    
+    result = await payments_collection.insert_one(payment_doc)
+    
+    # Return serializable response
+    return {
+        "id": str(result.inserted_id),
+        "match_id": payment_data.match_id,
+        "amount": payment_data.amount,
+        "status": str(payment_doc["status"]),
+        "checkout_url": payment_doc.get("checkout_url"),
+        "mercadopago_preference_id": payment_doc.get("mercadopago_preference_id")
+    }
+
+@api_router.get("/payments/{match_id}/status")
+async def get_payment_status(match_id: str, user_id: str = Depends(get_current_user_id)):
+    """Get payment status for a match"""
+    payment = await payments_collection.find_one({"match_id": match_id})
+    
+    if not payment:
+        return {"status": "not_initiated", "match_id": match_id}
+    
+    return {
+        "id": str(payment["_id"]),
+        "match_id": match_id,
+        "amount": payment.get("amount"),
+        "status": str(payment.get("status")),
+        "checkout_url": payment.get("checkout_url"),
+        "created_at": payment.get("created_at").isoformat() if payment.get("created_at") else None
+    }
     
     result = await payments_collection.insert_one(payment_doc)
     payment_doc["id"] = str(result.inserted_id)
