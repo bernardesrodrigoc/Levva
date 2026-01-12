@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Package, MapPin, TruckIcon, User, Star, Check, X, Camera, CurrencyDollar } from '@phosphor-icons/react';
+import { Package, MapPin, TruckIcon, User, Star, Check, X, Camera, CurrencyDollar, CreditCard } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ const MatchDetailPage = () => {
   const navigate = useNavigate();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [photoAction, setPhotoAction] = useState(null);
@@ -44,6 +45,32 @@ const MatchDetailPage = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    setPaymentLoading(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${API}/payments/initiate`,
+        {
+          match_id: matchId,
+          amount: match.estimated_price
+        },
+        { headers }
+      );
+
+      if (response.data.checkout_url) {
+        // Redirect to Mercado Pago checkout
+        window.location.href = response.data.checkout_url;
+      } else {
+        toast.error('Erro ao gerar link de pagamento');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao iniciar pagamento');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
