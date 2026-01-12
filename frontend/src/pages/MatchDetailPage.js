@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Package, MapPin, TruckIcon, User, Star, Check, X, Camera, CurrencyDollar, CreditCard, MapTrifold } from '@phosphor-icons/react';
+import { Package, MapPin, TruckIcon, User, Star, Check, X, Camera, CurrencyDollar, CreditCard, MapTrifold, Navigation, Play, Pause } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +8,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChatBox } from '@/components/ChatBox';
 import RouteMap from '@/components/RouteMap';
+import LiveTrackingMap from '@/components/LiveTrackingMap';
+import { useGPSTracking, useCarrierGPS } from '@/hooks/useGPSTracking';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
