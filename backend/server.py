@@ -138,7 +138,7 @@ async def get_verification_status(user_id: str = Depends(get_current_user_id)):
 async def register(user_data: UserRegister):
     existing = await users_collection.find_one({"email": user_data.email})
     if existing:
-        raise HTTPException(status_code=400, detail="Email j\u00e1 cadastrado")
+        raise HTTPException(status_code=400, detail="Email já cadastrado")
     
     user_doc = {
         "email": user_data.email,
@@ -172,7 +172,7 @@ async def register(user_data: UserRegister):
 async def login(credentials: UserLogin):
     user = await users_collection.find_one({"email": credentials.email})
     if not user or not verify_password(credentials.password, user["password_hash"]):
-        raise HTTPException(status_code=401, detail="Credenciais inv\u00e1lidas")
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
     
     token = create_access_token({"user_id": str(user["_id"])})
     
@@ -192,7 +192,7 @@ async def login(credentials: UserLogin):
 async def get_current_user(user_id: str = Depends(get_current_user_id)):
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
     if not user:
-        raise HTTPException(status_code=404, detail="Usu\u00e1rio n\u00e3o encontrado")
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
     return {
         "id": str(user["_id"]),
@@ -696,7 +696,7 @@ async def create_match(
     shipment = await shipments_collection.find_one({"_id": ObjectId(shipment_id)})
     
     if not trip or not shipment:
-        raise HTTPException(status_code=404, detail="Viagem ou envio n\u00e3o encontrado")
+        raise HTTPException(status_code=404, detail="Viagem ou envio não encontrado")
     
     # Calculate price (simple algorithm)
     price_per_kg = trip.get("price_per_kg") or 5.0
@@ -791,7 +791,7 @@ async def confirm_pickup(match_id: str, photo_url: str, user_id: str = Depends(g
     match = await matches_collection.find_one({"_id": ObjectId(match_id)})
     
     if not match:
-        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
     
     if match["carrier_id"] != user_id:
         raise HTTPException(status_code=403, detail="Apenas o transportador pode confirmar coleta")
@@ -814,7 +814,7 @@ async def confirm_delivery(match_id: str, photo_url: str, user_id: str = Depends
     match = await matches_collection.find_one({"_id": ObjectId(match_id)})
     
     if not match:
-        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
     
     if match["carrier_id"] != user_id:
         raise HTTPException(status_code=403, detail="Apenas o transportador pode confirmar entrega")
@@ -946,11 +946,11 @@ async def create_rating(rating_data: RatingCreate, user_id: str = Depends(get_cu
     match = await matches_collection.find_one({"_id": ObjectId(rating_data.match_id)})
     
     if not match:
-        raise HTTPException(status_code=404, detail="Combina\u00e7\u00e3o n\u00e3o encontrada")
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
     
     # Check if user is part of this match
     if user_id not in [match["carrier_id"], match["sender_id"]]:
-        raise HTTPException(status_code=403, detail="Voc\u00ea n\u00e3o pode avaliar esta transa\u00e7\u00e3o")
+        raise HTTPException(status_code=403, detail="Você não pode avaliar esta transação")
     
     # Check if rating already exists
     existing = await ratings_collection.find_one({
@@ -959,7 +959,7 @@ async def create_rating(rating_data: RatingCreate, user_id: str = Depends(get_cu
     })
     
     if existing:
-        raise HTTPException(status_code=400, detail="Voc\u00ea j\u00e1 avaliou esta transa\u00e7\u00e3o")
+        raise HTTPException(status_code=400, detail="Você já avaliou esta transação")
     
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
     
@@ -981,7 +981,7 @@ async def create_rating(rating_data: RatingCreate, user_id: str = Depends(get_cu
         {"$set": {"rating": round(avg_rating, 2)}}
     )
     
-    return {"message": "Avalia\u00e7\u00e3o criada com sucesso"}
+    return {"message": "Avaliação criada com sucesso"}
 
 @api_router.get("/ratings/{user_id}")
 async def get_user_ratings(user_id: str):
@@ -1702,8 +1702,12 @@ async def websocket_carrier_tracking(websocket: WebSocket, match_id: str, token:
     """
     try:
         # Validate token
-        payload = decode_token(token)
-        user_id = payload.get("user_id")
+        try:
+            payload = decode_token(token)
+            user_id = payload.get("user_id")
+        except Exception:
+            await websocket.close(code=4001, reason="Token inválido ou expirado")
+            return
         
         if not user_id:
             await websocket.close(code=4001, reason="Token inválido")
@@ -1719,6 +1723,7 @@ async def websocket_carrier_tracking(websocket: WebSocket, match_id: str, token:
             await websocket.close(code=4003, reason="Apenas o transportador pode enviar localização")
             return
         
+        # Enforce status check (Optimization: Battery & Data)
         if match.get("status") not in ["paid", "in_transit"]:
             await websocket.close(code=4000, reason="Rastreamento não permitido para este status")
             return
@@ -1754,8 +1759,12 @@ async def websocket_watch_tracking(websocket: WebSocket, match_id: str, token: s
     """
     try:
         # Validate token
-        payload = decode_token(token)
-        user_id = payload.get("user_id")
+        try:
+            payload = decode_token(token)
+            user_id = payload.get("user_id")
+        except Exception:
+            await websocket.close(code=4001, reason="Token inválido ou expirado")
+            return
         
         if not user_id:
             await websocket.close(code=4001, reason="Token inválido")
@@ -1767,10 +1776,19 @@ async def websocket_watch_tracking(websocket: WebSocket, match_id: str, token: s
             await websocket.close(code=4004, reason="Combinação não encontrada")
             return
         
-        if user_id not in [match["sender_id"], match["carrier_id"]]:
+        # Security: Check if user is Sender, Carrier OR Admin
+        user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        is_admin = user and user.get("role") == "admin"
+
+        if not is_admin and user_id not in [match["sender_id"], match["carrier_id"]]:
             await websocket.close(code=4003, reason="Acesso negado")
             return
         
+        # Security: Don't allow watching cancelled trips
+        if match.get("status") == "cancelled":
+             await websocket.close(code=4000, reason="Entrega cancelada")
+             return
+
         # Connect and handle messages
         await manager.connect_watcher(websocket, match_id, user_id)
         await handle_watcher_messages(websocket, user_id, match_id)
