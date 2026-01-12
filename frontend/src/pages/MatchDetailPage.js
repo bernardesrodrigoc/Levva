@@ -251,12 +251,12 @@ const MatchDetailPage = () => {
           </CardContent>
         </Card>
 
-        {/* Route Map */}
+        {/* Route Map / Live Tracking */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapTrifold size={24} weight="duotone" className="text-jungle" />
-              Mapa da Rota
+              {match.status === 'in_transit' ? 'Rastreamento em Tempo Real' : 'Mapa da Rota'}
             </CardTitle>
             <CardDescription>
               {match.status === 'in_transit' 
@@ -266,23 +266,33 @@ const MatchDetailPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RouteMap
-              originCity={match.trip?.origin.city}
-              originLat={match.trip?.origin.lat}
-              originLng={match.trip?.origin.lng}
-              originAddress={match.trip?.origin.address}
-              destinationCity={match.trip?.destination.city}
-              destinationLat={match.trip?.destination.lat}
-              destinationLng={match.trip?.destination.lng}
-              destinationAddress={match.trip?.destination.address}
-              routePolyline={match.trip?.route_polyline}
-              corridorRadiusKm={match.trip?.corridor_radius_km || 10}
-              showCorridor={true}
-              pickupLocation={match.shipment?.origin}
-              dropoffLocation={match.shipment?.destination}
-              status={match.status}
-              height="350px"
-            />
+            {/* Live Tracking for in_transit status */}
+            {match.status === 'in_transit' ? (
+              <LiveTrackingSection 
+                matchId={matchId} 
+                match={match} 
+                isCarrier={isCarrier}
+                token={token}
+              />
+            ) : (
+              <RouteMap
+                originCity={match.trip?.origin.city}
+                originLat={match.trip?.origin.lat}
+                originLng={match.trip?.origin.lng}
+                originAddress={match.trip?.origin.address}
+                destinationCity={match.trip?.destination.city}
+                destinationLat={match.trip?.destination.lat}
+                destinationLng={match.trip?.destination.lng}
+                destinationAddress={match.trip?.destination.address}
+                routePolyline={match.trip?.route_polyline}
+                corridorRadiusKm={match.trip?.corridor_radius_km || 10}
+                showCorridor={true}
+                pickupLocation={match.shipment?.origin}
+                dropoffLocation={match.shipment?.destination}
+                status={match.status}
+                height="350px"
+              />
+            )}
           </CardContent>
         </Card>
 
