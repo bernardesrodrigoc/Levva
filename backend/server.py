@@ -209,11 +209,19 @@ async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_
             detail="Você precisa verificar sua identidade antes de criar viagens"
         )
     
+    # Generate route polyline
+    route_polyline = await get_route_polyline(
+        trip_data.origin.lat, trip_data.origin.lng,
+        trip_data.destination.lat, trip_data.destination.lng
+    )
+    
     trip_doc = {
         "carrier_id": user_id,
         "carrier_name": user["name"],
         "carrier_rating": user.get("rating", 0.0),
         **trip_data.model_dump(),
+        "route_polyline": route_polyline,
+        "available_capacity_kg": trip_data.cargo_space.max_weight_kg,
         "status": TripStatus.PUBLISHED,
         "created_at": datetime.now(timezone.utc)
     }
