@@ -116,6 +116,8 @@ class TripResponse(BaseModel):
     route_polyline: Optional[List[List[float]]] = None  # [[lat, lng], ...]
     price_per_kg: Optional[float] = None
     status: TripStatus
+    is_recurring: bool = False
+    recurrence: Optional[RecurrencePattern] = None
     created_at: datetime
 
 # Shipment Models
