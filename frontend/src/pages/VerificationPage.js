@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Camera, IdentificationCard, User, Warning } from '@phosphor-icons/react';
+import { Package, Camera, IdentificationCard, User, Warning, Loader2, CheckCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ const VerificationPage = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(null);
   const [formData, setFormData] = useState({
     cpf: '',
     birthDate: '',
@@ -28,18 +29,68 @@ const VerificationPage = () => {
     zipCode: '',
     profilePhoto: null,
     profilePhotoPreview: null,
+    profilePhotoUrl: null,
     idFront: null,
     idFrontPreview: null,
+    idFrontUrl: null,
     idBack: null,
     idBackPreview: null,
+    idBackUrl: null,
     selfie: null,
     selfiePreview: null,
+    selfieUrl: null,
     driverLicense: null,
-    driverLicensePreview: null
+    driverLicensePreview: null,
+    driverLicenseUrl: null
   });
 
-  const handleFileChange = (field, previewField, file) => {
+  // Upload file to R2 using presigned URL
+  const uploadFileToR2 = async (file, fileType) => {
+    try {
+      setUploadingFile(fileType);
+      
+      // Step 1: Get presigned URL from backend
+      const presignedResponse = await axios.post(
+        `${API}/uploads/presigned-url`,
+        {
+          file_type: fileType,
+          content_type: file.type
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const { presigned_url, file_key, content_type } = presignedResponse.data;
+      
+      // Step 2: Upload directly to R2
+      await axios.put(presigned_url, file, {
+        headers: {
+          'Content-Type': content_type
+        }
+      });
+      
+      // Step 3: Confirm upload and get public URL
+      const confirmResponse = await axios.post(
+        `${API}/uploads/confirm`,
+        {
+          file_key: file_key,
+          file_type: fileType
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setUploadingFile(null);
+      return confirmResponse.data.file_url;
+      
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadingFile(null);
+      throw error;
+    }
+  };
+
+  const handleFileChange = async (field, previewField, urlField, fileType, file) => {
     if (file) {
+      // First show preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
@@ -49,6 +100,23 @@ const VerificationPage = () => {
         }));
       };
       reader.readAsDataURL(file);
+      
+      // Then upload to R2
+      try {
+        const url = await uploadFileToR2(file, fileType);
+        setFormData(prev => ({
+          ...prev,
+          [urlField]: url
+        }));
+        toast.success('Arquivo enviado com sucesso!');
+      } catch (error) {
+        toast.error('Erro ao enviar arquivo. Tente novamente.');
+        setFormData(prev => ({
+          ...prev,
+          [field]: null,
+          [previewField]: null
+        }));
+      }
     }
   };
 
@@ -67,7 +135,7 @@ const VerificationPage = () => {
 
   const handleSubmitStep2 = (e) => {
     e.preventDefault();
-    if (!formData.profilePhoto) {
+    if (!formData.profilePhotoUrl) {
       toast.error('Foto de perfil é obrigatória');
       return;
     }
@@ -76,7 +144,7 @@ const VerificationPage = () => {
 
   const handleSubmitStep3 = (e) => {
     e.preventDefault();
-    if (!formData.idFront || !formData.idBack || !formData.selfie) {
+    if (!formData.idFrontUrl || !formData.idBackUrl || !formData.selfieUrl) {
       toast.error('Todos os documentos são obrigatórios');
       return;
     }
@@ -89,7 +157,7 @@ const VerificationPage = () => {
 
   const handleSubmitStep4 = (e) => {
     e.preventDefault();
-    if (!formData.driverLicense) {
+    if (!formData.driverLicenseUrl) {
       toast.error('CNH é obrigatória para transportadores');
       return;
     }
@@ -99,7 +167,6 @@ const VerificationPage = () => {
   const handleFinalSubmit = async () => {
     setLoading(true);
     try {
-      // Use real Unsplash URLs as placeholders until R2 is implemented
       const verificationData = {
         cpf: formData.cpf,
         birth_date: formData.birthDate,
@@ -110,11 +177,11 @@ const VerificationPage = () => {
           zip_code: formData.zipCode
         },
         documents: {
-          profile_photo: formData.profilePhotoPreview || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=300&h=300&fit=crop',
-          id_front: formData.idFrontPreview || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=300&fit=crop',
-          id_back: formData.idBackPreview || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=300&fit=crop',
-          selfie: formData.selfiePreview || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop',
-          driver_license: formData.driverLicense ? (formData.driverLicensePreview || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=300&fit=crop') : null
+          profile_photo: formData.profilePhotoUrl,
+          id_front: formData.idFrontUrl,
+          id_back: formData.idBackUrl,
+          selfie: formData.selfieUrl,
+          driver_license: formData.driverLicenseUrl || null
         }
       };
 
@@ -132,6 +199,44 @@ const VerificationPage = () => {
   };
 
   const progress = (step / (user?.role === 'carrier' || user?.role === 'both' ? 4 : 3)) * 100;
+
+  const FileUploadZone = ({ label, preview, isUploading, isUploaded, onFileSelect, testId }) => (
+    <div>
+      <Label>{label}</Label>
+      <div className="mt-2 border-2 border-dashed rounded-lg p-6 relative">
+        {isUploading && (
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-lg">
+            <div className="flex flex-col items-center">
+              <Loader2 className="w-8 h-8 animate-spin text-jungle" />
+              <span className="text-sm mt-2">Enviando...</span>
+            </div>
+          </div>
+        )}
+        {preview ? (
+          <div className="relative">
+            <img src={preview} alt="Preview" className="w-full h-48 object-contain mb-4" />
+            {isUploaded && (
+              <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
+                <CheckCircle size={20} />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center text-center py-8">
+            <Camera size={32} className="text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">Clique ou arraste para selecionar</p>
+          </div>
+        )}
+        <Input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(e) => onFileSelect(e.target.files[0])}
+          disabled={isUploading}
+          data-testid={testId}
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -279,20 +384,36 @@ const VerificationPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col items-center">
-                  {formData.profilePhotoPreview ? (
-                    <img src={formData.profilePhotoPreview} alt="Preview" className="w-48 h-48 rounded-full object-cover mb-4" />
-                  ) : (
-                    <div className="w-48 h-48 rounded-full bg-muted flex items-center justify-center mb-4">
-                      <Camera size={48} className="text-muted-foreground" />
-                    </div>
-                  )}
+                  <div className="relative mb-4">
+                    {uploadingFile === 'profile' && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-full">
+                        <Loader2 className="w-8 h-8 animate-spin text-jungle" />
+                      </div>
+                    )}
+                    {formData.profilePhotoPreview ? (
+                      <div className="relative">
+                        <img src={formData.profilePhotoPreview} alt="Preview" className="w-48 h-48 rounded-full object-cover" />
+                        {formData.profilePhotoUrl && (
+                          <div className="absolute bottom-2 right-2 bg-green-500 text-white rounded-full p-1">
+                            <CheckCircle size={24} />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-48 h-48 rounded-full bg-muted flex items-center justify-center">
+                        <Camera size={48} className="text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
                   <Input
                     type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange('profilePhoto', 'profilePhotoPreview', e.target.files[0])}
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => handleFileChange('profilePhoto', 'profilePhotoPreview', 'profilePhotoUrl', 'profile', e.target.files[0])}
                     className="max-w-xs"
+                    disabled={uploadingFile === 'profile'}
                     data-testid="profile-photo-input"
                   />
+                  <p className="text-xs text-muted-foreground mt-2">Formatos aceitos: JPEG, PNG, WebP. Máximo 5MB</p>
                 </div>
               </CardContent>
             </Card>
@@ -301,7 +422,7 @@ const VerificationPage = () => {
               <Button type="button" variant="outline" className="flex-1 h-12" onClick={() => setStep(1)}>
                 Voltar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800">
+              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800" disabled={uploadingFile !== null}>
                 Continuar
               </Button>
             </div>
@@ -320,68 +441,32 @@ const VerificationPage = () => {
                 <CardDescription>RG ou CNH + Selfie com documento</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* ID Front */}
-                <div>
-                  <Label>Frente do Documento *</Label>
-                  <div className="mt-2 border-2 border-dashed rounded-lg p-6">
-                    {formData.idFrontPreview ? (
-                      <img src={formData.idFrontPreview} alt="ID Front" className="w-full h-48 object-contain mb-4" />
-                    ) : (
-                      <div className="flex flex-col items-center text-center py-8">
-                        <Camera size={32} className="text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">Frente do RG ou CNH</p>
-                      </div>
-                    )}
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange('idFront', 'idFrontPreview', e.target.files[0])}
-                      data-testid="id-front-input"
-                    />
-                  </div>
-                </div>
+                <FileUploadZone
+                  label="Frente do Documento *"
+                  preview={formData.idFrontPreview}
+                  isUploading={uploadingFile === 'id_front'}
+                  isUploaded={!!formData.idFrontUrl}
+                  onFileSelect={(file) => handleFileChange('idFront', 'idFrontPreview', 'idFrontUrl', 'id_front', file)}
+                  testId="id-front-input"
+                />
 
-                {/* ID Back */}
-                <div>
-                  <Label>Verso do Documento *</Label>
-                  <div className="mt-2 border-2 border-dashed rounded-lg p-6">
-                    {formData.idBackPreview ? (
-                      <img src={formData.idBackPreview} alt="ID Back" className="w-full h-48 object-contain mb-4" />
-                    ) : (
-                      <div className="flex flex-col items-center text-center py-8">
-                        <Camera size={32} className="text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">Verso do documento</p>
-                      </div>
-                    )}
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange('idBack', 'idBackPreview', e.target.files[0])}
-                      data-testid="id-back-input"
-                    />
-                  </div>
-                </div>
+                <FileUploadZone
+                  label="Verso do Documento *"
+                  preview={formData.idBackPreview}
+                  isUploading={uploadingFile === 'id_back'}
+                  isUploaded={!!formData.idBackUrl}
+                  onFileSelect={(file) => handleFileChange('idBack', 'idBackPreview', 'idBackUrl', 'id_back', file)}
+                  testId="id-back-input"
+                />
 
-                {/* Selfie */}
-                <div>
-                  <Label>Selfie com Documento *</Label>
-                  <div className="mt-2 border-2 border-dashed rounded-lg p-6">
-                    {formData.selfiePreview ? (
-                      <img src={formData.selfiePreview} alt="Selfie" className="w-full h-48 object-contain mb-4" />
-                    ) : (
-                      <div className="flex flex-col items-center text-center py-8">
-                        <Camera size={32} className="text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">Você segurando o documento ao lado do rosto</p>
-                      </div>
-                    )}
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange('selfie', 'selfiePreview', e.target.files[0])}
-                      data-testid="selfie-input"
-                    />
-                  </div>
-                </div>
+                <FileUploadZone
+                  label="Selfie com Documento *"
+                  preview={formData.selfiePreview}
+                  isUploading={uploadingFile === 'selfie'}
+                  isUploaded={!!formData.selfieUrl}
+                  onFileSelect={(file) => handleFileChange('selfie', 'selfiePreview', 'selfieUrl', 'selfie', file)}
+                  testId="selfie-input"
+                />
               </CardContent>
             </Card>
 
@@ -389,7 +474,7 @@ const VerificationPage = () => {
               <Button type="button" variant="outline" className="flex-1 h-12" onClick={() => setStep(2)}>
                 Voltar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800">
+              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800" disabled={uploadingFile !== null}>
                 {(user?.role === 'carrier' || user?.role === 'both') ? 'Continuar' : 'Enviar para Verificação'}
               </Button>
             </div>
@@ -408,25 +493,14 @@ const VerificationPage = () => {
                 <CardDescription>Obrigatório para transportadores</CardDescription>
               </CardHeader>
               <CardContent>
-                <div>
-                  <Label>CNH (frente e verso ou aberta) *</Label>
-                  <div className="mt-2 border-2 border-dashed rounded-lg p-6">
-                    {formData.driverLicensePreview ? (
-                      <img src={formData.driverLicensePreview} alt="CNH" className="w-full h-48 object-contain mb-4" />
-                    ) : (
-                      <div className="flex flex-col items-center text-center py-8">
-                        <Camera size={32} className="text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">CNH válida</p>
-                      </div>
-                    )}
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileChange('driverLicense', 'driverLicensePreview', e.target.files[0])}
-                      data-testid="driver-license-input"
-                    />
-                  </div>
-                </div>
+                <FileUploadZone
+                  label="CNH (frente e verso ou aberta) *"
+                  preview={formData.driverLicensePreview}
+                  isUploading={uploadingFile === 'license'}
+                  isUploaded={!!formData.driverLicenseUrl}
+                  onFileSelect={(file) => handleFileChange('driverLicense', 'driverLicensePreview', 'driverLicenseUrl', 'license', file)}
+                  testId="driver-license-input"
+                />
               </CardContent>
             </Card>
 
@@ -434,7 +508,7 @@ const VerificationPage = () => {
               <Button type="button" variant="outline" className="flex-1 h-12" onClick={() => setStep(3)}>
                 Voltar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800" disabled={loading}>
+              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800" disabled={loading || uploadingFile !== null}>
                 {loading ? 'Enviando...' : 'Enviar para Verificação'}
               </Button>
             </div>
