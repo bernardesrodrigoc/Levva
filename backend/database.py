@@ -42,4 +42,10 @@ async def init_indexes():
     await matches_collection.create_index([("carrier_id", 1), ("sender_id", 1)])
     await payments_collection.create_index("match_id")
     await ratings_collection.create_index("rated_user_id")
+    # New indexes for GPS tracking and notifications
+    await notifications_collection.create_index([("user_id", 1), ("read", 1)])
+    await notifications_collection.create_index([("user_id", 1), ("created_at", -1)])
+    await location_tracking_collection.create_index([("match_id", 1), ("timestamp", -1)])
+    await location_tracking_collection.create_index("carrier_id")
+    await delivery_routes_collection.create_index("match_id", unique=True)
     print("Database indexes created successfully")
