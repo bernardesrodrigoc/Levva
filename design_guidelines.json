@@ -1,0 +1,127 @@
+{
+  "identity": {
+    "persona": "E1",
+    "role": "Creative Designer",
+    "mission": "Create a top 1% collaborative freight platform that blends trust, safety, and modern Brazilian aesthetics.",
+    "principles": [
+      "Fusion over Imitation: Mix logistics precision with community warmth.",
+      "Emotion First: Every screen must convey 'Safety' and 'Speed'.",
+      "Content is King: Data (ETA, Price, Trust Score) is the hero.",
+      "Zoom In: Focus on the human element (driver faces, package photos).",
+      "Negative Space: Use white space to reduce cognitive load."
+    ]
+  },
+  "brand": {
+    "name": "Levva",
+    "tone": "Reliable, Agile, Transparent, Brazilian",
+    "typography": {
+      "headings": {
+        "family": "Outfit",
+        "weights": ["500", "600", "700"],
+        "usage": "Main headers, section titles, marketing copy. DO NOT use Inter."
+      },
+      "body": {
+        "family": "Plus Jakarta Sans",
+        "weights": ["400", "500", "600"],
+        "usage": "Paragraphs, UI labels, data tables, inputs."
+      },
+      "mono": {
+        "family": "JetBrains Mono",
+        "usage": "Tracking codes, coordinates, technical data."
+      }
+    },
+    "colors": {
+      "primary": {
+        "name": "Jungle Deep",
+        "hex": "#047857",
+        "tailwind": "emerald-700",
+        "usage": "Primary buttons, active states, brand headers."
+      },
+      "secondary": {
+        "name": "Lime Punch",
+        "hex": "#84CC16",
+        "tailwind": "lime-500",
+        "usage": "Accents, success states, high-visibility tags."
+      },
+      "neutral": {
+        "surface": "#F8FAFC",
+        "border": "#E2E8F0",
+        "text_main": "#0F172A",
+        "text_muted": "#64748B"
+      },
+      "semantic": {
+        "error": "#EF4444",
+        "warning": "#F59E0B",
+        "info": "#3B82F6"
+      }
+    },
+    "radius": "0.75rem"
+  },
+  "layout_strategy": {
+    "grid_system": {
+      "marketing": "Bento Grid (Mode A) - Asymmetric, visual tension.",
+      "dashboard": "Control Room Grid (Mode B) - Dense, data-correlated.",
+      "mobile": "Single column, bottom-sheet heavy for actions."
+    },
+    "spacing": {
+      "base": "Generous. Use p-6, p-8, p-12. Avoid cramped p-4.",
+      "containers": "Borders must have internal padding (p-6+) to prevent text collision."
+    }
+  },
+  "component_rules": {
+    "general": "Use Shadcn components but heavily customized. Remove the 'Vercel default' look.",
+    "cards": "Flat background, subtle border (border-slate-200), soft shadow (shadow-sm). Hover: lift (-translate-y-1) + shadow-md.",
+    "buttons": "Pill-shaped or rounded-xl. Primary: Jungle Deep bg, White text. Secondary: White bg, Border, Jungle text.",
+    "inputs": "Tall (h-12), light gray bg (bg-slate-50) on focus white with primary ring.",
+    "navigation": {
+      "header": "Glassmorphism (backdrop-blur-xl, bg-white/80). Sticky.",
+      "sidebar": "Clean, icon-heavy, collapsible."
+    },
+    "feedback": "Use 'Sonner' for toasts. Position: bottom-right."
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use for sticky headers and overlays. backdrop-blur-xl + bg-white/70 + border-white/20.",
+    "gradients": "Subtle mesh gradients in backgrounds for marketing. NO text gradients.",
+    "textures": "Subtle noise overlay on solid colors to reduce 'digital flatness'.",
+    "motion": "Framer Motion for page transitions. Micro-interactions on all buttons."
+  },
+  "images": {
+    "hero_marketing": {
+      "url": "https://images.unsplash.com/photo-1646920912229-bc0d5d94e68b?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Smiling delivery driver with green bag",
+      "usage": "Hero section, main landing page visual."
+    },
+    "trust_proof": {
+      "url": "https://images.unsplash.com/photo-1659353739926-4c7df1a645a6?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Person holding package securely",
+      "usage": "Trust & Safety section, verification flow."
+    },
+    "brazil_context": {
+      "url": "https://images.unsplash.com/photo-1595878704580-817567c691cf?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Sao Paulo city street context",
+      "usage": "Backgrounds, location context, map overlays."
+    },
+    "logistics_tech": {
+      "url": "https://images.unsplash.com/photo-1726866492047-7f9516558c6e?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Modern clean logistics warehouse aerial",
+      "usage": "Enterprise/Business section, 'How it works'."
+    }
+  },
+  "instructions_to_main_agent": {
+    "step_1": "Install dependencies: `yarn add @phosphor-icons/react framer-motion clsx tailwind-merge`.",
+    "step_2": "Configure Tailwind: Add 'Outfit' and 'Plus Jakarta Sans' fonts. Add custom colors (Jungle Deep, Lime Punch). Set default radius.",
+    "step_3": "Create Layouts: Build 'MarketingLayout' (Glass header, footer) and 'DashboardLayout' (Sidebar, Topbar).",
+    "step_4": "Develop Components: Customize Button, Card, Input, Badge to match 'Levva' brand.",
+    "step_5": "Build Pages: Landing -> Auth -> Dashboard -> Trip/Shipment Flows.",
+    "critical": "Do NOT use generic 'Inter' font. Do NOT make it look like a default Shadcn template. Use the images provided."
+  },
+  "universal_guidelines": [
+    "Avoid 'AI Slop': No generic centered layouts. Create depth with z-index and shadows.",
+    "Dark colors: Use independently, NO dark gradients.",
+    "Glassmorphism: Use backdrop-filter blur(12px) for overlays.",
+    "Transitions: specific properties only (transform, opacity), NEVER 'all'.",
+    "Alignment: No text-align: center on app container.",
+    "Icons: Use Phosphor Icons (Duotone for marketing, Regular for UI).",
+    "Testing: Add data-testid to all interactive elements."
+  ]
+}
