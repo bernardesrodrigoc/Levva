@@ -98,7 +98,8 @@ const VerificationPage = () => {
 
   const handleFinalSubmit = async () => {
     setLoading(true);
-    try {\n      // Use real Unsplash URLs as placeholders until R2 is implemented
+    try {
+      // Use real Unsplash URLs as placeholders until R2 is implemented
       const verificationData = {
         cpf: formData.cpf,
         birth_date: formData.birthDate,
