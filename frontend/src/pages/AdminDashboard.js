@@ -189,15 +189,7 @@ const AdminDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Verificações Pendentes</CardTitle>
-            <CardDescription>
-              Revise e aprove identidades de usuários
-              {/* Debug info */}
-              <div className="mt-2 text-xs font-mono bg-yellow-50 p-2 rounded">
-                Debug: {pendingVerifications.length} verificações carregadas | 
-                Loading: {loading ? 'sim' : 'não'} | 
-                User role: {user?.role}
-              </div>
-            </CardDescription>
+            <CardDescription>Revise e aprove identidades de usuários</CardDescription>
           </CardHeader>
           <CardContent>
             {pendingVerifications.length === 0 ? (
