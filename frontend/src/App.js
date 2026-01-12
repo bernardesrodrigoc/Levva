@@ -16,6 +16,7 @@ import AdminDashboard from '@/pages/AdminDashboard';
 import ProfilePage from '@/pages/ProfilePage';
 import MatchDetailPage from '@/pages/MatchDetailPage';
 import CreateMatchPage from '@/pages/CreateMatchPage';
+import MatchSuggestionsPage from '@/pages/MatchSuggestionsPage';
 import { PaymentSuccessPage, PaymentFailurePage, PaymentPendingPage } from '@/pages/PaymentResultPage';
 import '@/App.css';
 
