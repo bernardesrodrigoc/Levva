@@ -81,12 +81,12 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
    - Páginas de retorno criadas
 
 ### P1 (Alta Prioridade)
-3. **Sistema de Avaliações e Reputação** - Parcialmente implementado
-4. **Rastreamento GPS com Leaflet** - Não iniciado
-5. **Níveis Progressivos de Confiança** - Lógica parcial
+3. ~~**Sistema de Avaliações e Reputação**~~ ✅ IMPLEMENTADO
+4. ~~**Rastreamento GPS com Leaflet**~~ ✅ IMPLEMENTADO - Mapa de rota na página de detalhes
 
 ### P2 (Média Prioridade)
-6. **Motor de Matching Automático** - Atualmente manual
+5. ~~**Motor de Matching Automático**~~ ✅ IMPLEMENTADO - Página de sugestões inteligentes
+6. **Níveis Progressivos de Confiança** - Parcialmente implementado
 7. **Ferramentas de Resolução de Disputas** - Não iniciado
 
 ## Credenciais de Teste
