@@ -4,6 +4,7 @@ import { Package, TruckIcon, User, SignOut, Plus, MapTrifold } from '@phosphor-i
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { VerificationAlert } from '@/components/VerificationAlert';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 
