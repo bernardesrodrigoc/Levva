@@ -52,10 +52,7 @@ const BrowseShipmentsPage = () => {
   };
 
   const handleCreateMatch = async (shipmentId, shipment) => {
-    // In a real app, user would select their trip first
-    toast.info('Selecione uma viagem sua para combinar com este envio');
-    // Navigate to a page where user can select their trip
-    // For now, just show info
+    navigate('/criar-combinacao', { state: { shipmentId } });
   };
 
   return (
