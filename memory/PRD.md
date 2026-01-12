@@ -115,6 +115,6 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 ```
 
 ## Status dos Testes
-- Backend: 14/14 testes passando (100%)
-- Frontend: Todos os fluxos críticos funcionando
-- Relatório: /app/test_reports/iteration_1.json
+- Iteration 1: Backend 14/14, Frontend 100%
+- Iteration 2: Backend 27/27, Frontend 100% (uploads R2 + pagamentos Mercado Pago)
+- Relatórios: /app/test_reports/iteration_1.json, /app/test_reports/iteration_2.json
