@@ -75,10 +75,10 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
    - Upload direto para R2 funcionando
    - URLs temporárias para visualização
 
-2. **Implementar Pagamentos Mercado Pago**
-   - Sistema de escrow
-   - Webhook para confirmação
-   - Credenciais já configuradas no backend
+2. ~~**Implementar Pagamentos Mercado Pago**~~ ✅ CONCLUÍDO
+   - Sistema de escrow implementado
+   - Checkout redirect funcionando
+   - Páginas de retorno criadas
 
 ### P1 (Alta Prioridade)
 3. **Sistema de Avaliações e Reputação** - Parcialmente implementado
