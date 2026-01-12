@@ -317,6 +317,48 @@ async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_
     
     return trip_doc
 
+@api_router.post("/trips/calculate-price")
+async def calculate_suggested_price(
+    origin_lat: float,
+    origin_lng: float,
+    dest_lat: float,
+    dest_lng: float
+):
+    """Calculate suggested price per kg based on distance"""
+    from route_service import haversine_distance
+    
+    distance_km = haversine_distance(origin_lat, origin_lng, dest_lat, dest_lng)
+    
+    # Price tiers based on distance
+    if distance_km <= 50:
+        base_price = 3.0
+        per_km = 0.02
+    elif distance_km <= 200:
+        base_price = 3.5
+        per_km = 0.015
+    elif distance_km <= 500:
+        base_price = 4.0
+        per_km = 0.01
+    else:
+        base_price = 5.0
+        per_km = 0.008
+    
+    suggested_price = min(12.0, base_price + (distance_km * per_km))
+    
+    # Calculate example prices for different weights
+    return {
+        "distance_km": round(distance_km, 1),
+        "suggested_price_per_kg": round(suggested_price, 2),
+        "examples": {
+            "1kg": round(suggested_price * 1, 2),
+            "5kg": round(suggested_price * 5, 2),
+            "10kg": round(suggested_price * 10, 2),
+            "20kg": round(suggested_price * 20, 2)
+        },
+        "platform_fee_percent": 15,
+        "carrier_receives_percent": 85
+    }
+
 @api_router.get("/trips", response_model=List[TripResponse])
 async def list_trips(
     origin_city: Optional[str] = None,
