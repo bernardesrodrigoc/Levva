@@ -246,8 +246,12 @@ const DashboardPage = () => {
           </CardHeader>
         </Card>
 
-        {/* Browse Section */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* Trust Level and Browse Section */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          {/* Trust Level Card */}
+          <TrustLevelCard />
+          
+          {/* Browse Section */}
           <Card className="card-hover cursor-pointer" onClick={() => navigate('/viagens')} data-testid="browse-trips-card">
             <CardHeader>
               <div className="flex items-center gap-3">
