@@ -357,28 +357,42 @@ class LevvaAPITester:
         return success
 
     def test_trips_with_filters(self):
-        """Test GET /api/trips with filters"""
+        """Test GET /api/trips with Belo Horizonte filter"""
         success, response = self.run_test(
-            "List Trips with Filters",
+            "List Trips with Origin Filter",
             "GET",
-            "trips?origin_city=Belo Horizonte&destination_city=Salvador",
+            "trips?origin_city=Belo Horizonte",
             200
         )
         if success:
-            print(f"✅ Found {len(response)} trips matching filters")
-        return success
+            print(f"✅ Found {len(response)} trips with origin 'Belo Horizonte'")
+            # Verify our trip appears in the list
+            trip_found = any(trip.get('id') == self.trip_id for trip in response)
+            if trip_found:
+                print("✅ Our created trip appears in filtered results")
+                return True
+            else:
+                print("❌ Our created trip not found in filtered results")
+        return False
 
-    def test_list_shipments(self):
-        """Test GET /api/shipments"""
+    def test_list_shipments_with_filter(self):
+        """Test GET /api/shipments with São Paulo filter"""
         success, response = self.run_test(
-            "List All Shipments",
+            "List Shipments with Destination Filter",
             "GET",
-            "shipments",
+            "shipments?destination_city=São Paulo",
             200
         )
         if success:
-            print(f"✅ Found {len(response)} shipments")
-        return success
+            print(f"✅ Found {len(response)} shipments with destination 'São Paulo'")
+            # Verify our shipment appears in the list
+            shipment_found = any(shipment.get('id') == self.shipment_id for shipment in response)
+            if shipment_found:
+                print("✅ Our created shipment appears in filtered results")
+                return True
+            else:
+                print("❌ Our created shipment not found in filtered results")
+        return False
 
     def test_health_check(self):
         """Test health check endpoint"""
