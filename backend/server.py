@@ -533,11 +533,6 @@ async def get_payment_status(match_id: str, user_id: str = Depends(get_current_u
         "created_at": payment.get("created_at").isoformat() if payment.get("created_at") else None
     }
     
-    result = await payments_collection.insert_one(payment_doc)
-    payment_doc["id"] = str(result.inserted_id)
-    
-    return payment_doc
-
 @api_router.post("/payments/webhook")
 async def mercadopago_webhook(data: dict):
     if data.get("type") == "payment":
