@@ -62,6 +62,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/verificacao"
+            element={
+              <ProtectedRoute>
+                <VerificationPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<LandingPage />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
