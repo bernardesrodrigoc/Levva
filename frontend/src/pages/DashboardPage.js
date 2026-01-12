@@ -278,7 +278,6 @@ const DashboardPage = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
           <Card data-testid="my-trips-card">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">Minhas Viagens</CardTitle>
