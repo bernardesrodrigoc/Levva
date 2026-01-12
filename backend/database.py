@@ -22,6 +22,7 @@ ratings_collection = db.ratings
 flag_collection = db.flags
 disputes_collection = db.disputes
 verifications_collection = db.verifications
+messages_collection = db.messages
 
 async def init_indexes():
     """Initialize database indexes"""
