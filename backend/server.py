@@ -34,6 +34,10 @@ from route_service import (
     get_route_polyline, check_shipment_matches_route,
     calculate_corridor_match_score, get_city_coordinates, geocode_address
 )
+from trust_service import (
+    get_trust_level_config, calculate_trust_level, check_shipment_allowed,
+    check_trip_allowed, get_next_level_requirements, TRUST_LEVEL_CONFIG
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
