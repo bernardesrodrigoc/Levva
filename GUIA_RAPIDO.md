@@ -3,8 +3,8 @@
 ## 🚀 Acesso Rápido
 
 ### URLs
-- **Frontend**: https://shipmate-113.preview.emergentagent.com
-- **Backend API**: https://shipmate-113.preview.emergentagent.com/api
+- **Frontend**: https://levvaexpress.preview.emergentagent.com
+- **Backend API**: https://levvaexpress.preview.emergentagent.com/api
 
 ### Credenciais Admin
 ```
