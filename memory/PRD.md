@@ -118,3 +118,10 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - Iteration 1: Backend 14/14, Frontend 100%
 - Iteration 2: Backend 27/27, Frontend 100% (uploads R2 + pagamentos Mercado Pago)
 - Relatórios: /app/test_reports/iteration_1.json, /app/test_reports/iteration_2.json
+
+## Funcionalidades Implementadas Nesta Sessão (12/01/2026)
+1. ✅ **Correções de bugs** - Match detail, criar combinação, chat
+2. ✅ **Upload Cloudflare R2** - Presigned URLs funcionando
+3. ✅ **Pagamentos Mercado Pago** - Checkout redirect funcionando
+4. ✅ **Mapa de Rota (Leaflet)** - Visualização de rotas com OpenStreetMap
+5. ✅ **Matching Automático** - Sugestões inteligentes baseadas em rotas
