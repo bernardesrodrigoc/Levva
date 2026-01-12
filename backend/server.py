@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Header, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
@@ -16,7 +16,8 @@ from database import (
     db, users_collection, trips_collection, shipments_collection,
     matches_collection, payments_collection, ratings_collection,
     flag_collection, disputes_collection, verifications_collection, 
-    messages_collection, init_indexes
+    messages_collection, notifications_collection, location_tracking_collection,
+    delivery_routes_collection, init_indexes
 )
 from models import (
     UserRegister, UserLogin, UserResponse, TripCreate, TripResponse,
@@ -28,7 +29,7 @@ from models import (
 )
 from auth import (
     hash_password, verify_password, create_access_token,
-    get_current_user_id
+    get_current_user_id, decode_token
 )
 from route_service import (
     get_route_polyline, check_shipment_matches_route,
@@ -37,6 +38,13 @@ from route_service import (
 from trust_service import (
     get_trust_level_config, calculate_trust_level, check_shipment_allowed,
     check_trip_allowed, get_next_level_requirements, TRUST_LEVEL_CONFIG
+)
+from websocket_manager import manager, handle_carrier_messages, handle_watcher_messages
+from notification_service import (
+    create_notification, get_user_notifications, mark_notification_read,
+    mark_all_notifications_read, get_unread_count, delete_notification,
+    NotificationType, notify_match_created, notify_payment_approved,
+    notify_delivery_completed
 )
 
 ROOT_DIR = Path(__file__).parent
