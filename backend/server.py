@@ -316,7 +316,8 @@ async def create_match(
         raise HTTPException(status_code=404, detail="Viagem ou envio n\u00e3o encontrado")
     
     # Calculate price (simple algorithm)
-    base_price = shipment["package"]["weight_kg"] * trip.get("price_per_kg", 5.0)
+    price_per_kg = trip.get("price_per_kg") or 5.0
+    base_price = shipment["package"]["weight_kg"] * price_per_kg
     platform_commission = base_price * 0.15
     carrier_earnings = base_price - platform_commission
     
