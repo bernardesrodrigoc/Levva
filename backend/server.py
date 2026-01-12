@@ -247,6 +247,9 @@ async def list_trips(
     
     for trip in trips:
         trip["id"] = str(trip.pop("_id"))
+        # Backward compatibility: use max_deviation_km if corridor_radius_km not set
+        if "corridor_radius_km" not in trip:
+            trip["corridor_radius_km"] = trip.get("max_deviation_km", 10.0)
     
     return trips
 
@@ -256,6 +259,9 @@ async def get_my_trips(user_id: str = Depends(get_current_user_id)):
     
     for trip in trips:
         trip["id"] = str(trip.pop("_id"))
+        # Backward compatibility: use max_deviation_km if corridor_radius_km not set
+        if "corridor_radius_km" not in trip:
+            trip["corridor_radius_km"] = trip.get("max_deviation_km", 10.0)
     
     return trips
 
