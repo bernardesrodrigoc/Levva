@@ -151,7 +151,7 @@ const DashboardPage = () => {
           )}
 
           {(user?.role === 'sender' || user?.role === 'both') && (
-            <Card className="card-hover cursor-pointer" onClick={() => navigate('/criar-envio')} data-testid="create-shipment-card">
+            <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-envio')} data-testid="create-shipment-card">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
