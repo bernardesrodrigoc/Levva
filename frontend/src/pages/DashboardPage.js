@@ -49,6 +49,24 @@ const DashboardPage = () => {
     }
   };
 
+  const fetchVerificationStatus = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API}/users/verification-status`, { headers });
+      setVerificationStatus(response.data.verification_status);
+    } catch (error) {
+      console.error('Erro ao carregar status de verificação:', error);
+    }
+  };
+
+  const handleCreateAction = (path) => {
+    if (verificationStatus !== 'verified') {
+      navigate('/verificacao');
+      return;
+    }
+    navigate(path);
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
