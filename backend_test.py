@@ -121,25 +121,29 @@ class LevvaAPITester:
         return False
 
     def test_create_trip(self):
-        """Create a trip from Belo Horizonte to Salvador"""
+        """Create a trip with exact data from requirements"""
         trip_data = {
             "origin": {
                 "city": "Belo Horizonte",
                 "state": "MG",
-                "address": "Centro, Belo Horizonte, MG"
+                "address": "Belo Horizonte, MG",
+                "lat": -19.9191,
+                "lng": -43.9386
             },
             "destination": {
-                "city": "Salvador",
-                "state": "BA", 
-                "address": "Centro, Salvador, BA"
+                "city": "São Paulo",
+                "state": "SP", 
+                "address": "São Paulo, SP",
+                "lat": -23.5505,
+                "lng": -46.6333
             },
-            "departure_date": "2025-01-20",
-            "vehicle_type": "pickup",
+            "departure_date": "2025-01-25T08:00:00Z",
+            "vehicle_type": "car",
             "cargo_space": {
-                "volume_m3": 1.2,
-                "max_weight_kg": 50
+                "volume_m3": 0.8,
+                "max_weight_kg": 30
             },
-            "price_per_kg": 6.5
+            "price_per_kg": 7.5
         }
         
         success, response = self.run_test(
@@ -152,8 +156,14 @@ class LevvaAPITester:
         )
         if success and 'id' in response:
             self.trip_id = response['id']
+            status = response.get('status')
             print(f"✅ Trip created with ID: {self.trip_id}")
-            return True
+            print(f"✅ Trip status: {status}")
+            if status == "published":
+                print("✅ Trip status verification passed")
+                return True
+            else:
+                print(f"❌ Expected status 'published', got '{status}'")
         return False
 
     def test_sender_registration(self):
