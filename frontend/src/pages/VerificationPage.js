@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Camera, IdentificationCard, User, Warning, Loader2, CheckCircle } from '@phosphor-icons/react';
+import { Package, Camera, IdentificationCard, User, Warning, SpinnerGap, CheckCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
