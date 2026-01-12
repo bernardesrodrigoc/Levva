@@ -102,7 +102,7 @@ const DashboardPage = () => {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="text-right">
+              <div className="text-right cursor-pointer" onClick={() => navigate('/perfil')} data-testid="profile-link">
                 <p className="font-semibold text-sm">{user?.name}</p>
                 <Badge className={getTrustBadge(user?.trust_level)}>
                   {user?.trust_level?.replace('_', ' ').toUpperCase()}
