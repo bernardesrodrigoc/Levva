@@ -199,6 +199,74 @@ async def get_current_user(user_id: str = Depends(get_current_user_id)):
         "total_deliveries": user.get("total_deliveries", 0)
     }
 
+# ============= TRUST LEVEL ROUTES =============
+@api_router.get("/users/trust-level")
+async def get_user_trust_level(user_id: str = Depends(get_current_user_id)):
+    """Get user's trust level details and next level requirements"""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    current_level = user.get("trust_level", TrustLevel.LEVEL_1)
+    config = get_trust_level_config(current_level)
+    next_level_info = get_next_level_requirements(
+        current_level,
+        user.get("total_deliveries", 0),
+        user.get("rating", 0.0)
+    )
+    
+    return {
+        "current_level": current_level,
+        "level_name": config["name"],
+        "level_description": config["description"],
+        "badge_color": config["badge_color"],
+        "limits": {
+            "max_shipment_value": config["max_shipment_value"] if config["max_shipment_value"] != float('inf') else None,
+            "max_weight_kg": config["max_weight_kg"] if config["max_weight_kg"] != float('inf') else None,
+            "can_create_trips": config["can_create_trips"],
+            "can_create_shipments": config["can_create_shipments"]
+        },
+        "stats": {
+            "total_deliveries": user.get("total_deliveries", 0),
+            "rating": user.get("rating", 0.0)
+        },
+        "next_level": next_level_info
+    }
+
+@api_router.post("/users/update-trust-level")
+async def update_user_trust_level(user_id: str = Depends(get_current_user_id)):
+    """Recalculate and update user's trust level based on current stats"""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    new_level = calculate_trust_level(
+        user.get("verification_status", "pending"),
+        user.get("total_deliveries", 0),
+        user.get("rating", 0.0)
+    )
+    
+    old_level = user.get("trust_level", TrustLevel.LEVEL_1)
+    
+    if new_level != old_level:
+        await users_collection.update_one(
+            {"_id": ObjectId(user_id)},
+            {"$set": {"trust_level": new_level}}
+        )
+        
+        return {
+            "updated": True,
+            "old_level": old_level,
+            "new_level": new_level,
+            "message": f"Parabéns! Você subiu para o nível {get_trust_level_config(new_level)['name']}!"
+        }
+    
+    return {
+        "updated": False,
+        "current_level": old_level,
+        "message": "Seu nível de confiança permanece o mesmo."
+    }
+
 # ============= TRIP ROUTES =============
 @api_router.post("/trips", response_model=TripResponse)
 async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_user_id)):
