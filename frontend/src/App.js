@@ -80,6 +80,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/perfil"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<LandingPage />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
