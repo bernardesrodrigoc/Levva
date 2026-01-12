@@ -97,7 +97,17 @@ async def register(user_data: UserRegister):
     }
     
     result = await users_collection.insert_one(user_doc)
-    token = create_access_token({"user_id": str(result.inserted_id)})\n    \n    return {\n        "token": token,\n        "user": {\n            "id": str(result.inserted_id),\n            "email": user_data.email,\n            "name": user_data.name,\n            "role": user_data.role\n        }\n    }
+    token = create_access_token({"user_id": str(result.inserted_id)})
+    
+    return {
+        "token": token,
+        "user": {
+            "id": str(result.inserted_id),
+            "email": user_data.email,
+            "name": user_data.name,
+            "role": user_data.role
+        }
+    }
 
 @api_router.post("/auth/login")
 async def login(credentials: UserLogin):
