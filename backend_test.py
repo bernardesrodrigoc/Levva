@@ -405,47 +405,61 @@ class LevvaAPITester:
         return success
 
 def main():
-    print("🚀 Starting Levva API Testing...")
+    print("🚀 Starting Levva API Complete End-to-End Testing...")
     tester = LevvaAPITester()
 
-    # Test sequence
+    # Test sequence matching the exact requirements
     tests = [
         ("Health Check", tester.test_health_check),
-        ("Carrier Registration", tester.test_carrier_registration),
-        ("Carrier Login", tester.test_carrier_login),
-        ("Auth Me", tester.test_auth_me),
-        ("Create Trip", tester.test_create_trip),
-        ("Sender Registration", tester.test_sender_registration),
-        ("Sender Login", tester.test_sender_login),
-        ("Create Shipment", tester.test_create_shipment),
-        ("Create Match", tester.test_create_match),
-        ("List Matches", tester.test_list_matches),
-        ("Ratings Endpoint", tester.test_ratings_endpoint),
-        ("Trips with Filters", tester.test_trips_with_filters),
-        ("List Shipments", tester.test_list_shipments),
+        ("1. Carrier Registration", tester.test_carrier_registration),
+        ("2. Verify Registration Token", lambda: tester.carrier_token is not None),
+        ("3. Carrier Login", tester.test_carrier_login),
+        ("4. Verify GET /api/auth/me", tester.test_auth_me),
+        ("5. Create Trip", tester.test_create_trip),
+        ("6. Verify Trip in List", tester.test_trips_with_filters),
+        ("7. Sender Registration", tester.test_sender_registration),
+        ("8. Sender Login", tester.test_sender_login),
+        ("9. Create Shipment", tester.test_create_shipment),
+        ("10. Verify Shipment in List", tester.test_list_shipments_with_filter),
+        ("11. Create Match", tester.test_create_match),
+        ("12. Verify Trip Status Changed", tester.test_verify_trip_status_changed),
+        ("13. Verify Shipment Status Changed", tester.test_verify_shipment_status_changed),
     ]
 
     for test_name, test_func in tests:
-        print(f"\n{'='*50}")
+        print(f"\n{'='*60}")
         print(f"Running: {test_name}")
-        print('='*50)
+        print('='*60)
         try:
-            test_func()
+            if callable(test_func):
+                result = test_func()
+            else:
+                result = test_func
+            if not result:
+                print(f"❌ Test {test_name} failed")
         except Exception as e:
             print(f"❌ Test {test_name} failed with exception: {str(e)}")
 
     # Print final results
     print(f"\n{'='*60}")
-    print(f"📊 FINAL RESULTS")
+    print(f"📊 FINAL BACKEND API RESULTS")
     print(f"{'='*60}")
     print(f"Tests passed: {tester.tests_passed}/{tester.tests_run}")
     print(f"Success rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%" if tester.tests_run > 0 else "No tests run")
     
+    # Print summary of created entities
+    print(f"\n📋 CREATED ENTITIES:")
+    print(f"Carrier User ID: {tester.carrier_user_id}")
+    print(f"Sender User ID: {tester.sender_user_id}")
+    print(f"Trip ID: {tester.trip_id}")
+    print(f"Shipment ID: {tester.shipment_id}")
+    print(f"Match ID: {tester.match_id}")
+    
     if tester.tests_passed == tester.tests_run:
-        print("🎉 All tests passed!")
+        print("🎉 All backend API tests passed!")
         return 0
     else:
-        print("⚠️  Some tests failed - check logs above")
+        print("⚠️  Some backend API tests failed - check logs above")
         return 1
 
 if __name__ == "__main__":
