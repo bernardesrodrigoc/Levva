@@ -26,12 +26,21 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
-      navigate('/dashboard');
-      return;
-    }
-    fetchData();
-  }, []);
+    const checkAndFetch = async () => {
+      if (!user) {
+        return;
+      }
+      
+      if (user.role !== 'admin') {
+        navigate('/dashboard');
+        return;
+      }
+      
+      await fetchData();
+    };
+    
+    checkAndFetch();
+  }, [user]);
 
   const fetchData = async () => {
     try {
