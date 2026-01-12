@@ -872,6 +872,262 @@ async def get_user_ratings(user_id: str):
     
     return ratings
 
+# ============= DISPUTE ROUTES =============
+class DisputeStatus(str):
+    OPEN = "open"
+    UNDER_REVIEW = "under_review"
+    RESOLVED_SENDER = "resolved_sender"
+    RESOLVED_CARRIER = "resolved_carrier"
+    RESOLVED_SPLIT = "resolved_split"
+    CLOSED = "closed"
+
+@api_router.post("/disputes")
+async def create_dispute(dispute_data: DisputeCreate, user_id: str = Depends(get_current_user_id)):
+    """Create a new dispute for a match"""
+    match = await matches_collection.find_one({"_id": ObjectId(dispute_data.match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    # Check if user is part of the match
+    if user_id not in [match["sender_id"], match["carrier_id"]]:
+        raise HTTPException(status_code=403, detail="Você não faz parte desta combinação")
+    
+    # Check if dispute already exists
+    existing = await disputes_collection.find_one({"match_id": dispute_data.match_id, "status": {"$ne": "closed"}})
+    if existing:
+        raise HTTPException(status_code=400, detail="Já existe uma disputa aberta para esta combinação")
+    
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    dispute_doc = {
+        "match_id": dispute_data.match_id,
+        "opened_by": user_id,
+        "opened_by_name": user["name"],
+        "opened_by_role": "sender" if user_id == match["sender_id"] else "carrier",
+        "reason": dispute_data.reason,
+        "description": dispute_data.description,
+        "evidence_urls": dispute_data.evidence_urls if hasattr(dispute_data, 'evidence_urls') else [],
+        "status": DisputeStatus.OPEN,
+        "admin_notes": [],
+        "resolution": None,
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    result = await disputes_collection.insert_one(dispute_doc)
+    
+    # Update match status
+    await matches_collection.update_one(
+        {"_id": ObjectId(dispute_data.match_id)},
+        {"$set": {"status": "disputed", "dispute_id": str(result.inserted_id)}}
+    )
+    
+    return {
+        "id": str(result.inserted_id),
+        "match_id": dispute_data.match_id,
+        "status": DisputeStatus.OPEN,
+        "message": "Disputa aberta com sucesso. Nossa equipe irá analisar."
+    }
+
+@api_router.get("/disputes/my-disputes")
+async def get_my_disputes(user_id: str = Depends(get_current_user_id)):
+    """Get disputes for current user"""
+    disputes = await disputes_collection.find({
+        "$or": [
+            {"opened_by": user_id},
+            {"match_id": {"$in": await get_user_match_ids(user_id)}}
+        ]
+    }).sort("created_at", -1).to_list(50)
+    
+    for dispute in disputes:
+        dispute["id"] = str(dispute.pop("_id"))
+    
+    return disputes
+
+async def get_user_match_ids(user_id: str) -> list:
+    """Helper to get all match IDs for a user"""
+    matches = await matches_collection.find({
+        "$or": [{"sender_id": user_id}, {"carrier_id": user_id}]
+    }).to_list(100)
+    return [str(m["_id"]) for m in matches]
+
+@api_router.get("/admin/disputes")
+async def get_all_disputes(user_id: str = Depends(get_current_user_id)):
+    """Admin: Get all disputes"""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    disputes = await disputes_collection.find().sort("created_at", -1).to_list(100)
+    
+    result = []
+    for dispute in disputes:
+        match = await matches_collection.find_one({"_id": ObjectId(dispute["match_id"])})
+        sender = await users_collection.find_one({"_id": ObjectId(match["sender_id"])}) if match else None
+        carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])}) if match else None
+        
+        result.append({
+            "id": str(dispute["_id"]),
+            "match_id": dispute["match_id"],
+            "opened_by_name": dispute["opened_by_name"],
+            "opened_by_role": dispute["opened_by_role"],
+            "reason": dispute["reason"],
+            "description": dispute["description"],
+            "status": dispute["status"],
+            "sender_name": sender["name"] if sender else "N/A",
+            "carrier_name": carrier["name"] if carrier else "N/A",
+            "match_value": match.get("estimated_price", 0) if match else 0,
+            "created_at": dispute["created_at"].isoformat() if dispute.get("created_at") else None,
+            "admin_notes": dispute.get("admin_notes", []),
+            "resolution": dispute.get("resolution")
+        })
+    
+    return result
+
+@api_router.get("/admin/disputes/{dispute_id}")
+async def get_dispute_details(dispute_id: str, user_id: str = Depends(get_current_user_id)):
+    """Admin: Get detailed dispute info"""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    dispute = await disputes_collection.find_one({"_id": ObjectId(dispute_id)})
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Disputa não encontrada")
+    
+    match = await matches_collection.find_one({"_id": ObjectId(dispute["match_id"])})
+    sender = await users_collection.find_one({"_id": ObjectId(match["sender_id"])}) if match else None
+    carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])}) if match else None
+    
+    # Get chat messages for context
+    messages = await messages_collection.find({"match_id": dispute["match_id"]}).sort("timestamp", 1).to_list(100)
+    
+    return {
+        "id": str(dispute["_id"]),
+        "match_id": dispute["match_id"],
+        "opened_by": dispute["opened_by"],
+        "opened_by_name": dispute["opened_by_name"],
+        "opened_by_role": dispute["opened_by_role"],
+        "reason": dispute["reason"],
+        "description": dispute["description"],
+        "evidence_urls": dispute.get("evidence_urls", []),
+        "status": dispute["status"],
+        "admin_notes": dispute.get("admin_notes", []),
+        "resolution": dispute.get("resolution"),
+        "created_at": dispute["created_at"].isoformat() if dispute.get("created_at") else None,
+        "match": {
+            "id": str(match["_id"]) if match else None,
+            "estimated_price": match.get("estimated_price") if match else 0,
+            "status": match.get("status") if match else None,
+            "origin": match.get("trip", {}).get("origin", {}).get("city") if match else None,
+            "destination": match.get("trip", {}).get("destination", {}).get("city") if match else None
+        },
+        "sender": {
+            "id": str(sender["_id"]) if sender else None,
+            "name": sender["name"] if sender else "N/A",
+            "email": sender["email"] if sender else "N/A",
+            "rating": sender.get("rating", 0) if sender else 0,
+            "total_deliveries": sender.get("total_deliveries", 0) if sender else 0
+        },
+        "carrier": {
+            "id": str(carrier["_id"]) if carrier else None,
+            "name": carrier["name"] if carrier else "N/A",
+            "email": carrier["email"] if carrier else "N/A",
+            "rating": carrier.get("rating", 0) if carrier else 0,
+            "total_deliveries": carrier.get("total_deliveries", 0) if carrier else 0
+        },
+        "chat_messages": [
+            {
+                "sender_name": m.get("sender_name", "Unknown"),
+                "content": m["content"],
+                "timestamp": m["timestamp"].isoformat() if m.get("timestamp") else None
+            }
+            for m in messages
+        ]
+    }
+
+@api_router.post("/admin/disputes/{dispute_id}/add-note")
+async def add_dispute_note(dispute_id: str, note_data: dict, user_id: str = Depends(get_current_user_id)):
+    """Admin: Add a note to dispute"""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    note = {
+        "admin_id": user_id,
+        "admin_name": user["name"],
+        "content": note_data.get("content", ""),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await disputes_collection.update_one(
+        {"_id": ObjectId(dispute_id)},
+        {
+            "$push": {"admin_notes": note},
+            "$set": {"updated_at": datetime.now(timezone.utc)}
+        }
+    )
+    
+    return {"message": "Nota adicionada", "note": note}
+
+@api_router.post("/admin/disputes/{dispute_id}/resolve")
+async def resolve_dispute(dispute_id: str, resolution_data: dict, user_id: str = Depends(get_current_user_id)):
+    """Admin: Resolve a dispute"""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    dispute = await disputes_collection.find_one({"_id": ObjectId(dispute_id)})
+    if not dispute:
+        raise HTTPException(status_code=404, detail="Disputa não encontrada")
+    
+    resolution_type = resolution_data.get("resolution_type")  # sender, carrier, split, dismissed
+    resolution_notes = resolution_data.get("notes", "")
+    refund_amount = resolution_data.get("refund_amount", 0)
+    
+    resolution = {
+        "type": resolution_type,
+        "notes": resolution_notes,
+        "refund_amount": refund_amount,
+        "resolved_by": user_id,
+        "resolved_by_name": user["name"],
+        "resolved_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    status_map = {
+        "sender": DisputeStatus.RESOLVED_SENDER,
+        "carrier": DisputeStatus.RESOLVED_CARRIER,
+        "split": DisputeStatus.RESOLVED_SPLIT,
+        "dismissed": DisputeStatus.CLOSED
+    }
+    
+    new_status = status_map.get(resolution_type, DisputeStatus.CLOSED)
+    
+    await disputes_collection.update_one(
+        {"_id": ObjectId(dispute_id)},
+        {
+            "$set": {
+                "status": new_status,
+                "resolution": resolution,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Update match status
+    match_status = "cancelled" if resolution_type == "dismissed" else "dispute_resolved"
+    await matches_collection.update_one(
+        {"_id": ObjectId(dispute["match_id"])},
+        {"$set": {"status": match_status}}
+    )
+    
+    return {
+        "message": "Disputa resolvida",
+        "resolution": resolution,
+        "new_status": new_status
+    }
+
 # ============= UPLOAD ROUTES =============
 @api_router.post("/uploads/presigned-url")
 async def get_presigned_url(upload_data: UploadInitiate, user_id: str = Depends(get_current_user_id)):
