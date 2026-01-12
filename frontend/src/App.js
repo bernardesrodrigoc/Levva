@@ -98,6 +98,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/criar-combinacao"
+            element={
+              <ProtectedRoute>
+                <CreateMatchPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<LandingPage />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
