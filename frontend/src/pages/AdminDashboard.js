@@ -481,6 +481,200 @@ const AdminDashboard = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dispute Detail Dialog */}
+      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gavel size={24} />
+              Detalhes da Disputa
+            </DialogTitle>
+            <DialogDescription>
+              Analise as informações e resolva o conflito
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDispute && (
+            <div className="space-y-6">
+              {/* Status and Basic Info */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Remetente</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="font-semibold">{selectedDispute.sender?.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedDispute.sender?.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline">⭐ {selectedDispute.sender?.rating?.toFixed(1) || 'N/A'}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {selectedDispute.sender?.total_deliveries || 0} entregas
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Transportador</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="font-semibold">{selectedDispute.carrier?.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedDispute.carrier?.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline">⭐ {selectedDispute.carrier?.rating?.toFixed(1) || 'N/A'}</Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {selectedDispute.carrier?.total_deliveries || 0} entregas
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Dispute Details */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Motivo da Disputa</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="font-semibold">{selectedDispute.reason}</p>
+                  <p className="text-sm mt-2">{selectedDispute.description}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Aberta por: {selectedDispute.opened_by_name} ({selectedDispute.opened_by_role === 'sender' ? 'Remetente' : 'Transportador'})
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Chat History */}
+              {selectedDispute.chat_messages?.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <ChatCircle size={16} />
+                      Histórico de Mensagens
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="max-h-48 overflow-y-auto space-y-2 bg-muted p-3 rounded-lg">
+                      {selectedDispute.chat_messages.map((msg, idx) => (
+                        <div key={idx} className="text-sm">
+                          <span className="font-medium">{msg.sender_name}:</span>{' '}
+                          <span>{msg.content}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {msg.timestamp && new Date(msg.timestamp).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Admin Notes */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Notas do Admin</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedDispute.admin_notes?.length > 0 ? (
+                    <div className="space-y-2 mb-4">
+                      {selectedDispute.admin_notes.map((note, idx) => (
+                        <div key={idx} className="bg-muted p-2 rounded text-sm">
+                          <span className="font-medium">{note.admin_name}:</span> {note.content}
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {note.timestamp && new Date(note.timestamp).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mb-4">Nenhuma nota adicionada</p>
+                  )}
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      value={disputeNote}
+                      onChange={(e) => setDisputeNote(e.target.value)}
+                      placeholder="Adicionar nota..."
+                      className="flex-1"
+                    />
+                    <Button onClick={handleAddDisputeNote} variant="outline">
+                      Adicionar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Resolution */}
+              {selectedDispute.status === 'open' || selectedDispute.status === 'under_review' ? (
+                <Card className="border-jungle">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Resolver Disputa</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Tipo de Resolução</Label>
+                      <Select value={resolutionType} onValueChange={setResolutionType}>
+                        <SelectTrigger className="mt-2">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sender">A favor do Remetente</SelectItem>
+                          <SelectItem value="carrier">A favor do Transportador</SelectItem>
+                          <SelectItem value="split">Divisão (50/50)</SelectItem>
+                          <SelectItem value="dismissed">Disputa Improcedente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>Valor do Reembolso (se aplicável)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={refundAmount}
+                        onChange={(e) => setRefundAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="mt-2"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label>Justificativa da Resolução</Label>
+                      <Textarea
+                        value={disputeNote}
+                        onChange={(e) => setDisputeNote(e.target.value)}
+                        placeholder="Explique a decisão..."
+                        rows={3}
+                        className="mt-2"
+                      />
+                    </div>
+                    
+                    <Button onClick={handleResolveDispute} className="w-full bg-jungle hover:bg-jungle-800">
+                      Confirmar Resolução
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="p-4">
+                    <p className="font-semibold text-green-800">Disputa Resolvida</p>
+                    <p className="text-sm text-green-700 mt-1">
+                      Tipo: {selectedDispute.resolution?.type === 'sender' ? 'A favor do Remetente' :
+                             selectedDispute.resolution?.type === 'carrier' ? 'A favor do Transportador' :
+                             selectedDispute.resolution?.type === 'split' ? 'Divisão' : 'Improcedente'}
+                    </p>
+                    {selectedDispute.resolution?.notes && (
+                      <p className="text-sm text-green-700 mt-1">{selectedDispute.resolution.notes}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
