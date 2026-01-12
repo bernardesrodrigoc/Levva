@@ -89,6 +89,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/match/:matchId"
+            element={
+              <ProtectedRoute>
+                <MatchDetailPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<LandingPage />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
