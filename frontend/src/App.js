@@ -12,6 +12,7 @@ import CreateShipmentPage from '@/pages/CreateShipmentPage';
 import BrowseTripsPage from '@/pages/BrowseTripsPage';
 import BrowseShipmentsPage from '@/pages/BrowseShipmentsPage';
 import VerificationPage from '@/pages/VerificationPage';
+import AdminDashboard from '@/pages/AdminDashboard';
 import '@/App.css';
 
 function App() {
