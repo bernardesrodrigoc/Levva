@@ -387,6 +387,12 @@ async def get_match_details(match_id: str, user_id: str = Depends(get_current_us
     carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
     sender = await users_collection.find_one({"_id": ObjectId(match["sender_id"])})
     
+    # Remove _id from nested objects
+    if trip:
+        trip.pop("_id", None)
+    if shipment:
+        shipment.pop("_id", None)
+    
     match["id"] = str(match.pop("_id"))
     match["trip"] = trip
     match["shipment"] = shipment
