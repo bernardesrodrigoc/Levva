@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Users, TruckIcon, ShieldCheck, Warning, Check, X, Gavel, ChatCircle } from '@phosphor-icons/react';
+import { 
+  Package, Users, TruckIcon, ShieldCheck, Warning, Check, X, Gavel, 
+  ChatCircle, MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsOut 
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -20,13 +22,24 @@ const API = `${BACKEND_URL}/api`;
 const AdminDashboard = () => {
   const { token, user } = useAuth();
   const navigate = useNavigate();
+  
+  // Dados Principais
   const [stats, setStats] = useState(null);
   const [pendingVerifications, setPendingVerifications] = useState([]);
   const [disputes, setDisputes] = useState([]);
+  
+  // Estados de Seleção e Modais
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
-  const [showDialog, setShowDialog] = useState(false);
-  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+  const [showDialog, setShowDialog] = useState(false); // Modal de Confirmação de Verificação
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false); // Modal de Detalhes da Disputa
+  
+  // --- ESTADOS DO LIGHTBOX (NOVO) ---
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [previewImage, setPreviewImage] = useState({ url: '', title: '' });
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  // Estados de Formulário
   const [reviewAction, setReviewAction] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [disputeNote, setDisputeNote] = useState('');
@@ -35,21 +48,15 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if admin
     if (!user) {
-      console.log('No user yet, waiting...');
       return;
     }
     
-    console.log('User loaded:', user.email, 'Role:', user.role);
-    
     if (user.role !== 'admin') {
-      console.log('Not admin, redirecting to dashboard');
       navigate('/dashboard');
       return;
     }
     
-    console.log('User is admin, fetching data...');
     fetchData();
   }, [user, navigate]);
 
@@ -58,32 +65,70 @@ const AdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      console.log('Fetching admin data with token:', token?.substring(0, 30) + '...');
-      
       const [statsRes, verificationsRes, disputesRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/verifications/pending`, { headers }),
         axios.get(`${API}/admin/disputes`, { headers }).catch(() => ({ data: [] }))
       ]);
       
-      console.log('Stats received:', statsRes.data);
-      console.log('Verifications received:', verificationsRes.data.length, 'items');
-      console.log('Disputes received:', disputesRes.data.length, 'items');
-      
       setStats(statsRes.data);
       setPendingVerifications(verificationsRes.data);
       setDisputes(disputesRes.data);
-      setPendingVerifications(verificationsRes.data);
       
-      console.log('State updated with', verificationsRes.data.length, 'verifications');
     } catch (error) {
       console.error('Error fetching admin data:', error);
-      console.error('Error details:', error.response?.data);
       toast.error('Erro ao carregar dados: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
   };
+
+  // --- LÓGICA DO LIGHTBOX (ZOOM) ---
+  const handleOpenImage = (url, title, verificationContext) => {
+    setPreviewImage({ url, title });
+    // Se o contexto for passado, já seleciona a verificação para permitir aprovação rápida
+    if (verificationContext) {
+        setSelectedVerification(verificationContext);
+    }
+    setZoomLevel(1); // Reseta o zoom ao abrir
+    setShowImageDialog(true);
+  };
+
+  const handleZoom = (delta) => {
+    setZoomLevel(prev => {
+        const newZoom = prev + delta;
+        return Math.max(0.5, Math.min(newZoom, 3)); // Limita entre 0.5x e 3x
+    });
+  };
+
+  const handleQuickActionFromImage = (action) => {
+    // Fecha o modal de imagem e abre o de confirmação imediatamente
+    setShowImageDialog(false);
+    // Pequeno delay para a animação do modal não conflitar
+    setTimeout(() => {
+        openReviewDialog(selectedVerification, action);
+    }, 100);
+  };
+
+  const DocumentThumbnail = ({ src, title, verification }) => (
+    <div 
+      className="group relative cursor-pointer" 
+      onClick={() => handleOpenImage(src, title, verification)}
+    >
+      <p className="text-xs text-muted-foreground mb-2">{title}</p>
+      <div className="relative overflow-hidden rounded-lg border bg-muted">
+        <img 
+          src={src} 
+          alt={title} 
+          className="w-full h-24 object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
+            <MagnifyingGlassPlus size={24} className="text-white opacity-0 group-hover:opacity-100 drop-shadow-md transform scale-75 group-hover:scale-100 transition-all" />
+        </div>
+      </div>
+    </div>
+  );
+  // ---------------------------------
 
   const handleReview = async () => {
     if (!selectedVerification || !reviewAction) return;
@@ -136,7 +181,6 @@ const AdminDashboard = () => {
       );
       toast.success('Nota adicionada');
       setDisputeNote('');
-      // Refresh dispute details
       handleViewDispute({ id: selectedDispute.id });
       fetchData();
     } catch (error) {
@@ -262,7 +306,7 @@ const AdminDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle>Verificações Pendentes</CardTitle>
-            <CardDescription>Revise e aprove identidades de usuários</CardDescription>
+            <CardDescription>Clique nas imagens para ampliar. Revise e aprove identidades de usuários.</CardDescription>
           </CardHeader>
           <CardContent>
             {pendingVerifications.length === 0 ? (
@@ -273,10 +317,10 @@ const AdminDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {pendingVerifications.map((verification) => (
-                  <Card key={verification.id} className="border-2" data-testid={`verification-${verification.id}`}>
+                  <Card key={verification.id} className="border-2 hover:border-jungle/30 transition-colors" data-testid={`verification-${verification.id}`}>
                     <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-6">
-                        <div className="flex-1">
+                      <div className="flex items-start justify-between gap-6 flex-wrap md:flex-nowrap">
+                        <div className="flex-1 min-w-[300px]">
                           <div className="flex items-center gap-3 mb-4">
                             <div className="w-12 h-12 bg-jungle/10 rounded-full flex items-center justify-center">
                               <Users size={24} className="text-jungle" />
@@ -285,13 +329,13 @@ const AdminDashboard = () => {
                               <p className="font-semibold text-lg">{verification.user_name}</p>
                               <p className="text-sm text-muted-foreground">{verification.user_email}</p>
                             </div>
-                            <Badge>{verification.user_role}</Badge>
+                            <Badge className="ml-2">{verification.user_role}</Badge>
                           </div>
 
-                          <div className="grid md:grid-cols-2 gap-4 mb-4">
+                          <div className="grid md:grid-cols-2 gap-4 mb-4 bg-muted/20 p-4 rounded-lg">
                             <div>
                               <p className="text-xs text-muted-foreground">CPF</p>
-                              <p className="font-medium">{verification.cpf}</p>
+                              <p className="font-medium font-mono">{verification.cpf}</p>
                             </div>
                             <div>
                               <p className="text-xs text-muted-foreground">Data de Nascimento</p>
@@ -305,56 +349,41 @@ const AdminDashboard = () => {
                             </div>
                           </div>
 
-                          <div className="grid md:grid-cols-4 gap-4">
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-2">Foto de Perfil</p>
-                              <img 
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <DocumentThumbnail 
                                 src={verification.documents.profile_photo} 
-                                alt="Perfil" 
-                                className="w-full h-24 object-cover rounded-lg border"
-                              />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-2">Doc. Frente</p>
-                              <img 
+                                title="Foto de Perfil" 
+                                verification={verification} 
+                            />
+                            <DocumentThumbnail 
                                 src={verification.documents.id_front} 
-                                alt="ID Front" 
-                                className="w-full h-24 object-cover rounded-lg border"
-                              />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-2">Doc. Verso</p>
-                              <img 
+                                title="Doc. Frente" 
+                                verification={verification} 
+                            />
+                            <DocumentThumbnail 
                                 src={verification.documents.id_back} 
-                                alt="ID Back" 
-                                className="w-full h-24 object-cover rounded-lg border"
-                              />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-2">Selfie</p>
-                              <img 
+                                title="Doc. Verso" 
+                                verification={verification} 
+                            />
+                            <DocumentThumbnail 
                                 src={verification.documents.selfie} 
-                                alt="Selfie" 
-                                className="w-full h-24 object-cover rounded-lg border"
-                              />
-                            </div>
+                                title="Selfie" 
+                                verification={verification} 
+                            />
                             {verification.documents.driver_license && (
-                              <div>
-                                <p className="text-xs text-muted-foreground mb-2">CNH</p>
-                                <img 
-                                  src={verification.documents.driver_license} 
-                                  alt="CNH" 
-                                  className="w-full h-24 object-cover rounded-lg border"
+                                <DocumentThumbnail 
+                                    src={verification.documents.driver_license} 
+                                    title="CNH" 
+                                    verification={verification} 
                                 />
-                              </div>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto mt-4 md:mt-0">
                           <Button
                             onClick={() => openReviewDialog(verification, 'approve')}
-                            className="bg-jungle hover:bg-jungle-800"
+                            className="bg-jungle hover:bg-jungle-800 flex-1 md:w-32"
                             data-testid={`approve-btn-${verification.id}`}
                           >
                             <Check size={20} className="mr-2" />
@@ -363,6 +392,7 @@ const AdminDashboard = () => {
                           <Button
                             onClick={() => openReviewDialog(verification, 'reject')}
                             variant="destructive"
+                            className="flex-1 md:w-32"
                             data-testid={`reject-btn-${verification.id}`}
                           >
                             <X size={20} className="mr-2" />
@@ -439,6 +469,65 @@ const AdminDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* --- NOVO MODAL DE LIGHTBOX (VISUALIZAÇÃO DE IMAGEM) --- */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="max-w-screen-xl h-[95vh] flex flex-col p-0 gap-0 overflow-hidden bg-black/95 border-none text-white shadow-2xl">
+          {/* Header do Modal */}
+          <div className="flex items-center justify-between p-4 bg-black/60 backdrop-blur-sm z-20 absolute top-0 w-full">
+            <h3 className="font-semibold text-lg">{previewImage.title}</h3>
+            <div className="flex items-center gap-2">
+               <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full" onClick={() => handleZoom(-0.5)}>
+                  <MagnifyingGlassMinus size={24} />
+               </Button>
+               <span className="text-sm font-mono min-w-[3ch] text-center">{Math.round(zoomLevel * 100)}%</span>
+               <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full" onClick={() => handleZoom(0.5)}>
+                  <MagnifyingGlassPlus size={24} />
+               </Button>
+               <div className="h-6 w-px bg-white/20 mx-2"></div>
+               <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full" onClick={() => setShowImageDialog(false)}>
+                  <X size={24} />
+               </Button>
+            </div>
+          </div>
+
+          {/* Área da Imagem */}
+          <div className="flex-1 flex items-center justify-center overflow-auto p-4 cursor-grab active:cursor-grabbing bg-neutral-900 w-full h-full">
+            <img 
+              src={previewImage.url} 
+              alt={previewImage.title}
+              style={{ transform: `scale(${zoomLevel})` }}
+              className="max-h-full max-w-full object-contain transition-transform duration-200 ease-out"
+              draggable="false"
+            />
+          </div>
+
+          {/* Footer com Ações Rápidas */}
+          {selectedVerification && (
+            <div className="p-4 bg-white dark:bg-zinc-900 flex flex-wrap justify-between items-center border-t border-white/10 z-20">
+               <div className="text-black dark:text-white mb-2 md:mb-0">
+                  <p className="text-sm font-medium text-black">Verificando: <span className="font-bold">{selectedVerification.user_name}</span></p>
+                  <p className="text-xs text-muted-foreground">{selectedVerification.cpf}</p>
+               </div>
+               <div className="flex gap-3 w-full md:w-auto">
+                  <Button 
+                      variant="destructive" 
+                      onClick={() => handleQuickActionFromImage('reject')}
+                      className="flex-1 md:flex-none"
+                  >
+                      <X size={18} className="mr-2" /> Rejeitar
+                  </Button>
+                  <Button 
+                      className="bg-jungle hover:bg-jungle-800 text-white flex-1 md:flex-none" 
+                      onClick={() => handleQuickActionFromImage('approve')}
+                  >
+                      <Check size={18} className="mr-2" /> Aprovar
+                  </Button>
+               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Review Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
