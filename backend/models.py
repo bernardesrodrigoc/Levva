@@ -284,3 +284,16 @@ class DisputeCreate(BaseModel):
     reason: str
     description: str
     evidence_urls: List[str] = []
+
+class UserDB(BaseModel):
+    id: str = Field(alias="_id")
+    email: str
+    name: str
+    role: str
+    
+    # Configuração para aceitar o _id do MongoDB e ignorar campos extras
+    class Config:
+        populate_by_name = True
+        arbitrary_types_allowed = True
+        extra = "ignore" 
+        json_encoders = {ObjectId: str}
