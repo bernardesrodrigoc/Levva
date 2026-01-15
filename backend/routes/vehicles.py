@@ -1,10 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, status
 from typing import List
-from ..models import VehicleCreate, VehicleDB, UserDB
-from ..auth import get_current_user
-from ..database import db
+
+from models import VehicleCreate, VehicleDB, UserDB
+from auth import get_current_user
+from database import db
 from bson import ObjectId
 from datetime import datetime
+
+router = APIRouter()
+# ... o resto do código continua igual ...
 
 router = APIRouter()
 
