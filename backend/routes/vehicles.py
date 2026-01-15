@@ -6,10 +6,12 @@ from database import db
 from bson import ObjectId
 from datetime import datetime
 
-# Importante: Mantemos o router, mas tiramos a barra dos endpoints abaixo
+# --- AQUI ESTÁ A CORREÇÃO ---
+# Mantemos o router, mas removemos a barra "/" dos endpoints @router.post e @router.get
+# O prefixo já está definido no server.py como "/api/vehicles"
+
 router = APIRouter()
 
-# MUDANÇA AQUI: De "/" para "" (string vazia)
 @router.post("", response_model=VehicleDB) 
 async def create_vehicle(
     vehicle_in: VehicleCreate, 
@@ -29,13 +31,12 @@ async def create_vehicle(
     
     return VehicleDB(**created_vehicle)
 
-# MUDANÇA AQUI: De "/" para ""
 @router.get("", response_model=List[VehicleDB])
 async def get_my_vehicles(user_id: str = Depends(get_current_user_id)):
     vehicles_cursor = db.vehicles.find({"owner_id": user_id})
     return [VehicleDB(**v) async for v in vehicles_cursor]
 
-@router.delete("/{vehicle_id}") # Aqui mantém, pois tem parâmetro
+@router.delete("/{vehicle_id}") # Este mantém a barra e o ID
 async def delete_vehicle(vehicle_id: str, user_id: str = Depends(get_current_user_id)):
     result = await db.vehicles.delete_one({"_id": ObjectId(vehicle_id), "owner_id": user_id})
     if result.deleted_count == 0:
