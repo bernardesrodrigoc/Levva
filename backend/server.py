@@ -13,6 +13,7 @@ import uuid
 import mercadopago
 from routes import vehicles
 
+
 from database import (
     db, users_collection, trips_collection, shipments_collection,
     matches_collection, payments_collection, ratings_collection,
