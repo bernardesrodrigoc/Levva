@@ -14,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-// Lógica de URL blindada (igual ao AuthContext)
+// Lógica de URL blindada
 const getBackendUrl = () => {
   let url = process.env.REACT_APP_BACKEND_URL || '';
   if (url && !url.startsWith('http')) {
@@ -25,7 +25,7 @@ const getBackendUrl = () => {
 
 const API = `${getBackendUrl()}/api`;
 
-// --- Inteligência de Capacidade (Requirement #2) ---
+// --- Inteligência de Capacidade (Smart Defaults) ---
 const VEHICLE_DEFAULTS = {
   motorcycle: { 
     label: "Moto", 
@@ -87,18 +87,19 @@ const VehiclesPage = () => {
 
   const fetchVehicles = async () => {
     try {
-      const res = await axios.get(`${API}/vehicles`, {
+      // CORREÇÃO AQUI: Adicionada barra "/" no final para evitar erro 307 Redirect
+      const res = await axios.get(`${API}/vehicles/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setVehicles(res.data);
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao buscar veículos:", error);
+      // Não mostra toast no load inicial para não poluir
     } finally {
       setLoading(false);
     }
   };
 
-  // --- O "Pulo do Gato": Preenchimento Automático ---
   const handleTypeChange = (value) => {
     const defaults = VEHICLE_DEFAULTS[value];
     // Preenche automaticamente com os valores sugeridos
@@ -117,7 +118,8 @@ const VehiclesPage = () => {
         return;
       }
 
-      await axios.post(`${API}/vehicles`, newVehicle, {
+      // CORREÇÃO AQUI: Adicionada barra "/" no final para evitar erro 307 Redirect
+      await axios.post(`${API}/vehicles/`, newVehicle, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -125,7 +127,7 @@ const VehiclesPage = () => {
       setIsDialogOpen(false);
       fetchVehicles();
       
-      // Limpa o formulário
+      // Reset form
       setNewVehicle({ type: '', name: '', license_plate: '', model: '', capacity_weight_kg: 0, capacity_volume_liters: 0 });
 
     } catch (error) {
@@ -137,6 +139,7 @@ const VehiclesPage = () => {
   const handleDelete = async (id) => {
     if(!window.confirm("Tem certeza que deseja remover este veículo?")) return;
     try {
+      // Aqui mantém a estrutura normal (ID já funciona como sufixo)
       await axios.delete(`${API}/vehicles/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
