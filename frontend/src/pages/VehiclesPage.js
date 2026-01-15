@@ -119,7 +119,7 @@ const VehiclesPage = () => {
       }
 
       // SEM BARRA NO FINAL
-      await axios.post(`${API}/vehicles`, newVehicle, {
+      await axios.post(`${API}/vehicles/add`, newVehicle, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
