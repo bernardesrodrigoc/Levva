@@ -11,6 +11,7 @@ import boto3
 from botocore.config import Config
 import uuid
 import mercadopago
+from routes import vehicles
 
 from database import (
     db, users_collection, trips_collection, shipments_collection,
@@ -1683,6 +1684,10 @@ async def stop_tracking(match_id: str, user_id: str = Depends(get_current_user_i
         await manager.disconnect_carrier(user_id, match_id)
     
     return {"message": "Rastreamento parado"}
+
+# ============= REGISTRO DE ROTAS EXTERNAS =============
+# Adicione esta linha para ativar o arquivo vehicles.py que criamos
+app.include_router(vehicles.router, prefix="/api/vehicles", tags=["vehicles"])
 
 app.include_router(api_router)
 
