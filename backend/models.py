@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, EmailStr, validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+from bson import ObjectId
 
 class UserRole(str, Enum):
     SENDER = "sender"
@@ -237,6 +238,46 @@ class FlagCreate(BaseModel):
     entity_id: str
     reason: str
     description: str
+
+
+
+class TransportType(str, Enum):
+    MOTORCYCLE = "motorcycle"
+    CAR = "car"
+    VAN = "van"
+    TRUCK = "truck"
+    BUS_PASSENGER = "bus_passenger" # Passageiro levando mala
+    CARPOOL_PASSENGER = "carpool_passenger" # Carona levando pacote
+
+class VehicleBase(BaseModel):
+    name: str = Field(..., example="Meu Honda Civic")
+    type: TransportType
+    
+    # Dados Específicos de Veículo
+    license_plate: Optional[str] = None
+    model: Optional[str] = None
+    color: Optional[str] = None
+    
+    # Capacidade Inteligente (Requirement #2 e #3)
+    capacity_weight_kg: float = Field(..., gt=0)
+    capacity_volume_liters: float = Field(..., gt=0) # Estimativa em Litros
+    
+    # Se aceita itens frágeis, refrigeração, etc (Futuro)
+    features: List[str] = []
+
+class VehicleCreate(VehicleBase):
+    pass
+
+class VehicleDB(VehicleBase):
+    id: str = Field(alias="_id")
+    owner_id: str
+    is_verified: bool = False # Requirement #8
+    document_photo_url: Optional[str] = None
+    created_at: datetime = datetime.utcnow()
+
+    class Config:
+        populate_by_name = True
+        json_encoders = {ObjectId: str}
 
 class DisputeCreate(BaseModel):
     match_id: str
