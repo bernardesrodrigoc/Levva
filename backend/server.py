@@ -1809,6 +1809,7 @@ async def websocket_watch_tracking(websocket: WebSocket, match_id: str, token: s
 async def startup_event():
     await init_indexes()
     logger.info("Levva API started successfully")
+    
 
 @app.on_event("shutdown")
 async def shutdown_event():
