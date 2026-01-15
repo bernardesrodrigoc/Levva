@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Package, TruckIcon, User, SignOut, Plus, MapTrifold, Lightning } from '@phosphor-icons/react';
+import { useNavigate } from 'react-router-dom';
+import { Package, TruckIcon, User, SignOut, Plus, MapTrifold, Lightning, Car } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { VerificationAlert } from '@/components/VerificationAlert';
 import TrustLevelCard from '@/components/TrustLevelCard';
@@ -191,26 +191,50 @@ const DashboardPage = () => {
         )}
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          
+          {/* Lógica para Transportadores (Carrier ou Both) */}
           {(user?.role === 'carrier' || user?.role === 'both') && (
-            <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-viagem')} data-testid="create-trip-card">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-jungle/10 rounded-xl flex items-center justify-center">
-                      <TruckIcon size={24} weight="duotone" className="text-jungle" />
+            <>
+              {/* Card Criar Viagem */}
+              <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-viagem')} data-testid="create-trip-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-jungle/10 rounded-xl flex items-center justify-center">
+                        <TruckIcon size={24} weight="duotone" className="text-jungle" />
+                      </div>
+                      <div>
+                        <CardTitle>Criar Viagem</CardTitle>
+                        <CardDescription>Publique uma rota</CardDescription>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle>Criar Viagem</CardTitle>
-                      <CardDescription>Publique uma rota disponível</CardDescription>
-                    </div>
+                    <Plus size={24} className="text-muted-foreground" />
                   </div>
-                  <Plus size={24} className="text-muted-foreground" />
-                </div>
-              </CardHeader>
-            </Card>
+                </CardHeader>
+              </Card>
+
+              {/* Card Meus Veículos (NOVO) */}
+              <Card className="card-hover cursor-pointer" onClick={() => navigate('/vehicles')} data-testid="my-vehicles-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                        <Car size={24} weight="duotone" className="text-slate-600" />
+                      </div>
+                      <div>
+                        <CardTitle>Meus Veículos</CardTitle>
+                        <CardDescription>Gerencie sua frota</CardDescription>
+                      </div>
+                    </div>
+                    <div className="text-muted-foreground">→</div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </>
           )}
 
+          {/* Lógica para Remetentes (Sender ou Both) */}
           {(user?.role === 'sender' || user?.role === 'both') && (
             <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-envio')} data-testid="create-shipment-card">
               <CardHeader>
@@ -221,7 +245,7 @@ const DashboardPage = () => {
                     </div>
                     <div>
                       <CardTitle>Criar Envio</CardTitle>
-                      <CardDescription>Cadastre um pacote para enviar</CardDescription>
+                      <CardDescription>Enviar um pacote</CardDescription>
                     </div>
                   </div>
                   <Plus size={24} className="text-muted-foreground" />
