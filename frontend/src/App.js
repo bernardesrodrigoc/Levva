@@ -18,6 +18,7 @@ import MatchDetailPage from '@/pages/MatchDetailPage';
 import CreateMatchPage from '@/pages/CreateMatchPage';
 import MatchSuggestionsPage from '@/pages/MatchSuggestionsPage';
 import { PaymentSuccessPage, PaymentFailurePage, PaymentPendingPage } from '@/pages/PaymentResultPage';
+import VehiclesPage from './pages/VehiclesPage';
 import '@/App.css';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          
           <Route
             path="/dashboard"
             element={
@@ -92,6 +94,18 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* --- ROTA DE VEÍCULOS ADICIONADA AQUI --- */}
+          <Route
+            path="/vehicles"
+            element={
+              <ProtectedRoute>
+                <VehiclesPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* ---------------------------------------- */}
+
           <Route
             path="/match/:matchId"
             element={
