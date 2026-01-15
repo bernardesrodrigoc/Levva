@@ -87,14 +87,13 @@ const VehiclesPage = () => {
 
   const fetchVehicles = async () => {
     try {
-      // CORREÇÃO AQUI: Adicionada barra "/" no final para evitar erro 307 Redirect
-      const res = await axios.get(`${API}/vehicles/`, {
+      // SEM BARRA NO FINAL
+      const res = await axios.get(`${API}/vehicles`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setVehicles(res.data);
     } catch (error) {
       console.error("Erro ao buscar veículos:", error);
-      // Não mostra toast no load inicial para não poluir
     } finally {
       setLoading(false);
     }
@@ -110,6 +109,7 @@ const VehiclesPage = () => {
       capacity_volume_liters: defaults.defaultVolume
     }));
   };
+  
 
   const handleSubmit = async () => {
     try {
@@ -118,8 +118,8 @@ const VehiclesPage = () => {
         return;
       }
 
-      // CORREÇÃO AQUI: Adicionada barra "/" no final para evitar erro 307 Redirect
-      await axios.post(`${API}/vehicles/`, newVehicle, {
+      // SEM BARRA NO FINAL
+      await axios.post(`${API}/vehicles`, newVehicle, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -136,6 +136,7 @@ const VehiclesPage = () => {
     }
   };
 
+  
   const handleDelete = async (id) => {
     if(!window.confirm("Tem certeza que deseja remover este veículo?")) return;
     try {
