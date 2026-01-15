@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TruckIcon, Calendar, Cube, Path, Repeat, CurrencyDollar, Info } from '@phosphor-icons/react';
+import { Package, TruckIcon, Calendar, Cube, Path, Repeat, CurrencyDollar, Info, PlusCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,15 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import LocationPicker from '@/components/LocationPicker';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+// Garante HTTPS na URL se necessário
+const getBackendUrl = () => {
+  let url = process.env.REACT_APP_BACKEND_URL || '';
+  if (url && !url.startsWith('http')) {
+    url = `https://${url}`;
+  }
+  return url.replace(/\/$/, '');
+};
+
+const API = `${getBackendUrl()}/api`;
 
 const DAYS_OF_WEEK = [
   { id: 0, label: 'Seg' },
@@ -32,12 +39,17 @@ const CreateTripPage = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  
+  // Dados principais
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
   const [priceInfo, setPriceInfo] = useState(null);
+  const [myVehicles, setMyVehicles] = useState([]); // Lista de veículos do usuário
+  
   const [formData, setFormData] = useState({
     departureDate: '',
     departureTime: '08:00',
+    selectedVehicleId: 'manual', // Controle do dropdown
     vehicleType: 'car',
     volumeM3: '',
     maxWeightKg: '',
@@ -48,12 +60,28 @@ const CreateTripPage = () => {
     recurringEndDate: ''
   });
 
-  // Calculate suggested price when origin/destination change
+  // 1. Busca veículos ao carregar
+  useEffect(() => {
+    fetchMyVehicles();
+  }, []);
+
+  // 2. Calcula preço ao definir origem/destino
   useEffect(() => {
     if (origin?.lat && destination?.lat) {
       calculatePrice();
     }
   }, [origin, destination]);
+
+  const fetchMyVehicles = async () => {
+    try {
+      const res = await axios.get(`${API}/vehicles`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMyVehicles(res.data);
+    } catch (error) {
+      console.error("Erro ao buscar veículos", error);
+    }
+  };
 
   const calculatePrice = async () => {
     try {
@@ -66,7 +94,6 @@ const CreateTripPage = () => {
         }
       });
       setPriceInfo(response.data);
-      // Auto-fill suggested price if empty
       if (!formData.pricePerKg) {
         setFormData(prev => ({ ...prev, pricePerKg: response.data.suggested_price_per_kg.toString() }));
       }
@@ -74,6 +101,33 @@ const CreateTripPage = () => {
       console.error('Error calculating price:', error);
     }
   };
+
+  // --- Lógica de Seleção Inteligente de Veículo ---
+  const handleVehicleSelect = (vehicleId) => {
+    if (vehicleId === 'manual') {
+        // Reseta para manual mas mantém os dados atuais pra não frustrar o usuário
+        setFormData(prev => ({ ...prev, selectedVehicleId: 'manual' }));
+        return;
+    }
+
+    const vehicle = myVehicles.find(v => v.id === vehicleId);
+    if (vehicle) {
+        // CONVERSÃO: O banco guarda em Litros, a viagem usa m³.
+        // 1000 Litros = 1 m³
+        const volumeM3 = (vehicle.capacity_volume_liters / 1000).toFixed(2);
+        
+        setFormData(prev => ({
+            ...prev,
+            selectedVehicleId: vehicleId,
+            vehicleType: vehicle.type,
+            maxWeightKg: vehicle.capacity_weight_kg.toString(),
+            volumeM3: volumeM3
+        }));
+        
+        toast.info(`Dados de ${vehicle.name} carregados!`);
+    }
+  };
+  // -----------------------------------------------
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -154,7 +208,7 @@ const CreateTripPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-12">
       {/* Header */}
       <header className="glass border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -234,13 +288,151 @@ const CreateTripPage = () => {
                 value={[formData.corridorRadiusKm]}
                 onValueChange={([value]) => handleChange('corridorRadiusKm', value)}
                 min={2}
-                max={20}
+                max={50}
                 step={1}
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
                 Envios com pontos de coleta e entrega dentro de {formData.corridorRadiusKm}km da sua rota serão sugeridos
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Vehicle & Cargo (Atualizado com Smart Fill) */}
+          <Card data-testid="vehicle-card" className="border-jungle/20 border-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cube size={24} weight="duotone" className="text-jungle" />
+                Veículo e Capacidade
+              </CardTitle>
+              <CardDescription>Como você fará este transporte?</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {/* Seleção de Veículo Pré-cadastrado */}
+              <div className="bg-muted/30 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-2">
+                    <Label htmlFor="vehicleSelect">Selecione um Veículo Cadastrado</Label>
+                    <Button 
+                        type="button" 
+                        variant="link" 
+                        className="text-xs h-auto p-0 text-jungle"
+                        onClick={() => navigate('/vehicles')}
+                    >
+                        Gerenciar frota
+                    </Button>
+                </div>
+                <Select 
+                    value={formData.selectedVehicleId} 
+                    onValueChange={handleVehicleSelect}
+                >
+                  <SelectTrigger className="h-12 border-jungle/30">
+                    <SelectValue placeholder="Escolha um veículo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">-- Inserir Manualmente --</SelectItem>
+                    {myVehicles.map(v => (
+                        <SelectItem key={v.id} value={v.id}>
+                            {v.name} ({v.capacity_weight_kg}kg)
+                        </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.selectedVehicleId !== 'manual' && (
+                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                        <Info size={14} /> Capacidade preenchida automaticamente
+                    </p>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4">
+                 <div>
+                    <Label htmlFor="vehicleType">Tipo de Veículo</Label>
+                    <Select 
+                        value={formData.vehicleType} 
+                        onValueChange={(value) => handleChange('vehicleType', value)}
+                        disabled={formData.selectedVehicleId !== 'manual'}
+                    >
+                      <SelectTrigger className="h-12 mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="motorcycle">Moto</SelectItem>
+                        <SelectItem value="car">Carro</SelectItem>
+                        <SelectItem value="pickup">Pickup</SelectItem>
+                        <SelectItem value="van">Van</SelectItem>
+                        <SelectItem value="truck">Caminhão</SelectItem>
+                        <SelectItem value="bus_passenger">Passageiro (Ônibus)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                 </div>
+
+                <div>
+                  <Label htmlFor="maxWeightKg">Peso Disponível (kg)</Label>
+                  <Input
+                    id="maxWeightKg"
+                    type="number"
+                    placeholder="20"
+                    value={formData.maxWeightKg}
+                    onChange={(e) => handleChange('maxWeightKg', e.target.value)}
+                    required
+                    className="h-12 mt-2 font-medium"
+                    readOnly={formData.selectedVehicleId !== 'manual'}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="volumeM3">Volume (m³)</Label>
+                  <Input
+                    id="volumeM3"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.5"
+                    value={formData.volumeM3}
+                    onChange={(e) => handleChange('volumeM3', e.target.value)}
+                    required
+                    className="h-12 mt-2 font-medium"
+                    readOnly={formData.selectedVehicleId !== 'manual'}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1 text-right">
+                    (1m³ = 1000 Litros)
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Date & Time */}
+          <Card data-testid="datetime-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar size={24} weight="duotone" className="text-jungle" />
+                {formData.isRecurring ? 'Horário e Início' : 'Data e Hora'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="departureDate">{formData.isRecurring ? 'Data da primeira viagem' : 'Data de Partida'}</Label>
+                <Input
+                  id="departureDate"
+                  type="date"
+                  value={formData.departureDate}
+                  onChange={(e) => handleChange('departureDate', e.target.value)}
+                  required
+                  className="h-12 mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="departureTime">Horário</Label>
+                <Input
+                  id="departureTime"
+                  type="time"
+                  value={formData.departureTime}
+                  onChange={(e) => handleChange('departureTime', e.target.value)}
+                  required
+                  className="h-12 mt-2"
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -251,9 +443,6 @@ const CreateTripPage = () => {
                 <Repeat size={24} weight="duotone" className="text-jungle" />
                 Rota Recorrente
               </CardTitle>
-              <CardDescription>
-                Faça o mesmo trajeto regularmente? Configure uma rota recorrente
-              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -287,7 +476,6 @@ const CreateTripPage = () => {
                       ))}
                     </div>
                   </div>
-
                   <div>
                     <Label htmlFor="recurringEndDate">Data final (opcional)</Label>
                     <Input
@@ -297,111 +485,9 @@ const CreateTripPage = () => {
                       onChange={(e) => handleChange('recurringEndDate', e.target.value)}
                       className="h-12 mt-2"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Deixe em branco para rota sem data de término
-                    </p>
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Date & Time */}
-          <Card data-testid="datetime-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar size={24} weight="duotone" className="text-jungle" />
-                {formData.isRecurring ? 'Horário e Primeira Viagem' : 'Data e Hora'}
-              </CardTitle>
-              <CardDescription>
-                {formData.isRecurring 
-                  ? 'Defina o horário das viagens e a data da primeira' 
-                  : 'Quando você pretende viajar?'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="departureDate">{formData.isRecurring ? 'Data da primeira viagem' : 'Data de Partida'}</Label>
-                <Input
-                  id="departureDate"
-                  type="date"
-                  value={formData.departureDate}
-                  onChange={(e) => handleChange('departureDate', e.target.value)}
-                  required
-                  className="h-12 mt-2"
-                  data-testid="departure-date-input"
-                />
-              </div>
-              <div>
-                <Label htmlFor="departureTime">Horário</Label>
-                <Input
-                  id="departureTime"
-                  type="time"
-                  value={formData.departureTime}
-                  onChange={(e) => handleChange('departureTime', e.target.value)}
-                  required
-                  className="h-12 mt-2"
-                  data-testid="departure-time-input"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Vehicle & Cargo */}
-          <Card data-testid="vehicle-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cube size={24} weight="duotone" className="text-jungle" />
-                Veículo e Carga
-              </CardTitle>
-              <CardDescription>Informações sobre seu veículo e espaço disponível</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="vehicleType">Tipo de Veículo</Label>
-                <Select value={formData.vehicleType} onValueChange={(value) => handleChange('vehicleType', value)}>
-                  <SelectTrigger className="h-12 mt-2" data-testid="vehicle-type-select">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="motorcycle">Moto</SelectItem>
-                    <SelectItem value="car">Carro</SelectItem>
-                    <SelectItem value="pickup">Pickup</SelectItem>
-                    <SelectItem value="van">Van</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="volumeM3">Volume disponível (m³)</Label>
-                  <Input
-                    id="volumeM3"
-                    type="number"
-                    step="0.1"
-                    placeholder="0.5"
-                    value={formData.volumeM3}
-                    onChange={(e) => handleChange('volumeM3', e.target.value)}
-                    required
-                    className="h-12 mt-2"
-                    data-testid="volume-input"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="maxWeightKg">Peso máximo (kg)</Label>
-                  <Input
-                    id="maxWeightKg"
-                    type="number"
-                    placeholder="20"
-                    value={formData.maxWeightKg}
-                    onChange={(e) => handleChange('maxWeightKg', e.target.value)}
-                    required
-                    className="h-12 mt-2"
-                    data-testid="max-weight-input"
-                  />
-                </div>
-              </div>
             </CardContent>
           </Card>
 
@@ -423,12 +509,6 @@ const CreateTripPage = () => {
                       <span>Distância estimada: <strong>{priceInfo.distance_km} km</strong></span>
                       <span>Preço sugerido: <strong>R$ {priceInfo.suggested_price_per_kg}/kg</strong></span>
                     </div>
-                    <div className="mt-2 text-xs">
-                      Exemplos: 1kg = R$ {priceInfo.examples['1kg']} | 5kg = R$ {priceInfo.examples['5kg']} | 10kg = R$ {priceInfo.examples['10kg']}
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Comissão Levva: {priceInfo.platform_fee_percent}% • Você recebe: {priceInfo.carrier_receives_percent}%
-                    </div>
                   </AlertDescription>
                 </Alert>
               )}
@@ -443,11 +523,7 @@ const CreateTripPage = () => {
                   value={formData.pricePerKg}
                   onChange={(e) => handleChange('pricePerKg', e.target.value)}
                   className="h-12 mt-2"
-                  data-testid="price-per-kg-input"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Deixe em branco para usar o preço sugerido automaticamente
-                </p>
               </div>
             </CardContent>
           </Card>
@@ -458,7 +534,6 @@ const CreateTripPage = () => {
               variant="outline"
               className="flex-1 h-12"
               onClick={() => navigate('/dashboard')}
-              data-testid="cancel-btn"
             >
               Cancelar
             </Button>
@@ -466,7 +541,6 @@ const CreateTripPage = () => {
               type="submit"
               className="flex-1 h-12 bg-jungle hover:bg-jungle-800"
               disabled={loading}
-              data-testid="submit-trip-btn"
             >
               {loading ? 'Publicando...' : (formData.isRecurring ? 'Criar Rota Recorrente' : 'Publicar Viagem')}
             </Button>
