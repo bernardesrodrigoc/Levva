@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+// CORREÇÃO: Importando DialogDescription para corrigir o aviso do console
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
@@ -87,7 +88,7 @@ const VehiclesPage = () => {
 
   const fetchVehicles = async () => {
     try {
-      // SEM BARRA NO FINAL
+      // URL correta sem barra no final
       const res = await axios.get(`${API}/vehicles`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -109,7 +110,6 @@ const VehiclesPage = () => {
       capacity_volume_liters: defaults.defaultVolume
     }));
   };
-  
 
   const handleSubmit = async () => {
     try {
@@ -118,8 +118,8 @@ const VehiclesPage = () => {
         return;
       }
 
-      // SEM BARRA NO FINAL
-      await axios.post(`${API}/vehicles/add`, newVehicle, {
+      // URL correta sem barra no final
+      await axios.post(`${API}/vehicles`, newVehicle, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -136,11 +136,9 @@ const VehiclesPage = () => {
     }
   };
 
-  
   const handleDelete = async (id) => {
     if(!window.confirm("Tem certeza que deseja remover este veículo?")) return;
     try {
-      // Aqui mantém a estrutura normal (ID já funciona como sufixo)
       await axios.delete(`${API}/vehicles/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -168,6 +166,10 @@ const VehiclesPage = () => {
           <DialogContent className="max-w-md bg-white dark:bg-zinc-900">
             <DialogHeader>
               <DialogTitle>Novo Método de Transporte</DialogTitle>
+              {/* CORREÇÃO: Descrição adicionada aqui para corrigir o aviso do console */}
+              <DialogDescription>
+                Cadastre os detalhes do seu veículo ou método de transporte. Isso ajuda a calcularmos o que você pode levar.
+              </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4 py-4">
@@ -272,7 +274,7 @@ const VehiclesPage = () => {
         {vehicles.map(v => {
           const Icon = VEHICLE_DEFAULTS[v.type]?.icon || Truck;
           return (
-            <Card key={v.id} className="relative overflow-hidden border hover:shadow-md transition-shadow">
+            <Card key={v._id || v.id} className="relative overflow-hidden border hover:shadow-md transition-shadow">
                {/* Faixa lateral indicando status */}
               <div className={`absolute top-0 left-0 w-1.5 h-full ${v.is_verified ? 'bg-green-500' : 'bg-yellow-400'}`} />
               
@@ -295,7 +297,7 @@ const VehiclesPage = () => {
                       )}
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(v.id)}>
+                  <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(v._id || v.id)}>
                     <Trash size={18} />
                   </Button>
                 </div>
