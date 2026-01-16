@@ -204,9 +204,6 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
         )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* --- LISTA DE COMBINAÇÕES ATIVAS (RECENT ACTIVITY) --- */}
         <div className="mb-10">
