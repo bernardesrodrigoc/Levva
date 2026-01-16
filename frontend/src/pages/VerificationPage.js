@@ -372,21 +372,10 @@ const VerificationPage = () => {
                     />
                   </div>
                 </div>
-                    <Input
-                      id="zipCode"
-                      placeholder="00000-000"
-                      value={formData.zipCode}
-                      onChange={(e) => handleChange('zipCode', e.target.value)}
-                      required
-                      className="h-12 mt-2"
-                      data-testid="zipcode-input"
-                    />
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
-            <Button type="submit" className="w-full h-12 mt-6 bg-jungle hover:bg-jungle-800" data-testid="next-btn">
+            <Button type="submit" className="w-full h-11 md:h-12 mt-6 bg-jungle hover:bg-jungle-800" data-testid="next-btn">
               Continuar
             </Button>
           </form>
@@ -396,28 +385,22 @@ const VerificationPage = () => {
         {step === 2 && (
           <form onSubmit={handleSubmitStep2}>
             <Card data-testid="step2-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User size={24} weight="duotone" className="text-jungle" />
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <User size={22} weight="duotone" className="text-jungle" />
                   Foto de Perfil
                 </CardTitle>
-                <CardDescription>Uma foto clara do seu rosto</CardDescription>
+                <CardDescription className="text-xs md:text-sm">Uma foto clara do seu rosto</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center">
-                  <div className="relative mb-4">
-                    {uploadingFile === 'profile' && (
-                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10 rounded-full">
-                        <SpinnerGap className="w-8 h-8 animate-spin text-jungle" />
-                      </div>
-                    )}
-                    {formData.profilePhotoPreview ? (
-                      <div className="relative">
-                        <img src={formData.profilePhotoPreview} alt="Preview" className="w-48 h-48 rounded-full object-cover" />
-                        {formData.profilePhotoUrl && (
-                          <div className="absolute bottom-2 right-2 bg-green-500 text-white rounded-full p-1">
-                            <CheckCircle size={24} />
-                          </div>
+              <CardContent className="p-4 md:p-6 pt-0">
+                <div className="max-w-sm mx-auto">
+                  <ImageUploadWithCamera
+                    fileType="profile"
+                    label="Tire uma selfie ou escolha uma foto"
+                    onUploadComplete={(url) => handlePhotoUpload('profilePhotoUrl', url)}
+                    currentImageUrl={formData.profilePhotoUrl}
+                    maxSizeMB={5}
+                  />
                         )}
                       </div>
                     ) : (
