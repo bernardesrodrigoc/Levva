@@ -19,6 +19,7 @@ import CreateMatchPage from '@/pages/CreateMatchPage';
 import MatchSuggestionsPage from '@/pages/MatchSuggestionsPage';
 import { PaymentSuccessPage, PaymentFailurePage, PaymentPendingPage } from '@/pages/PaymentResultPage';
 import VehiclesPage from './pages/VehiclesPage';
+import TripDetailsPage from '@/pages/TripDetailsPage'; // <--- IMPORTAÇÃO NOVA
 import '@/App.css';
 
 function App() {
@@ -62,6 +63,18 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* --- NOVA ROTA DE DETALHES DA VIAGEM --- */}
+          <Route
+            path="/viagens/:tripId"
+            element={
+              <ProtectedRoute>
+                <TripDetailsPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* --------------------------------------- */}
+
           <Route
             path="/envios"
             element={
@@ -95,7 +108,6 @@ function App() {
             }
           />
 
-          {/* --- ROTA DE VEÍCULOS ADICIONADA AQUI --- */}
           <Route
             path="/vehicles"
             element={
@@ -104,7 +116,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* ---------------------------------------- */}
 
           <Route
             path="/match/:matchId"
