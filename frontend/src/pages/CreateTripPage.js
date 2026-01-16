@@ -357,15 +357,16 @@ const CreateTripPage = () => {
                 )}
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
+              {/* Vehicle details grid - Mobile Optimized */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                  <div>
-                    <Label htmlFor="vehicleType">Tipo de Veículo</Label>
+                    <Label htmlFor="vehicleType" className="text-xs md:text-sm">Tipo de Veículo</Label>
                     <Select 
                         value={formData.vehicleType} 
                         onValueChange={(value) => handleChange('vehicleType', value)}
                         disabled={formData.selectedVehicleId !== 'manual'}
                     >
-                      <SelectTrigger className="h-12 mt-2">
+                      <SelectTrigger className="h-11 md:h-12 mt-1.5 text-base">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -380,30 +381,32 @@ const CreateTripPage = () => {
                  </div>
 
                 <div>
-                  <Label htmlFor="maxWeightKg">Peso Disponível (kg)</Label>
+                  <Label htmlFor="maxWeightKg" className="text-xs md:text-sm">Peso Disponível (kg)</Label>
                   <Input
                     id="maxWeightKg"
                     type="number"
+                    inputMode="decimal"
                     placeholder="20"
                     value={formData.maxWeightKg}
                     onChange={(e) => handleChange('maxWeightKg', e.target.value)}
                     required
-                    className="h-12 mt-2 font-medium"
+                    className="h-11 md:h-12 mt-1.5 font-medium text-base"
                     readOnly={formData.selectedVehicleId !== 'manual'}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="volumeM3">Volume (m³)</Label>
+                  <Label htmlFor="volumeM3" className="text-xs md:text-sm">Volume (m³)</Label>
                   <Input
                     id="volumeM3"
                     type="number"
+                    inputMode="decimal"
                     step="0.01"
                     placeholder="0.5"
                     value={formData.volumeM3}
                     onChange={(e) => handleChange('volumeM3', e.target.value)}
                     required
-                    className="h-12 mt-2 font-medium"
+                    className="h-11 md:h-12 mt-1.5 font-medium text-base"
                     readOnly={formData.selectedVehicleId !== 'manual'}
                   />
                   <p className="text-[10px] text-muted-foreground mt-1 text-right">
@@ -414,53 +417,55 @@ const CreateTripPage = () => {
             </CardContent>
           </Card>
 
-          {/* Date & Time */}
+          {/* Date & Time - Mobile Optimized */}
           <Card data-testid="datetime-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar size={24} weight="duotone" className="text-jungle" />
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Calendar size={20} weight="duotone" className="text-jungle" />
                 {formData.isRecurring ? 'Horário e Início' : 'Data e Hora'}
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
+            <CardContent className="p-4 md:p-6 pt-0 grid grid-cols-2 gap-3 md:gap-4">
               <div>
-                <Label htmlFor="departureDate">{formData.isRecurring ? 'Data da primeira viagem' : 'Data de Partida'}</Label>
+                <Label htmlFor="departureDate" className="text-xs md:text-sm">
+                  {formData.isRecurring ? 'Primeira viagem' : 'Data de Partida'}
+                </Label>
                 <Input
                   id="departureDate"
                   type="date"
                   value={formData.departureDate}
                   onChange={(e) => handleChange('departureDate', e.target.value)}
                   required
-                  className="h-12 mt-2"
+                  className="h-11 md:h-12 mt-1.5 text-base"
                 />
               </div>
               <div>
-                <Label htmlFor="departureTime">Horário</Label>
+                <Label htmlFor="departureTime" className="text-xs md:text-sm">Horário</Label>
                 <Input
                   id="departureTime"
                   type="time"
                   value={formData.departureTime}
                   onChange={(e) => handleChange('departureTime', e.target.value)}
                   required
-                  className="h-12 mt-2"
+                  className="h-11 md:h-12 mt-1.5 text-base"
                 />
               </div>
             </CardContent>
           </Card>
 
-          {/* Recurring Trip Option */}
+          {/* Recurring Trip Option - Mobile Optimized */}
           <Card data-testid="recurring-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Repeat size={24} weight="duotone" className="text-jungle" />
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Repeat size={20} weight="duotone" className="text-jungle" />
                 Rota Recorrente
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 md:p-6 pt-0 space-y-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="isRecurring" className="font-medium">Ativar rota recorrente</Label>
-                  <p className="text-xs text-muted-foreground">Ideal para quem faz o mesmo trajeto frequentemente</p>
+                <div className="flex-1 mr-4">
+                  <Label htmlFor="isRecurring" className="font-medium text-sm">Ativar rota recorrente</Label>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">Ideal para trajetos frequentes</p>
                 </div>
                 <Switch
                   id="isRecurring"
@@ -472,14 +477,14 @@ const CreateTripPage = () => {
               {formData.isRecurring && (
                 <div className="space-y-4 pt-4 border-t">
                   <div>
-                    <Label className="mb-3 block">Dias da semana</Label>
-                    <div className="flex gap-2 flex-wrap">
+                    <Label className="mb-2 md:mb-3 block text-xs md:text-sm">Dias da semana</Label>
+                    <div className="flex gap-1.5 md:gap-2 flex-wrap">
                       {DAYS_OF_WEEK.map(day => (
                         <Button
                           key={day.id}
                           type="button"
                           variant={formData.recurringDays.includes(day.id) ? "default" : "outline"}
-                          className={formData.recurringDays.includes(day.id) ? "bg-jungle hover:bg-jungle-800" : ""}
+                          className={`${formData.recurringDays.includes(day.id) ? "bg-jungle hover:bg-jungle-800" : ""} text-xs px-2 md:px-3`}
                           size="sm"
                           onClick={() => toggleRecurringDay(day.id)}
                         >
@@ -489,13 +494,13 @@ const CreateTripPage = () => {
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="recurringEndDate">Data final (opcional)</Label>
+                    <Label htmlFor="recurringEndDate" className="text-xs md:text-sm">Data final (opcional)</Label>
                     <Input
                       id="recurringEndDate"
                       type="date"
                       value={formData.recurringEndDate}
                       onChange={(e) => handleChange('recurringEndDate', e.target.value)}
-                      className="h-12 mt-2"
+                      className="h-11 md:h-12 mt-1.5 text-base"
                     />
                   </div>
                 </div>
@@ -503,58 +508,60 @@ const CreateTripPage = () => {
             </CardContent>
           </Card>
 
-          {/* Pricing */}
+          {/* Pricing - Mobile Optimized */}
           <Card data-testid="pricing-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CurrencyDollar size={24} weight="duotone" className="text-jungle" />
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <CurrencyDollar size={20} weight="duotone" className="text-jungle" />
                 Precificação
               </CardTitle>
-              <CardDescription>Defina quanto você cobra por kg transportado</CardDescription>
+              <CardDescription className="text-xs md:text-sm">Defina quanto você cobra por kg</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4">
               {priceInfo && (
                 <Alert className="bg-jungle/5 border-jungle/30">
-                  <Info size={16} className="text-jungle" />
-                  <AlertDescription>
-                    <div className="flex items-center justify-between">
-                      <span>Distância estimada: <strong>{priceInfo.distance_km} km</strong></span>
-                      <span>Preço sugerido: <strong>R$ {priceInfo.suggested_price_per_kg}/kg</strong></span>
+                  <Info size={14} className="text-jungle flex-shrink-0" />
+                  <AlertDescription className="text-xs md:text-sm">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1 md:gap-4">
+                      <span>Distância: <strong>{priceInfo.distance_km} km</strong></span>
+                      <span>Sugerido: <strong>R$ {priceInfo.suggested_price_per_kg}/kg</strong></span>
                     </div>
                   </AlertDescription>
                 </Alert>
               )}
 
               <div>
-                <Label htmlFor="pricePerKg">Preço por kg (R$)</Label>
+                <Label htmlFor="pricePerKg" className="text-xs md:text-sm">Preço por kg (R$)</Label>
                 <Input
                   id="pricePerKg"
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   placeholder={priceInfo?.suggested_price_per_kg?.toString() || "5.00"}
                   value={formData.pricePerKg}
                   onChange={(e) => handleChange('pricePerKg', e.target.value)}
-                  className="h-12 mt-2"
+                  className="h-11 md:h-12 mt-1.5 text-base"
                 />
               </div>
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
+          {/* Action Buttons - Sticky on mobile */}
+          <div className="flex gap-3 md:gap-4 sticky bottom-20 md:static bg-background py-4 md:py-0 -mx-4 px-4 md:mx-0 md:px-0 border-t md:border-0">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-12"
+              className="flex-1 h-11 md:h-12 text-sm md:text-base"
               onClick={() => navigate('/dashboard')}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              className="flex-1 h-12 bg-jungle hover:bg-jungle-800"
+              className="flex-1 h-11 md:h-12 bg-jungle hover:bg-jungle-800 text-sm md:text-base font-semibold"
               disabled={loading}
             >
-              {loading ? 'Publicando...' : (formData.isRecurring ? 'Criar Rota Recorrente' : 'Publicar Viagem')}
+              {loading ? 'Publicando...' : (formData.isRecurring ? 'Criar Rota' : 'Publicar')}
             </Button>
           </div>
         </form>
