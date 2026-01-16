@@ -51,7 +51,9 @@ const BrowseTripsPage = () => {
     fetchTrips(filters);
   };
 
-  const handleCreateMatch = async (tripId, trip) => {
+  // Ajustado para evitar conflito com o clique do Card
+  const handleCreateMatch = async (e, tripId) => {
+    e.stopPropagation(); // Impede que o clique no botão abra a página de detalhes
     navigate('/criar-combinacao', { state: { tripId } });
   };
 
@@ -70,7 +72,7 @@ const BrowseTripsPage = () => {
     return date.toLocaleDateString('pt-BR', { 
       day: '2-digit', 
       month: 'short', 
-      year: 'numeric',
+      year: 'numeric', 
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -160,7 +162,13 @@ const BrowseTripsPage = () => {
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">{trips.length} viagem(ns) encontrada(s)</p>
             {trips.map((trip) => (
-              <Card key={trip.id} className="card-hover" data-testid={`trip-card-${trip.id}`}>
+              <Card 
+                key={trip.id} 
+                // AQUI ESTÁ A MUDANÇA: onClick para navegar aos detalhes
+                className="card-hover cursor-pointer hover:border-jungle transition-all" 
+                data-testid={`trip-card-${trip.id}`}
+                onClick={() => navigate(`/viagens/${trip.id}`)}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between gap-6">
                     <div className="flex-1">
@@ -201,7 +209,7 @@ const BrowseTripsPage = () => {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Capacidade</p>
-                          <p className="text-sm font-medium">{trip.cargo_space.max_weight_kg} kg</p>
+                          <p className="text-sm font-medium">{trip.cargo_space?.max_weight_kg || 0} kg</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Preço/kg</p>
@@ -234,7 +242,8 @@ const BrowseTripsPage = () => {
                         {trip.status === 'published' ? 'Disponível' : trip.status}
                       </Badge>
                       <Button 
-                        onClick={() => handleCreateMatch(trip.id, trip)}
+                        // Alterado para passar o evento 'e' e parar propagação
+                        onClick={(e) => handleCreateMatch(e, trip.id)}
                         className="bg-jungle hover:bg-jungle-800"
                         data-testid={`match-btn-${trip.id}`}
                       >
