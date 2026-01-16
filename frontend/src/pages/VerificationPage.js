@@ -294,20 +294,19 @@ const VerificationPage = () => {
                       value={formData.cpf}
                       onChange={(e) => handleChange('cpf', e.target.value)}
                       required
-                      className="h-12 mt-2"
+                      className="h-11 md:h-12 mt-2"
                       data-testid="cpf-input"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="birthDate">Data de Nascimento *</Label>
-                    <Input
-                      id="birthDate"
-                      type="date"
+                    <MobileDatePicker
+                      label="Data de Nascimento *"
                       value={formData.birthDate}
-                      onChange={(e) => handleChange('birthDate', e.target.value)}
+                      onChange={(value) => handleChange('birthDate', value)}
+                      minYear={1920}
+                      maxYear={new Date().getFullYear() - 18}
                       required
-                      className="h-12 mt-2"
-                      data-testid="birthdate-input"
+                      data-testid="birthdate"
                     />
                   </div>
                 </div>
@@ -320,12 +319,12 @@ const VerificationPage = () => {
                     value={formData.address}
                     onChange={(e) => handleChange('address', e.target.value)}
                     required
-                    className="h-12 mt-2"
+                    className="h-11 md:h-12 mt-2"
                     data-testid="address-input"
                   />
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                   <div>
                     <Label htmlFor="city">Cidade *</Label>
                     <Input
@@ -333,7 +332,7 @@ const VerificationPage = () => {
                       value={formData.city}
                       onChange={(e) => handleChange('city', e.target.value)}
                       required
-                      className="h-12 mt-2"
+                      className="h-11 md:h-12 mt-2"
                       data-testid="city-input"
                     />
                   </div>
