@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
+import polyline from '@mapbox/polyline'; // <--- IMPORTANTE: Biblioteca para decodificar
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in React-Leaflet
@@ -35,20 +36,42 @@ const RouteMap = ({
   destinationLat,
   destinationLng,
   destinationAddress,
-  routePolyline = null,  // Real polyline from backend [[lat, lng], ...]
+  routePolyline = null,  // Pode vir como String (novo backend) ou Array (legado)
   corridorRadiusKm = 10,
   showCorridor = false,
-  pickupLocation = null,  // {lat, lng, address} for shipment pickup
-  dropoffLocation = null, // {lat, lng, address} for shipment dropoff
-  carrierLocation = null, // Optional: current carrier GPS location [lat, lng]
+  pickupLocation = null, 
+  dropoffLocation = null,
+  carrierLocation = null,
   status = 'pending_payment',
   height = '350px'
 }) => {
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
+  const [decodedPath, setDecodedPath] = useState([]); // Estado para a rota processada
 
+  // 1. Processa a Rota (Decodifica se for string)
   useEffect(() => {
-    // Use provided coordinates or fall back to city lookup
+    if (routePolyline) {
+      if (typeof routePolyline === 'string') {
+        try {
+          // Decodifica a string do OSRM/Google para [[lat,lng], ...]
+          const points = polyline.decode(routePolyline);
+          setDecodedPath(points);
+        } catch (e) {
+          console.error("Erro ao decodificar rota:", e);
+          setDecodedPath([]);
+        }
+      } else if (Array.isArray(routePolyline)) {
+        // Suporte legado se já for array
+        setDecodedPath(routePolyline);
+      }
+    } else {
+        setDecodedPath([]);
+    }
+  }, [routePolyline]);
+
+  // 2. Define Origem e Destino
+  useEffect(() => {
     if (originLat && originLng) {
       setOrigin([originLat, originLng]);
     } else if (originCity) {
@@ -89,12 +112,10 @@ const RouteMap = ({
   const getCoordinates = (city) => {
     if (!city) return [-23.5505, -46.6333];
     
-    // Try to find exact match
     if (cityCoordinates[city]) {
       return cityCoordinates[city];
     }
     
-    // Try to find partial match
     const cityLower = city.toLowerCase();
     for (const [name, coords] of Object.entries(cityCoordinates)) {
       if (name.toLowerCase().includes(cityLower) || cityLower.includes(name.toLowerCase())) {
@@ -102,7 +123,6 @@ const RouteMap = ({
       }
     }
     
-    // Default to São Paulo if not found
     return [-23.5505, -46.6333];
   };
 
@@ -114,11 +134,13 @@ const RouteMap = ({
     );
   }
 
-  // Calculate center and zoom
+  // Calculate center and zoom based on DECODED path
   const allPoints = [origin, destination];
   if (pickupLocation?.lat) allPoints.push([pickupLocation.lat, pickupLocation.lng]);
   if (dropoffLocation?.lat) allPoints.push([dropoffLocation.lat, dropoffLocation.lng]);
-  if (routePolyline?.length) allPoints.push(...routePolyline);
+  
+  // Adiciona os pontos da rota decodificada para o cálculo do zoom
+  if (decodedPath.length > 0) allPoints.push(...decodedPath);
   
   const lats = allPoints.map(p => p[0]);
   const lngs = allPoints.map(p => p[1]);
@@ -138,10 +160,8 @@ const RouteMap = ({
   else if (maxDiff < 10) zoom = 5;
   else zoom = 4;
 
-  // Use real polyline if available, otherwise straight line
-  const routePath = routePolyline && routePolyline.length > 0 
-    ? routePolyline 
-    : [origin, destination];
+  // Se não tiver rota decodificada, usa linha reta entre origem e destino
+  const displayPath = decodedPath.length > 0 ? decodedPath : [origin, destination];
 
   return (
     <MapContainer
@@ -155,19 +175,19 @@ const RouteMap = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Route polyline */}
+      {/* Rota Principal */}
       <Polyline
-        positions={routePath}
+        positions={displayPath}
         color="#166534"
         weight={4}
         opacity={0.8}
       />
       
-      {/* Corridor visualization (semi-transparent circles along the route) */}
-      {showCorridor && routePolyline && routePolyline.length > 0 && (
+      {/* Visualização do Corredor (Círculos semi-transparentes) */}
+      {/* Importante: Usamos decodedPath aqui, pois routePolyline pode ser string */}
+      {showCorridor && decodedPath.length > 0 && (
         <>
-          {/* Show corridor as semi-transparent buffer - sample every 10th point */}
-          {routePolyline.filter((_, i) => i % 10 === 0).map((point, idx) => (
+          {decodedPath.filter((_, i) => i % 10 === 0).map((point, idx) => (
             <Circle
               key={idx}
               center={point}
@@ -199,7 +219,7 @@ const RouteMap = ({
         </Popup>
       </Marker>
       
-      {/* Pickup location (for shipment) */}
+      {/* Pickup location */}
       {pickupLocation?.lat && pickupLocation?.lng && (
         <Marker position={[pickupLocation.lat, pickupLocation.lng]} icon={orangeIcon}>
           <Popup>
@@ -209,7 +229,7 @@ const RouteMap = ({
         </Marker>
       )}
       
-      {/* Dropoff location (for shipment) */}
+      {/* Dropoff location */}
       {dropoffLocation?.lat && dropoffLocation?.lng && (
         <Marker position={[dropoffLocation.lat, dropoffLocation.lng]} icon={orangeIcon}>
           <Popup>
@@ -219,7 +239,7 @@ const RouteMap = ({
         </Marker>
       )}
       
-      {/* Carrier location (if in transit) */}
+      {/* Carrier location */}
       {carrierLocation && status === 'in_transit' && (
         <Marker position={carrierLocation} icon={blueIcon}>
           <Popup>
