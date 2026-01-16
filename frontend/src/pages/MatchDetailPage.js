@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Package, MapPin, TruckIcon, User, Star, Check, X, Camera, CurrencyDollar, CreditCard, MapTrifold, NavigationArrow, Play, Pause } from '@phosphor-icons/react';
+import { Package, MapPin, TruckIcon, User, Star, Check, X, Camera, CurrencyDollar, CreditCard, MapTrifold, NavigationArrow, Play, Pause, Warning } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -102,7 +102,7 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
               data-testid="start-tracking-btn"
             >
               <Play size={18} />
-              Iniciar Rastreamento
+              Iniciar
             </Button>
           )}
         </div>
@@ -120,18 +120,20 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
           </div>
         )}
 
-        {/* Map showing current route */}
-        <LiveTrackingMap
-          carrierLocation={carrierGPS.lastSentLocation ? {
-            lat: carrierGPS.lastSentLocation.latitude,
-            lng: carrierGPS.lastSentLocation.longitude
-          } : null}
-          pickupLocation={match.shipment?.origin}
-          dropoffLocation={match.shipment?.destination}
-          routePolyline={match.trip?.route_polyline}
-          isTracking={carrierGPS.isTracking}
-          height="350px"
-        />
+        {/* RESPONSIVIDADE: Wrapper para controlar altura do mapa */}
+        <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
+            <LiveTrackingMap
+            carrierLocation={carrierGPS.lastSentLocation ? {
+                lat: carrierGPS.lastSentLocation.latitude,
+                lng: carrierGPS.lastSentLocation.longitude
+            } : null}
+            pickupLocation={match.shipment?.origin}
+            dropoffLocation={match.shipment?.destination}
+            routePolyline={match.trip?.route_polyline}
+            isTracking={carrierGPS.isTracking}
+            height="100%" // Ocupa a altura do pai
+            />
+        </div>
       </div>
     );
   }
@@ -155,17 +157,19 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
         )}
       </div>
 
-      {/* Live Map */}
-      <LiveTrackingMap
-        carrierLocation={watcherTracking.currentLocation}
-        pickupLocation={match.shipment?.origin}
-        dropoffLocation={match.shipment?.destination}
-        routePolyline={match.trip?.route_polyline}
-        routeHistory={watcherTracking.routeHistory}
-        isTracking={watcherTracking.isTracking}
-        followCarrier={true}
-        height="350px"
-      />
+      {/* RESPONSIVIDADE: Wrapper para altura do mapa */}
+      <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
+        <LiveTrackingMap
+            carrierLocation={watcherTracking.currentLocation}
+            pickupLocation={match.shipment?.origin}
+            dropoffLocation={match.shipment?.destination}
+            routePolyline={match.trip?.route_polyline}
+            routeHistory={watcherTracking.routeHistory}
+            isTracking={watcherTracking.isTracking}
+            followCarrier={true}
+            height="100%" // Ocupa a altura do pai
+        />
+      </div>
 
       {/* Last Update Info */}
       {watcherTracking.currentLocation && (
@@ -362,7 +366,7 @@ const MatchDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20"> {/* pb-20 para não cobrir com o menu mobile */}
       {/* Header */}
       <header className="glass border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -377,7 +381,7 @@ const MatchDetailPage = () => {
       </header>
 
       <div className="container mx-auto px-6 py-8 max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-heading font-bold mb-2">Detalhes da Combinação</h1>
             <p className="text-muted-foreground">ID: {matchId?.slice(0, 12)}...</p>
@@ -412,7 +416,7 @@ const MatchDetailPage = () => {
         </Card>
 
         {/* Route Map / Live Tracking */}
-        <Card className="mb-6">
+        <Card className="mb-6 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapTrifold size={24} weight="duotone" className="text-jungle" />
@@ -435,23 +439,26 @@ const MatchDetailPage = () => {
                 token={token}
               />
             ) : (
-              <RouteMap
-                originCity={match.trip?.origin.city}
-                originLat={match.trip?.origin.lat}
-                originLng={match.trip?.origin.lng}
-                originAddress={match.trip?.origin.address}
-                destinationCity={match.trip?.destination.city}
-                destinationLat={match.trip?.destination.lat}
-                destinationLng={match.trip?.destination.lng}
-                destinationAddress={match.trip?.destination.address}
-                routePolyline={match.trip?.route_polyline}
-                corridorRadiusKm={match.trip?.corridor_radius_km || 10}
-                showCorridor={true}
-                pickupLocation={match.shipment?.origin}
-                dropoffLocation={match.shipment?.destination}
-                status={match.status}
-                height="350px"
-              />
+              // RESPONSIVIDADE: Wrapper para o mapa estático
+              <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
+                  <RouteMap
+                    originCity={match.trip?.origin.city}
+                    originLat={match.trip?.origin.lat}
+                    originLng={match.trip?.origin.lng}
+                    originAddress={match.trip?.origin.address}
+                    destinationCity={match.trip?.destination.city}
+                    destinationLat={match.trip?.destination.lat}
+                    destinationLng={match.trip?.destination.lng}
+                    destinationAddress={match.trip?.destination.address}
+                    routePolyline={match.trip?.route_polyline}
+                    corridorRadiusKm={match.trip?.corridor_radius_km || 10}
+                    showCorridor={true}
+                    pickupLocation={match.shipment?.origin}
+                    dropoffLocation={match.shipment?.destination}
+                    status={match.status}
+                    height="100%" // Ocupa a altura do pai (div acima)
+                  />
+              </div>
             )}
           </CardContent>
         </Card>
