@@ -222,7 +222,7 @@ class LevvaModularAPITester:
                 "category": "Livros",
                 "description": "Coleção de livros raros"
             },
-            "declared_value": 800.00,
+            "declared_value": 80.00,  # Reduced to fit level_1 trust limit
             "photos": {
                 "item_visible": "https://example.com/photo1.jpg",
                 "packaging_open": "https://example.com/photo2.jpg",
