@@ -206,51 +206,51 @@ const BrowseTripsPage = () => {
                         <div className="flex-shrink-0 w-8 md:flex-1 border-t-2 border-dashed border-border" />
                         <div className="flex items-center gap-1.5 md:gap-2 flex-1 justify-end md:justify-start">
                           <MapPin size={18} weight="fill" className="text-lime flex-shrink-0" />
-                          <div>
-                            <p className="font-semibold">{trip.destination.city}, {trip.destination.state}</p>
-                            <p className="text-xs text-muted-foreground">Destino</p>
+                          <div className="min-w-0 text-right md:text-left">
+                            <p className="font-semibold text-sm md:text-base truncate">{trip.destination.city}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground">Destino</p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Details */}
-                      <div className="grid md:grid-cols-4 gap-4 mb-4">
+                      {/* Details - Mobile Optimized Grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-3 md:mb-4">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Partida</p>
-                          <div className="flex items-center gap-2">
-                            <Calendar size={16} className="text-jungle" />
-                            <p className="text-sm font-medium">{formatDate(trip.departure_date)}</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Partida</p>
+                          <div className="flex items-center gap-1 md:gap-2">
+                            <Calendar size={14} className="text-jungle" />
+                            <p className="text-xs md:text-sm font-medium truncate">{formatDate(trip.departure_date)}</p>
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Veículo</p>
-                          <div className="flex items-center gap-2">
-                            <TruckIcon size={16} className="text-jungle" />
-                            <p className="text-sm font-medium">{getVehicleLabel(trip.vehicle_type)}</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Veículo</p>
+                          <div className="flex items-center gap-1 md:gap-2">
+                            <TruckIcon size={14} className="text-jungle" />
+                            <p className="text-xs md:text-sm font-medium">{getVehicleLabel(trip.vehicle_type)}</p>
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Capacidade</p>
-                          <p className="text-sm font-medium">{trip.cargo_space?.max_weight_kg || 0} kg</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Capacidade</p>
+                          <p className="text-xs md:text-sm font-medium">{trip.cargo_space?.max_weight_kg || 0} kg</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Preço/kg</p>
-                          <p className="text-sm font-medium">
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Preço/kg</p>
+                          <p className="text-xs md:text-sm font-medium text-jungle">
                             {trip.price_per_kg ? `R$ ${trip.price_per_kg.toFixed(2)}` : 'A combinar'}
                           </p>
                         </div>
                       </div>
 
-                      {/* Carrier Info */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-jungle/10 rounded-full flex items-center justify-center">
-                          <User size={20} className="text-jungle" />
+                      {/* Carrier Info - Mobile Optimized */}
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-jungle/10 rounded-full flex items-center justify-center">
+                          <User size={16} className="text-jungle" />
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{trip.carrier_name}</p>
+                          <p className="font-medium text-xs md:text-sm">{trip.carrier_name}</p>
                           <div className="flex items-center gap-1">
-                            <Star size={14} weight="fill" className="text-yellow-500" />
-                            <span className="text-xs text-muted-foreground">
+                            <Star size={12} weight="fill" className="text-yellow-500" />
+                            <span className="text-[10px] md:text-xs text-muted-foreground">
                               {trip.carrier_rating > 0 ? trip.carrier_rating.toFixed(1) : 'Novo'}
                             </span>
                           </div>
@@ -258,14 +258,14 @@ const BrowseTripsPage = () => {
                       </div>
                     </div>
 
-                    {/* Action */}
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge className="bg-lime/10 text-lime-700 hover:bg-lime/20">
+                    {/* Action - Mobile Optimized */}
+                    <div className="flex md:flex-col items-center md:items-end justify-between md:justify-start gap-2 pt-3 md:pt-0 border-t md:border-0">
+                      <Badge className="bg-lime/10 text-lime-700 hover:bg-lime/20 text-xs">
                         {trip.status === 'published' ? 'Disponível' : trip.status}
                       </Badge>
                       <Button 
                         onClick={(e) => handleCreateMatch(e, trip.id)}
-                        className="bg-jungle hover:bg-jungle-800"
+                        className="bg-jungle hover:bg-jungle-800 h-9 md:h-10 text-sm"
                         data-testid={`match-btn-${trip.id}`}
                       >
                         Combinar
