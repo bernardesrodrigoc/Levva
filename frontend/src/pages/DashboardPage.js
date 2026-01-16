@@ -105,7 +105,7 @@ const DashboardPage = () => {
     return colors[level] || colors.level_1;
   };
 
-  // Helper para Status Visual
+  // Helper para Status Visual dos Matches
   const getStatusConfig = (status) => {
     const config = {
       pending_payment: { label: 'Pagamento Pendente', color: 'bg-yellow-100 text-yellow-700', icon: CurrencyDollar },
@@ -127,7 +127,7 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-8"> {/* Padding bottom extra para mobile nav */}
       {/* Header */}
       <header className="glass border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -139,7 +139,7 @@ const DashboardPage = () => {
             {user?.role === 'admin' && (
               <Button 
                 onClick={() => navigate('/admin')} 
-                className="bg-jungle hover:bg-jungle-800"
+                className="hidden md:flex bg-jungle hover:bg-jungle-800"
                 data-testid="admin-panel-btn"
               >
                 Painel Admin
@@ -152,7 +152,7 @@ const DashboardPage = () => {
                 }
               }}
             />
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3">
               <div className="text-right cursor-pointer" onClick={() => navigate('/perfil')} data-testid="profile-link">
                 <p className="font-semibold text-sm">{user?.name}</p>
                 <Badge className={getTrustBadge(user?.trust_level)}>
@@ -163,6 +163,7 @@ const DashboardPage = () => {
                 <SignOut size={20} />
               </Button>
             </div>
+            {/* Menu Hamburguer Mobile poderia vir aqui, mas usamos BottomNav */}
           </div>
         </div>
       </header>
@@ -170,7 +171,7 @@ const DashboardPage = () => {
       <div className="container mx-auto px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-4xl font-heading font-bold mb-2">Olá, {user?.name?.split(' ')[0]}!</h1>
+          <h1 className="text-3xl md:text-4xl font-heading font-bold mb-2">Olá, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-muted-foreground">Bem-vindo ao seu painel de controle</p>
         </div>
 
@@ -181,9 +182,30 @@ const DashboardPage = () => {
           </div>
         )}
 
-        {/* --- LISTA DE COMBINAÇÕES ATIVAS (AQUI É O LUGAR IMPORTANTE) --- */}
+        {/* Admin Quick Access (Mobile) */}
+        {user?.role === 'admin' && (
+          <Card 
+            className="mb-8 border-2 border-jungle bg-jungle/5 cursor-pointer card-hover md:hidden"
+            onClick={() => navigate('/admin')}
+          >
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-jungle rounded-full flex items-center justify-center">
+                  <User size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-jungle">Painel Admin</p>
+                  <p className="text-xs text-muted-foreground">Gerenciar plataforma</p>
+                </div>
+              </div>
+              <ArrowRight size={20} className="text-jungle" />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* --- LISTA DE COMBINAÇÕES ATIVAS (RECENT ACTIVITY) --- */}
         <div className="mb-10">
-          <h2 className="text-2xl font-heading font-bold mb-4 flex items-center gap-2">
+          <h2 className="text-xl md:text-2xl font-heading font-bold mb-4 flex items-center gap-2">
             <Clock className="text-jungle" /> Entregas em Andamento
           </h2>
           
@@ -197,7 +219,7 @@ const DashboardPage = () => {
              </Card>
           ) : (
             <div className="grid gap-4">
-              {stats.myMatches.map((match) => {
+              {stats.myMatches.slice(0, 5).map((match) => { // Mostra as 5 últimas
                 const StatusInfo = getStatusConfig(match.status);
                 const StatusIcon = StatusInfo.icon;
                 const isCarrier = match.carrier_id === user.id;
@@ -208,44 +230,43 @@ const DashboardPage = () => {
                     className="hover:border-jungle transition-all cursor-pointer group shadow-sm hover:shadow-md"
                     onClick={() => navigate(`/match/${match.id}`)}
                   >
-                    <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
+                    <CardContent className="p-4 md:p-6 flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
                       
                       {/* Ícone Indicativo */}
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isCarrier ? 'bg-jungle/10 text-jungle' : 'bg-lime/10 text-lime-600'}`}>
+                      <div className={`hidden md:flex w-12 h-12 rounded-full items-center justify-center flex-shrink-0 ${isCarrier ? 'bg-jungle/10 text-jungle' : 'bg-lime/10 text-lime-600'}`}>
                         {isCarrier ? <TruckIcon size={24} weight="duotone" /> : <Package size={24} weight="duotone" />}
                       </div>
 
                       {/* Informações da Rota */}
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 w-full space-y-2">
+                        <div className="flex items-center justify-between md:justify-start gap-2">
                           <Badge className={StatusInfo.color}>
                             <StatusIcon className="mr-1" size={12} /> {StatusInfo.label}
                           </Badge>
-                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wide">
+                          <span className="text-[10px] md:text-xs text-muted-foreground uppercase font-bold tracking-wide">
                             {isCarrier ? 'Você leva' : 'Seu pacote'}
                           </span>
                         </div>
                         
-                        <div className="flex items-center gap-3 text-lg font-bold">
-                          {/* Usa Optional Chaining (?.) para evitar erro se trip for null */}
+                        <div className="flex items-center gap-2 text-base md:text-lg font-bold">
                           <span>{match.trip?.origin?.city || 'Origem'}</span>
                           <ArrowRight size={16} className="text-muted-foreground" />
                           <span>{match.trip?.destination?.city || 'Destino'}</span>
                         </div>
                         
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">
                           {match.shipment?.package?.description || "Encomenda"} • {match.shipment?.package?.weight_kg}kg
                         </p>
                       </div>
 
                       {/* Preço e Botão */}
-                      <div className="text-right flex flex-col items-end gap-2">
+                      <div className="flex w-full md:w-auto justify-between md:flex-col md:items-end gap-2 mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-t-0">
                         <span className="font-bold text-lg text-jungle">
                           R$ {match.estimated_price?.toFixed(2)}
                         </span>
-                        <Button size="sm" variant="ghost" className="group-hover:bg-jungle group-hover:text-white transition-colors">
-                          Acompanhar <ArrowRight className="ml-2" size={16} />
-                        </Button>
+                        <div className="flex items-center text-sm font-medium text-jungle md:text-muted-foreground group-hover:text-jungle transition-colors">
+                          Ver Detalhes <ArrowRight className="ml-1" size={16} />
+                        </div>
                       </div>
 
                     </CardContent>
@@ -255,39 +276,40 @@ const DashboardPage = () => {
             </div>
           )}
         </div>
-        {/* ----------------------------------------------------------- */}
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Quick Actions Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
+          
+          {/* Lógica para Transportadores */}
           {(user?.role === 'carrier' || user?.role === 'both') && (
             <>
-              <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-viagem')} data-testid="create-trip-card">
-                <CardHeader>
+              <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-viagem')}>
+                <CardHeader className="p-4 md:p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-jungle/10 rounded-xl flex items-center justify-center">
-                        <TruckIcon size={24} weight="duotone" className="text-jungle" />
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-jungle/10 rounded-xl flex items-center justify-center">
+                        <TruckIcon size={20} md:size={24} weight="duotone" className="text-jungle" />
                       </div>
                       <div>
-                        <CardTitle>Criar Viagem</CardTitle>
-                        <CardDescription>Publique uma rota</CardDescription>
+                        <CardTitle className="text-base md:text-lg">Criar Viagem</CardTitle>
+                        <CardDescription className="text-xs md:text-sm">Publique uma rota</CardDescription>
                       </div>
                     </div>
-                    <Plus size={24} className="text-muted-foreground" />
+                    <Plus size={20} className="text-muted-foreground" />
                   </div>
                 </CardHeader>
               </Card>
 
-              <Card className="card-hover cursor-pointer" onClick={() => navigate('/vehicles')} data-testid="my-vehicles-card">
-                <CardHeader>
+              <Card className="card-hover cursor-pointer" onClick={() => navigate('/vehicles')}>
+                <CardHeader className="p-4 md:p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                        <Car size={24} weight="duotone" className="text-slate-600" />
+                      <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                        <Car size={20} md:size={24} weight="duotone" className="text-slate-600" />
                       </div>
                       <div>
-                        <CardTitle>Meus Veículos</CardTitle>
-                        <CardDescription>Gerencie sua frota</CardDescription>
+                        <CardTitle className="text-base md:text-lg">Meus Veículos</CardTitle>
+                        <CardDescription className="text-xs md:text-sm">Gerencie sua frota</CardDescription>
                       </div>
                     </div>
                     <div className="text-muted-foreground">→</div>
@@ -297,112 +319,127 @@ const DashboardPage = () => {
             </>
           )}
 
+          {/* Lógica para Remetentes */}
           {(user?.role === 'sender' || user?.role === 'both') && (
-            <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-envio')} data-testid="create-shipment-card">
-              <CardHeader>
+            <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-envio')}>
+              <CardHeader className="p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-lime/10 rounded-xl flex items-center justify-center">
-                      <Package size={24} weight="duotone" className="text-lime" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-lime/10 rounded-xl flex items-center justify-center">
+                      <Package size={20} md:size={24} weight="duotone" className="text-lime" />
                     </div>
                     <div>
-                      <CardTitle>Criar Envio</CardTitle>
-                      <CardDescription>Enviar um pacote</CardDescription>
+                      <CardTitle className="text-base md:text-lg">Criar Envio</CardTitle>
+                      <CardDescription className="text-xs md:text-sm">Enviar um pacote</CardDescription>
                     </div>
                   </div>
-                  <Plus size={24} className="text-muted-foreground" />
+                  <Plus size={20} className="text-muted-foreground" />
                 </div>
               </CardHeader>
             </Card>
           )}
         </div>
 
-        {/* Smart Suggestions Card */}
-        <Card className="card-hover cursor-pointer mb-8 border-jungle/30 bg-gradient-to-r from-jungle/5 to-lime/5" onClick={() => navigate('/sugestoes')} data-testid="suggestions-card">
-          <CardHeader>
+        {/* Smart Suggestions */}
+        <Card className="card-hover cursor-pointer mb-8 border-jungle/30 bg-gradient-to-r from-jungle/5 to-lime/5" onClick={() => navigate('/sugestoes')}>
+          <CardHeader className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-jungle rounded-xl flex items-center justify-center">
-                  <Lightning size={24} weight="fill" className="text-white" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-jungle rounded-xl flex items-center justify-center">
+                  <Lightning size={20} md:size={24} weight="fill" className="text-white" />
                 </div>
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                     Sugestões Inteligentes
-                    <Badge className="bg-jungle/20 text-jungle">Novo</Badge>
+                    <Badge className="bg-jungle/20 text-jungle text-[10px]">Novo</Badge>
                   </CardTitle>
-                  <CardDescription>Combinações automáticas baseadas nas suas rotas</CardDescription>
+                  <CardDescription className="text-xs md:text-sm line-clamp-1">Combinações automáticas baseadas nas suas rotas</CardDescription>
                 </div>
               </div>
-              <Button variant="ghost" className="text-jungle">
+              <Button variant="ghost" className="text-jungle hidden md:flex">
                 Ver Sugestões →
               </Button>
+              <ArrowRight className="text-jungle md:hidden" />
             </div>
           </CardHeader>
         </Card>
 
-        {/* Trust Level and Browse Section */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <TrustLevelCard />
+        {/* Browse & Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
           
-          <Card className="card-hover cursor-pointer" onClick={() => navigate('/viagens')} data-testid="browse-trips-card">
-            <CardHeader>
+          {/* Trust Level (Esconde no mobile se já tiver no header, ou mantém se for importante) */}
+          <div className="hidden md:block">
+            <TrustLevelCard />
+          </div>
+          
+          <Card className="card-hover cursor-pointer" onClick={() => navigate('/viagens')}>
+            <CardHeader className="p-4 md:p-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                  <MapTrifold size={24} weight="duotone" className="text-jungle" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                  <MapTrifold size={20} md:size={24} weight="duotone" className="text-jungle" />
                 </div>
                 <div>
-                  <CardTitle>Buscar Viagens</CardTitle>
-                  <CardDescription>Encontre transportadores</CardDescription>
+                  <CardTitle className="text-base md:text-lg">Buscar Viagens</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Encontre transportadores</CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
-          <Card className="card-hover cursor-pointer" onClick={() => navigate('/envios')} data-testid="browse-shipments-card">
-            <CardHeader>
+          <Card className="card-hover cursor-pointer" onClick={() => navigate('/envios')}>
+            <CardHeader className="p-4 md:p-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                  <Package size={24} weight="duotone" className="text-lime" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                  <Package size={20} md:size={24} weight="duotone" className="text-lime" />
                 </div>
                 <div>
-                  <CardTitle>Buscar Envios</CardTitle>
-                  <CardDescription>Encontre pacotes para transportar</CardDescription>
+                  <CardTitle className="text-base md:text-lg">Buscar Envios</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Encontre pacotes</CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Card>
         </div>
 
-        {/* Stats Summary */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Minhas Viagens</CardTitle>
+        {/* --- STATS CLICÁVEIS (CORREÇÃO DE "ZERADO E NÃO CLICÁVEL") --- */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+          <Card 
+            className="cursor-pointer hover:border-jungle transition-all hover:shadow-md"
+            onClick={() => navigate('/minhas-viagens')}
+          >
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex justify-between items-center">
+                Minhas Viagens <ArrowRight size={14} />
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stats.myTrips.length}</p>
+            <CardContent className="p-4 pt-0">
+              <p className="text-2xl md:text-3xl font-bold">{stats.myTrips.length}</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Meus Envios</CardTitle>
+          <Card 
+            className="cursor-pointer hover:border-lime-500 transition-all hover:shadow-md"
+            onClick={() => navigate('/meus-envios')}
+          >
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground flex justify-between items-center">
+                Meus Envios <ArrowRight size={14} />
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stats.myShipments.length}</p>
+            <CardContent className="p-4 pt-0">
+              <p className="text-2xl md:text-3xl font-bold">{stats.myShipments.length}</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total de Matches</CardTitle>
+          <Card className="col-span-2 md:col-span-1">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">Total de Matches</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{stats.myMatches.length}</p>
+            <CardContent className="p-4 pt-0">
+              <p className="text-2xl md:text-3xl font-bold">{stats.myMatches.length}</p>
             </CardContent>
           </Card>
         </div>
-
       </div>
     </div>
   );
