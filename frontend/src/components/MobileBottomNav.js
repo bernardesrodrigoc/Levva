@@ -6,52 +6,68 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Função para verificar se o link está ativo
-  const isActive = (path) => location.pathname === path;
+  // Check if link is active (including sub-routes)
+  const isActive = (path) => {
+    if (path === '/dashboard') return location.pathname === '/dashboard';
+    return location.pathname.startsWith(path);
+  };
 
-  // Estilo base do botão
-  const navItemClass = (path) => `
-    flex flex-col items-center justify-center w-full h-full space-y-1
-    ${isActive(path) ? 'text-jungle' : 'text-gray-500 hover:text-gray-700'}
-  `;
+  // Navigation items configuration
+  const navItems = [
+    { path: '/dashboard', label: 'Início', icon: House },
+    { path: '/viagens', label: 'Buscar', icon: MagnifyingGlass },
+    { path: '/criar-viagem', label: 'Criar', icon: PlusCircle, isCenter: true },
+    { path: '/meus-envios', label: 'Envios', icon: Package },
+    { path: '/perfil', label: 'Perfil', icon: User },
+  ];
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-white border-t border-gray-200 shadow-lg md:hidden">
-      <div className="grid h-full max-w-lg grid-cols-5 mx-auto font-medium">
-        
-        {/* Home / Dashboard */}
-        <button onClick={() => navigate('/dashboard')} className={navItemClass('/dashboard')}>
-          <House size={24} weight={isActive('/dashboard') ? 'fill' : 'regular'} />
-          <span className="text-[10px]">Início</span>
-        </button>
+    <nav className="fixed bottom-0 left-0 z-50 w-full bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden safe-bottom">
+      <div className="grid h-16 max-w-lg grid-cols-5 mx-auto">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.path);
+          
+          if (item.isCenter) {
+            // Center button with elevated style
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className="flex flex-col items-center justify-center"
+                aria-label={item.label}
+              >
+                <div className="bg-jungle rounded-full p-2.5 shadow-lg transform -translate-y-3 border-4 border-white active:scale-95 transition-transform">
+                  <Icon size={26} weight="fill" className="text-white" />
+                </div>
+              </button>
+            );
+          }
 
-        {/* Buscar (Leva para viagens por padrão) */}
-        <button onClick={() => navigate('/viagens')} className={navItemClass('/viagens')}>
-          <MagnifyingGlass size={24} weight={isActive('/viagens') ? 'fill' : 'bold'} />
-          <span className="text-[10px]">Buscar</span>
-        </button>
-
-        {/* Criar (Menu central de ação) */}
-        <button onClick={() => navigate('/criar-viagem')} className={navItemClass('/criar-viagem')}>
-          <div className="bg-jungle rounded-full p-2 mb-1 shadow-md transform -translate-y-3 border-4 border-white">
-             <PlusCircle size={28} weight="fill" className="text-white" />
-          </div>
-        </button>
-
-        {/* Meus Itens */}
-        <button onClick={() => navigate('/meus-envios')} className={navItemClass('/meus-envios')}>
-          <Package size={24} weight={isActive('/meus-envios') ? 'fill' : 'regular'} />
-          <span className="text-[10px]">Envios</span>
-        </button>
-
-        {/* Perfil */}
-        <button onClick={() => navigate('/perfil')} className={navItemClass('/perfil')}>
-          <User size={24} weight={isActive('/perfil') ? 'fill' : 'regular'} />
-          <span className="text-[10px]">Perfil</span>
-        </button>
-
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`
+                flex flex-col items-center justify-center gap-0.5 transition-colors
+                ${active ? 'text-jungle' : 'text-gray-500 active:text-gray-700'}
+              `}
+              aria-label={item.label}
+              aria-current={active ? 'page' : undefined}
+            >
+              <Icon 
+                size={22} 
+                weight={active ? 'fill' : 'regular'} 
+                className={active ? 'text-jungle' : ''}
+              />
+              <span className={`text-[10px] font-medium ${active ? 'text-jungle' : ''}`}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </nav>
   );
 };
 
