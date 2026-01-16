@@ -208,39 +208,46 @@ const CreateTripPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20"> {/* pb-20 para o menu mobile */}
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn">
-            Voltar ao Dashboard
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/dashboard')} 
+            data-testid="back-to-dashboard-btn"
+            className="text-sm"
+          >
+            <span className="hidden md:inline">Voltar ao Dashboard</span>
+            <span className="md:hidden">Voltar</span>
           </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-heading font-bold mb-2 flex items-center gap-3">
-            <TruckIcon size={40} weight="duotone" className="text-jungle" />
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-4xl">
+        {/* Title - Mobile Optimized */}
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-heading font-bold mb-2 flex items-center gap-2 md:gap-3">
+            <TruckIcon size={32} weight="duotone" className="text-jungle hidden md:block" />
             Criar Nova Viagem
           </h1>
-          <p className="text-muted-foreground">Defina sua rota no mapa e encontre pacotes para transportar</p>
+          <p className="text-sm md:text-base text-muted-foreground">Defina sua rota no mapa e encontre pacotes para transportar</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           {/* Origin with Map */}
           <Card data-testid="origin-card">
-            <CardHeader>
-              <CardTitle className="text-jungle">Ponto de Partida</CardTitle>
-              <CardDescription>Clique no mapa ou busque o endereço de onde você vai partir</CardDescription>
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-jungle text-base md:text-lg">Ponto de Partida</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Clique no mapa ou busque o endereço</CardDescription>
             </CardHeader>
-            <CardContent>
-              {/* RESPONSIVIDADE: Wrapper para altura do mapa */}
-              <div className="h-[300px] md:h-[400px] w-full rounded-lg overflow-hidden border">
+            <CardContent className="p-4 md:p-6 pt-0">
+              <div className="h-[250px] md:h-[350px] w-full rounded-lg overflow-hidden border">
                   <LocationPicker
                     label="Origem"
                     value={origin}
@@ -255,13 +262,12 @@ const CreateTripPage = () => {
 
           {/* Destination with Map */}
           <Card data-testid="destination-card">
-            <CardHeader>
-              <CardTitle className="text-lime">Ponto de Chegada</CardTitle>
-              <CardDescription>Clique no mapa ou busque o endereço de destino</CardDescription>
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-lime text-base md:text-lg">Ponto de Chegada</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Clique no mapa ou busque o endereço de destino</CardDescription>
             </CardHeader>
-            <CardContent>
-              {/* RESPONSIVIDADE: Wrapper para altura do mapa */}
-              <div className="h-[300px] md:h-[400px] w-full rounded-lg overflow-hidden border">
+            <CardContent className="p-4 md:p-6 pt-0">
+              <div className="h-[250px] md:h-[350px] w-full rounded-lg overflow-hidden border">
                   <LocationPicker
                     label="Destino"
                     value={destination}
@@ -274,21 +280,21 @@ const CreateTripPage = () => {
             </CardContent>
           </Card>
 
-          {/* Route Corridor */}
+          {/* Route Corridor - Mobile Optimized */}
           <Card data-testid="corridor-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Path size={24} weight="duotone" className="text-jungle" />
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Path size={20} weight="duotone" className="text-jungle" />
                 Raio do Corredor
               </CardTitle>
-              <CardDescription>
-                Distância máxima que você aceita desviar da rota para coleta/entrega
+              <CardDescription className="text-xs md:text-sm">
+                Distância máxima para desvio da rota
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Raio do corredor</span>
-                <span className="font-bold text-jungle">{formData.corridorRadiusKm} km</span>
+                <span className="text-xs md:text-sm text-muted-foreground">Raio do corredor</span>
+                <span className="font-bold text-jungle text-lg">{formData.corridorRadiusKm} km</span>
               </div>
               <Slider
                 value={[formData.corridorRadiusKm]}
@@ -298,41 +304,41 @@ const CreateTripPage = () => {
                 step={1}
                 className="w-full"
               />
-              <p className="text-xs text-muted-foreground">
-                Envios com pontos de coleta e entrega dentro de {formData.corridorRadiusKm}km da sua rota serão sugeridos
+              <p className="text-[10px] md:text-xs text-muted-foreground">
+                Envios dentro de {formData.corridorRadiusKm}km da sua rota serão sugeridos
               </p>
             </CardContent>
           </Card>
 
-          {/* Vehicle & Cargo (Atualizado com Smart Fill) */}
+          {/* Vehicle & Cargo - Mobile Optimized */}
           <Card data-testid="vehicle-card" className="border-jungle/20 border-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cube size={24} weight="duotone" className="text-jungle" />
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Cube size={20} weight="duotone" className="text-jungle" />
                 Veículo e Capacidade
               </CardTitle>
-              <CardDescription>Como você fará este transporte?</CardDescription>
+              <CardDescription className="text-xs md:text-sm">Como você fará este transporte?</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-4 md:p-6 pt-0 space-y-4 md:space-y-6">
               
               {/* Seleção de Veículo Pré-cadastrado */}
-              <div className="bg-muted/30 p-4 rounded-lg">
+              <div className="bg-muted/30 p-3 md:p-4 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
-                    <Label htmlFor="vehicleSelect">Selecione um Veículo Cadastrado</Label>
+                    <Label htmlFor="vehicleSelect" className="text-xs md:text-sm">Selecione um Veículo</Label>
                     <Button 
                         type="button" 
                         variant="link" 
                         className="text-xs h-auto p-0 text-jungle"
                         onClick={() => navigate('/vehicles')}
                     >
-                        Gerenciar frota
+                        Gerenciar
                     </Button>
                 </div>
                 <Select 
                     value={formData.selectedVehicleId} 
                     onValueChange={handleVehicleSelect}
                 >
-                  <SelectTrigger className="h-12 border-jungle/30">
+                  <SelectTrigger className="h-11 md:h-12 border-jungle/30 text-base">
                     <SelectValue placeholder="Escolha um veículo..." />
                   </SelectTrigger>
                   <SelectContent>
