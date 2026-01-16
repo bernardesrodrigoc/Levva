@@ -108,45 +108,55 @@ const CreateShipmentPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8"> {/* Extra padding for mobile nav */}
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn">
-            Voltar ao Dashboard
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/dashboard')} 
+            data-testid="back-to-dashboard-btn"
+            className="text-sm"
+          >
+            <span className="hidden md:inline">Voltar ao Dashboard</span>
+            <span className="md:hidden">Voltar</span>
           </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="text-4xl font-heading font-bold mb-2 flex items-center gap-3">
-            <Package size={40} weight="duotone" className="text-lime" />
+      <div className="container mx-auto px-4 md:px-6 py-6 md:py-8 max-w-4xl">
+        {/* Title - Mobile Optimized */}
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-heading font-bold mb-2 flex items-center gap-2 md:gap-3">
+            <Package size={32} weight="duotone" className="text-lime hidden md:block" />
             Criar Novo Envio
           </h1>
-          <p className="text-muted-foreground">Defina os pontos de coleta e entrega no mapa</p>
+          <p className="text-sm md:text-base text-muted-foreground">Defina os pontos de coleta e entrega no mapa</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           {/* Pickup Location */}
           <Card data-testid="pickup-card">
-            <CardHeader>
-              <CardTitle className="text-jungle">Ponto de Coleta</CardTitle>
-              <CardDescription>Onde o transportador deve buscar o pacote</CardDescription>
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-jungle text-base md:text-lg">Ponto de Coleta</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Onde o transportador deve buscar o pacote</CardDescription>
             </CardHeader>
-            <CardContent>
-              <LocationPicker
-                label="Local de Coleta"
-                value={pickup}
-                onChange={setPickup}
-                markerColor="green"
-                placeholder="Buscar endereço de coleta..."
-                testIdPrefix="pickup"
-              />
+            <CardContent className="p-4 md:p-6 pt-0">
+              <div className="h-[250px] md:h-[350px] rounded-lg overflow-hidden border">
+                <LocationPicker
+                  label="Local de Coleta"
+                  value={pickup}
+                  onChange={setPickup}
+                  markerColor="green"
+                  placeholder="Buscar endereço de coleta..."
+                  testIdPrefix="pickup"
+                />
+              </div>
             </CardContent>
           </Card>
 
