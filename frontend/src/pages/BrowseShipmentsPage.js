@@ -159,69 +159,69 @@ const BrowseShipmentsPage = () => {
             <p className="text-xs md:text-sm text-muted-foreground">{shipments.length} envio(s) encontrado(s)</p>
             {shipments.map((shipment) => (
               <Card key={shipment.id} className="card-hover" data-testid={`shipment-card-${shipment.id}`}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-6">
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 md:gap-6">
                     <div className="flex-1">
-                      {/* Route */}
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={20} weight="fill" className="text-jungle" />
-                          <div>
-                            <p className="font-semibold">{shipment.origin.city}, {shipment.origin.state}</p>
-                            <p className="text-xs text-muted-foreground">Origem</p>
+                      {/* Route - Mobile Optimized */}
+                      <div className="flex items-center gap-2 md:gap-4 mb-3 md:mb-4">
+                        <div className="flex items-center gap-1.5 md:gap-2 flex-1 min-w-0">
+                          <MapPin size={18} weight="fill" className="text-jungle flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm md:text-base truncate">{shipment.origin.city}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground">Origem</p>
                           </div>
                         </div>
-                        <div className="flex-1 border-t-2 border-dashed border-border" />
-                        <div className="flex items-center gap-2">
-                          <MapPin size={20} weight="fill" className="text-lime" />
-                          <div>
-                            <p className="font-semibold">{shipment.destination.city}, {shipment.destination.state}</p>
-                            <p className="text-xs text-muted-foreground">Destino</p>
+                        <div className="flex-shrink-0 w-8 md:flex-1 border-t-2 border-dashed border-border" />
+                        <div className="flex items-center gap-1.5 md:gap-2 flex-1 min-w-0 justify-end md:justify-start">
+                          <MapPin size={18} weight="fill" className="text-lime flex-shrink-0" />
+                          <div className="min-w-0 text-right md:text-left">
+                            <p className="font-semibold text-sm md:text-base truncate">{shipment.destination.city}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground">Destino</p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Package Details */}
-                      <div className="grid md:grid-cols-4 gap-4 mb-4">
+                      {/* Package Details - Mobile Optimized */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-3 md:mb-4">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Categoria</p>
-                          <div className="flex items-center gap-2">
-                            <Cube size={16} className="text-jungle" />
-                            <p className="text-sm font-medium">{shipment.package.category}</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Categoria</p>
+                          <div className="flex items-center gap-1 md:gap-2">
+                            <Cube size={14} className="text-jungle" />
+                            <p className="text-xs md:text-sm font-medium truncate">{shipment.package.category}</p>
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Peso</p>
-                          <p className="text-sm font-medium">{shipment.package.weight_kg} kg</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Peso</p>
+                          <p className="text-xs md:text-sm font-medium">{shipment.package.weight_kg} kg</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Dimensões (cm)</p>
-                          <p className="text-sm font-medium">
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Dimensões</p>
+                          <p className="text-xs md:text-sm font-medium">
                             {shipment.package.length_cm}×{shipment.package.width_cm}×{shipment.package.height_cm}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">Valor</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground mb-0.5 md:mb-1">Valor</p>
                           <div className="flex items-center gap-1">
-                            <CurrencyDollar size={16} className="text-jungle" />
-                            <p className="text-sm font-medium">R$ {shipment.declared_value.toFixed(2)}</p>
+                            <CurrencyDollar size={14} className="text-jungle" />
+                            <p className="text-xs md:text-sm font-medium">R$ {shipment.declared_value.toFixed(2)}</p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Description */}
-                      <p className="text-sm text-muted-foreground mb-4">{shipment.package.description}</p>
+                      {/* Description - Mobile Optimized */}
+                      <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 line-clamp-2">{shipment.package.description}</p>
 
-                      {/* Sender Info */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-lime/10 rounded-full flex items-center justify-center">
-                          <User size={20} className="text-lime" />
+                      {/* Sender Info - Mobile Optimized */}
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className="w-8 h-8 md:w-10 md:h-10 bg-lime/10 rounded-full flex items-center justify-center">
+                          <User size={16} className="text-lime" />
                         </div>
                         <div>
-                          <p className="font-medium text-sm">{shipment.sender_name}</p>
+                          <p className="font-medium text-xs md:text-sm">{shipment.sender_name}</p>
                           <div className="flex items-center gap-1">
-                            <Star size={14} weight="fill" className="text-yellow-500" />
-                            <span className="text-xs text-muted-foreground">
+                            <Star size={12} weight="fill" className="text-yellow-500" />
+                            <span className="text-[10px] md:text-xs text-muted-foreground">
                               {shipment.sender_rating > 0 ? shipment.sender_rating.toFixed(1) : 'Novo'}
                             </span>
                           </div>
