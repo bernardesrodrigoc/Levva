@@ -162,93 +162,100 @@ const CreateShipmentPage = () => {
 
           {/* Dropoff Location */}
           <Card data-testid="dropoff-card">
-            <CardHeader>
-              <CardTitle className="text-lime">Ponto de Entrega</CardTitle>
-              <CardDescription>Onde o pacote deve ser entregue</CardDescription>
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-lime text-base md:text-lg">Ponto de Entrega</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Onde o pacote deve ser entregue</CardDescription>
             </CardHeader>
-            <CardContent>
-              <LocationPicker
-                label="Local de Entrega"
-                value={dropoff}
-                onChange={setDropoff}
-                markerColor="red"
-                placeholder="Buscar endereço de entrega..."
-                testIdPrefix="dropoff"
-              />
+            <CardContent className="p-4 md:p-6 pt-0">
+              <div className="h-[250px] md:h-[350px] rounded-lg overflow-hidden border">
+                <LocationPicker
+                  label="Local de Entrega"
+                  value={dropoff}
+                  onChange={setDropoff}
+                  markerColor="red"
+                  placeholder="Buscar endereço de entrega..."
+                  testIdPrefix="dropoff"
+                />
+              </div>
             </CardContent>
           </Card>
 
-          {/* Package Details */}
+          {/* Package Details - Mobile Optimized */}
           <Card data-testid="package-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Cube size={24} weight="duotone" className="text-jungle" />
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Cube size={20} weight="duotone" className="text-jungle" />
                 Detalhes do Pacote
               </CardTitle>
-              <CardDescription>Informações sobre o item a ser enviado</CardDescription>
+              <CardDescription className="text-xs md:text-sm">Informações sobre o item a ser enviado</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+            <CardContent className="p-4 md:p-6 pt-0 space-y-4">
+              {/* Dimensions - 2 columns on mobile, 3 on desktop */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                 <div>
-                  <Label htmlFor="lengthCm">Comprimento (cm)</Label>
+                  <Label htmlFor="lengthCm" className="text-xs md:text-sm">Comprimento (cm)</Label>
                   <Input
                     id="lengthCm"
                     type="number"
+                    inputMode="decimal"
                     placeholder="30"
                     value={formData.lengthCm}
                     onChange={(e) => handleChange('lengthCm', e.target.value)}
                     required
-                    className="h-12 mt-2"
+                    className="h-11 md:h-12 mt-1.5 text-base"
                     data-testid="length-input"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="widthCm">Largura (cm)</Label>
+                  <Label htmlFor="widthCm" className="text-xs md:text-sm">Largura (cm)</Label>
                   <Input
                     id="widthCm"
                     type="number"
+                    inputMode="decimal"
                     placeholder="20"
                     value={formData.widthCm}
                     onChange={(e) => handleChange('widthCm', e.target.value)}
                     required
-                    className="h-12 mt-2"
+                    className="h-11 md:h-12 mt-1.5 text-base"
                     data-testid="width-input"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="heightCm">Altura (cm)</Label>
+                <div className="col-span-2 md:col-span-1">
+                  <Label htmlFor="heightCm" className="text-xs md:text-sm">Altura (cm)</Label>
                   <Input
                     id="heightCm"
                     type="number"
+                    inputMode="decimal"
                     placeholder="15"
                     value={formData.heightCm}
                     onChange={(e) => handleChange('heightCm', e.target.value)}
                     required
-                    className="h-12 mt-2"
+                    className="h-11 md:h-12 mt-1.5 text-base"
                     data-testid="height-input"
                   />
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                 <div>
-                  <Label htmlFor="weightKg">Peso (kg)</Label>
+                  <Label htmlFor="weightKg" className="text-xs md:text-sm">Peso (kg)</Label>
                   <Input
                     id="weightKg"
                     type="number"
+                    inputMode="decimal"
                     step="0.1"
                     placeholder="2.5"
                     value={formData.weightKg}
                     onChange={(e) => handleChange('weightKg', e.target.value)}
                     required
-                    className="h-12 mt-2"
+                    className="h-11 md:h-12 mt-1.5 text-base"
                     data-testid="weight-input"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="category">Categoria</Label>
+                  <Label htmlFor="category" className="text-xs md:text-sm">Categoria</Label>
                   <Select value={formData.category} onValueChange={(value) => handleChange('category', value)}>
-                    <SelectTrigger className="h-12 mt-2" data-testid="category-select">
+                    <SelectTrigger className="h-11 md:h-12 mt-1.5 text-base" data-testid="category-select">
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -264,14 +271,14 @@ const CreateShipmentPage = () => {
               </div>
 
               <div>
-                <Label htmlFor="description">Descrição do Item</Label>
+                <Label htmlFor="description" className="text-xs md:text-sm">Descrição do Item</Label>
                 <Textarea
                   id="description"
                   placeholder="Descreva o conteúdo do pacote..."
                   value={formData.description}
                   onChange={(e) => handleChange('description', e.target.value)}
                   required
-                  className="mt-2"
+                  className="mt-1.5 text-base"
                   rows={3}
                   data-testid="description-input"
                 />
