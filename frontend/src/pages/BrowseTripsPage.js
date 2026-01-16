@@ -95,63 +95,70 @@ const BrowseTripsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn">
-            Voltar ao Dashboard
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/dashboard')} 
+            data-testid="back-to-dashboard-btn"
+          >
+            <span className="hidden md:inline">Voltar ao Dashboard</span>
+            <span className="md:hidden">Voltar</span>
           </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-heading font-bold mb-2 flex items-center gap-3">
-            <TruckIcon size={40} weight="duotone" className="text-jungle" />
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+        {/* Title - Mobile Optimized */}
+        <div className="mb-4 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-heading font-bold mb-1 md:mb-2 flex items-center gap-2 md:gap-3">
+            <TruckIcon size={28} weight="duotone" className="text-jungle hidden md:block" />
             Buscar Viagens
           </h1>
-          <p className="text-muted-foreground">Encontre transportadores para seu envio</p>
+          <p className="text-sm md:text-base text-muted-foreground">Encontre transportadores para seu envio</p>
         </div>
 
-        {/* Filters */}
-        <Card className="mb-8" data-testid="filters-card">
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-            <CardDescription>Refine sua busca</CardDescription>
+        {/* Filters - Mobile Optimized */}
+        <Card className="mb-4 md:mb-8" data-testid="filters-card">
+          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Filtros</CardTitle>
+            <CardDescription className="text-xs md:text-sm">Refine sua busca</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               <div>
-                <Label htmlFor="originCity">Cidade de Origem</Label>
+                <Label htmlFor="originCity" className="text-xs md:text-sm">Cidade de Origem</Label>
                 <Input
                   id="originCity"
                   placeholder="Ex: São Paulo"
                   value={filters.originCity}
                   onChange={(e) => setFilters(prev => ({ ...prev, originCity: e.target.value }))}
-                  className="h-12 mt-2"
+                  className="h-11 md:h-12 mt-1.5 text-base"
                   data-testid="origin-filter-input"
                 />
               </div>
               <div>
-                <Label htmlFor="destinationCity">Cidade de Destino</Label>
+                <Label htmlFor="destinationCity" className="text-xs md:text-sm">Cidade de Destino</Label>
                 <Input
                   id="destinationCity"
                   placeholder="Ex: Rio de Janeiro"
                   value={filters.destinationCity}
                   onChange={(e) => setFilters(prev => ({ ...prev, destinationCity: e.target.value }))}
-                  className="h-12 mt-2"
+                  className="h-11 md:h-12 mt-1.5 text-base"
                   data-testid="destination-filter-input"
                 />
               </div>
               <div className="flex items-end">
                 <Button 
                   onClick={handleSearch} 
-                  className="h-12 w-full bg-jungle hover:bg-jungle-800"
+                  className="h-11 md:h-12 w-full bg-jungle hover:bg-jungle-800 text-sm md:text-base"
                   data-testid="search-btn"
                 >
                   Buscar
@@ -161,22 +168,22 @@ const BrowseTripsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Results */}
+        {/* Results - Mobile Optimized */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-jungle"></div>
+          <div className="flex items-center justify-center py-16 md:py-20">
+            <div className="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-b-2 border-jungle"></div>
           </div>
         ) : trips.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className="text-center py-10 md:py-12">
             <CardContent>
-              <TruckIcon size={48} weight="duotone" className="mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg font-semibold mb-2">Nenhuma viagem encontrada</p>
-              <p className="text-muted-foreground">Tente ajustar os filtros ou volte mais tarde</p>
+              <TruckIcon size={40} weight="duotone" className="mx-auto text-muted-foreground mb-3 md:mb-4" />
+              <p className="text-base md:text-lg font-semibold mb-1 md:mb-2">Nenhuma viagem encontrada</p>
+              <p className="text-sm text-muted-foreground">Tente ajustar os filtros ou volte mais tarde</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{trips.length} viagem(ns) encontrada(s)</p>
+          <div className="space-y-3 md:space-y-4">
+            <p className="text-xs md:text-sm text-muted-foreground">{trips.length} viagem(ns) encontrada(s)</p>
             {trips.map((trip) => (
               <Card 
                 key={trip.id} 
@@ -184,21 +191,21 @@ const BrowseTripsPage = () => {
                 data-testid={`trip-card-${trip.id}`}
                 onClick={() => navigate(`/viagens/${trip.id}`)}
               >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-6">
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 md:gap-6">
                     <div className="flex-1">
-                      {/* Route */}
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={20} weight="fill" className="text-jungle" />
-                          <div>
-                            <p className="font-semibold">{trip.origin.city}, {trip.origin.state}</p>
-                            <p className="text-xs text-muted-foreground">Origem</p>
+                      {/* Route - Mobile Optimized */}
+                      <div className="flex items-center gap-2 md:gap-4 mb-3 md:mb-4">
+                        <div className="flex items-center gap-1.5 md:gap-2 flex-1">
+                          <MapPin size={18} weight="fill" className="text-jungle flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm md:text-base truncate">{trip.origin.city}</p>
+                            <p className="text-[10px] md:text-xs text-muted-foreground">Origem</p>
                           </div>
                         </div>
-                        <div className="flex-1 border-t-2 border-dashed border-border" />
-                        <div className="flex items-center gap-2">
-                          <MapPin size={20} weight="fill" className="text-lime" />
+                        <div className="flex-shrink-0 w-8 md:flex-1 border-t-2 border-dashed border-border" />
+                        <div className="flex items-center gap-1.5 md:gap-2 flex-1 justify-end md:justify-start">
+                          <MapPin size={18} weight="fill" className="text-lime flex-shrink-0" />
                           <div>
                             <p className="font-semibold">{trip.destination.city}, {trip.destination.state}</p>
                             <p className="text-xs text-muted-foreground">Destino</p>
