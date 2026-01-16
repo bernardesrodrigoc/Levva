@@ -440,8 +440,8 @@ const MatchDetailPage = () => {
                 token={token}
               />
             ) : (
-              // RESPONSIVIDADE: Wrapper para o mapa estático
-              <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
+              /* Static Route Map - Mobile Optimized */
+              <div className="h-[250px] md:h-[400px] w-full rounded-lg overflow-hidden border">
                   <RouteMap
                     originCity={match.trip?.origin.city}
                     originLat={match.trip?.origin.lat}
@@ -457,87 +457,87 @@ const MatchDetailPage = () => {
                     pickupLocation={match.shipment?.origin}
                     dropoffLocation={match.shipment?.destination}
                     status={match.status}
-                    height="100%" // Ocupa a altura do pai (div acima)
+                    height="100%"
                   />
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Payment Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Valores</CardTitle>
+        {/* Payment Card - Mobile Optimized */}
+        <Card className="mb-4 md:mb-6">
+          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Valores</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="space-y-2 md:space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Valor Total</span>
-                <span className="font-semibold text-lg">R$ {match.estimated_price?.toFixed(2)}</span>
+                <span className="text-sm text-muted-foreground">Valor Total</span>
+                <span className="font-semibold text-base md:text-lg">R$ {match.estimated_price?.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Comissão Levva (15%)</span>
-                <span className="text-muted-foreground">- R$ {match.platform_commission?.toFixed(2)}</span>
+                <span className="text-xs md:text-sm text-muted-foreground">Comissão Levva (15%)</span>
+                <span className="text-xs md:text-sm text-muted-foreground">- R$ {match.platform_commission?.toFixed(2)}</span>
               </div>
-              <div className="border-t pt-3 flex items-center justify-between">
-                <span className="font-semibold">Transportador Recebe</span>
-                <span className="font-bold text-jungle text-xl">R$ {match.carrier_earnings?.toFixed(2)}</span>
+              <div className="border-t pt-2 md:pt-3 flex items-center justify-between">
+                <span className="font-semibold text-sm">Transportador Recebe</span>
+                <span className="font-bold text-jungle text-lg md:text-xl">R$ {match.carrier_earnings?.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Payment Action Card - Only for sender when pending payment */}
+        {/* Payment Action Card - Mobile Optimized */}
         {canPay && (
-          <Card className="mb-6 border-jungle bg-jungle/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard size={24} weight="duotone" className="text-jungle" />
+          <Card className="mb-4 md:mb-6 border-jungle bg-jungle/5">
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <CreditCard size={20} weight="duotone" className="text-jungle" />
                 Pagamento Pendente
               </CardTitle>
-              <CardDescription>
-                Para confirmar a entrega, realize o pagamento. O valor ficará em escrow até a entrega ser concluída.
+              <CardDescription className="text-xs md:text-sm">
+                Realize o pagamento para confirmar. O valor ficará em escrow até a entrega.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6 pt-0">
               <Button
                 onClick={handlePayment}
                 disabled={paymentLoading}
-                className="w-full h-12 bg-jungle hover:bg-jungle-800 text-lg"
+                className="w-full h-11 md:h-12 bg-jungle hover:bg-jungle-800 text-base md:text-lg"
                 data-testid="pay-btn"
               >
                 {paymentLoading ? (
                   'Processando...'
                 ) : (
                   <>
-                    <CreditCard size={20} className="mr-2" />
+                    <CreditCard size={18} className="mr-2" />
                     Pagar R$ {match.estimated_price?.toFixed(2)}
                   </>
                 )}
               </Button>
-              <p className="text-xs text-center text-muted-foreground mt-3">
+              <p className="text-[10px] md:text-xs text-center text-muted-foreground mt-2 md:mt-3">
                 Pagamento seguro via Mercado Pago
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Users Card */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        {/* Users Card - Mobile Optimized */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Transportador</CardTitle>
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="text-sm md:text-base">Transportador</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-jungle/10 rounded-full flex items-center justify-center">
-                  <TruckIcon size={24} className="text-jungle" />
+            <CardContent className="p-4 md:p-6 pt-0">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-jungle/10 rounded-full flex items-center justify-center">
+                  <TruckIcon size={20} className="text-jungle" />
                 </div>
                 <div>
-                  <p className="font-semibold">{match.carrier_name}</p>
+                  <p className="font-semibold text-sm md:text-base">{match.carrier_name}</p>
                   <div className="flex items-center gap-1">
-                    <Star size={14} weight="fill" className="text-yellow-500" />
-                    <span className="text-sm text-muted-foreground">
+                    <Star size={12} weight="fill" className="text-yellow-500" />
+                    <span className="text-xs text-muted-foreground">
                       {match.carrier_rating > 0 ? match.carrier_rating.toFixed(1) : 'Novo'}
                     </span>
                   </div>
@@ -547,7 +547,7 @@ const MatchDetailPage = () => {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
               <CardTitle className="text-base">Remetente</CardTitle>
             </CardHeader>
             <CardContent>
