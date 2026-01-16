@@ -178,22 +178,23 @@ const MatchSuggestionsPage = () => {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                  {/* Footer - Mobile Optimized */}
+                  <div className="mt-3 md:mt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 pt-3 border-t md:border-0 md:pt-0">
+                    <div className="flex items-center gap-3 md:gap-4">
                       {suggestion.weight_kg && (
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Scales size={16} />
+                        <div className="flex items-center gap-1 text-xs md:text-sm text-muted-foreground">
+                          <Scales size={14} />
                           <span>{suggestion.weight_kg} kg</span>
                         </div>
                       )}
-                      <span className="font-bold text-jungle text-lg">
+                      <span className="font-bold text-jungle text-base md:text-lg">
                         R$ {suggestion.estimated_price?.toFixed(2)}
                       </span>
                     </div>
                     <Button
                       onClick={() => handleCreateMatch(suggestion.trip_id, suggestion.shipment_id)}
                       disabled={creating === `${suggestion.trip_id}-${suggestion.shipment_id}`}
-                      className="bg-jungle hover:bg-jungle-800"
+                      className="bg-jungle hover:bg-jungle-800 w-full md:w-auto h-10 text-sm"
                       data-testid={`create-match-${index}`}
                     >
                       {creating === `${suggestion.trip_id}-${suggestion.shipment_id}` 
