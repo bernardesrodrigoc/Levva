@@ -92,89 +92,97 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn">
-            Voltar ao Dashboard
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/dashboard')} 
+            data-testid="back-to-dashboard-btn"
+          >
+            <span className="hidden md:inline">Voltar ao Dashboard</span>
+            <span className="md:hidden">Voltar</span>
           </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
-        {/* Profile Header */}
-        <Card className="mb-8">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row items-start gap-8">
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-8 max-w-6xl">
+        {/* Profile Header - Mobile Optimized */}
+        <Card className="mb-4 md:mb-8">
+          <CardContent className="p-4 md:p-8">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-8">
               {/* Avatar */}
-              <div className="flex flex-col items-center gap-4">
-                <Avatar className="w-32 h-32">
+              <div className="flex flex-col items-center gap-3 md:gap-4">
+                <Avatar className="w-24 h-24 md:w-32 md:h-32">
                   <AvatarImage src={profile?.profile_photo_url} />
-                  <AvatarFallback className="bg-jungle/10 text-jungle text-3xl">
+                  <AvatarFallback className="bg-jungle/10 text-jungle text-2xl md:text-3xl">
                     {profile?.name?.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <Button 
                   variant="outline" 
+                  size="sm"
                   onClick={() => navigate('/verificacao')}
                   data-testid="edit-profile-btn"
+                  className="text-sm"
                 >
                   Editar Perfil
                 </Button>
               </div>
 
               {/* Info */}
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <h1 className="text-3xl font-heading font-bold">{profile?.name}</h1>
+              <div className="flex-1 text-center md:text-left w-full">
+                <div className="flex items-center justify-center md:justify-start gap-2 md:gap-3 mb-3 md:mb-4">
+                  <h1 className="text-xl md:text-3xl font-heading font-bold">{profile?.name}</h1>
                   {profile?.verification_status === 'verified' && (
-                    <ShieldCheck size={28} weight="fill" className="text-jungle" />
+                    <ShieldCheck size={24} weight="fill" className="text-jungle" />
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 mb-6">
-                  <Badge className={getTrustBadgeColor(profile?.trust_level)}>
-                    <Medal size={16} className="mr-2" />
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 md:gap-3 mb-4 md:mb-6">
+                  <Badge className={`${getTrustBadgeColor(profile?.trust_level)} text-xs md:text-sm`}>
+                    <Medal size={14} className="mr-1 md:mr-2" />
                     {getTrustLevelName(profile?.trust_level)}
                   </Badge>
-                  <Badge variant="outline">{getRoleLabel(profile?.role)}</Badge>
+                  <Badge variant="outline" className="text-xs md:text-sm">{getRoleLabel(profile?.role)}</Badge>
                   {profile?.rating > 0 && (
-                    <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
-                      <Star size={16} weight="fill" className="text-yellow-500" />
-                      <span className="font-semibold text-yellow-700">{profile?.rating.toFixed(1)}</span>
+                    <div className="flex items-center gap-1 bg-yellow-50 px-2 md:px-3 py-1 rounded-full border border-yellow-200">
+                      <Star size={14} weight="fill" className="text-yellow-500" />
+                      <span className="font-semibold text-yellow-700 text-sm">{profile?.rating.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone size={18} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 mb-4 md:mb-6 text-sm">
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
+                    <Phone size={16} />
                     <span>{profile?.phone}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar size={18} />
-                    <span>Membro desde {new Date(profile?.created_at).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+                  <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground">
+                    <Calendar size={16} />
+                    <span>Desde {new Date(profile?.created_at).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}</span>
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-muted rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">{stats?.trips || 0}</p>
-                    <p className="text-sm text-muted-foreground">Viagens</p>
+                {/* Stats - Mobile Optimized */}
+                <div className="grid grid-cols-3 gap-2 md:gap-4">
+                  <div className="text-center p-3 md:p-4 bg-muted rounded-lg">
+                    <p className="text-xl md:text-2xl font-bold text-foreground">{stats?.trips || 0}</p>
+                    <p className="text-[10px] md:text-sm text-muted-foreground">Viagens</p>
                   </div>
-                  <div className="text-center p-4 bg-muted rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">{stats?.shipments || 0}</p>
-                    <p className="text-sm text-muted-foreground">Envios</p>
+                  <div className="text-center p-3 md:p-4 bg-muted rounded-lg">
+                    <p className="text-xl md:text-2xl font-bold text-foreground">{stats?.shipments || 0}</p>
+                    <p className="text-[10px] md:text-sm text-muted-foreground">Envios</p>
                   </div>
-                  <div className="text-center p-4 bg-muted rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">{stats?.deliveries || 0}</p>
-                    <p className="text-sm text-muted-foreground">Entregas</p>
+                  <div className="text-center p-3 md:p-4 bg-muted rounded-lg">
+                    <p className="text-xl md:text-2xl font-bold text-foreground">{stats?.deliveries || 0}</p>
+                    <p className="text-[10px] md:text-sm text-muted-foreground">Entregas</p>
                   </div>
                 </div>
               </div>
@@ -182,20 +190,20 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        {/* Ratings Section */}
+        {/* Ratings Section - Mobile Optimized */}
         <Card>
-          <CardHeader>
-            <CardTitle>Avaliações Recebidas</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-base md:text-lg">Avaliações Recebidas</CardTitle>
+            <CardDescription className="text-xs md:text-sm">
               {ratings.length > 0 ? `${ratings.length} avaliações` : 'Nenhuma avaliação ainda'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             {ratings.length === 0 ? (
-              <div className="text-center py-12">
-                <Star size={48} className="mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Você ainda não tem avaliações</p>
-                <p className="text-sm text-muted-foreground">Complete sua primeira entrega para receber avaliações</p>
+              <div className="text-center py-8 md:py-12">
+                <Star size={40} className="mx-auto text-muted-foreground mb-3 md:mb-4" />
+                <p className="text-sm md:text-base text-muted-foreground">Você ainda não tem avaliações</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Complete sua primeira entrega para receber avaliações</p>
               </div>
             ) : (
               <div className="space-y-4">
