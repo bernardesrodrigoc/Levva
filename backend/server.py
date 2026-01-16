@@ -64,10 +64,17 @@ app = FastAPI(title="Levva API")
 api_router = APIRouter(prefix="/api")
 
 # CORS
+origins = [
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "https://victorious-strength-production.up.railway.app", # <--- SEU FRONTEND AQUI
+    "*" # Em desenvolvimento, às vezes usa-se *, mas o ideal é listar os domínios
+]
+
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=origins, # Usa a lista explicita
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
