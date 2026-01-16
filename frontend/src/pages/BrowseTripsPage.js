@@ -14,7 +14,8 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const BrowseTripsPage = () => {
-  const { token, user } = useAuth();
+  // ADICIONADO: 'user' para poder filtrar e 'isAuthenticated' (se houver no contexto) ou checar token
+  const { token, user } = useAuth(); 
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,11 +24,19 @@ const BrowseTripsPage = () => {
     destinationCity: ''
   });
 
+  // CORREÇÃO DO ERRO DE REFRESH:
+  // Adicionamos [token, user] nas dependências.
+  // O código só executa a busca quando o usuário estiver realmente logado.
   useEffect(() => {
-    fetchTrips();
-  }, []);
+    if (token && user) {
+      fetchTrips();
+    }
+  }, [token, user]);
 
   const fetchTrips = async (filterParams = {}) => {
+    // Proteção extra: se não tiver token, não busca (evita erro 401)
+    if (!token) return;
+
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -39,13 +48,17 @@ const BrowseTripsPage = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      const othersTrips = response.data.filter(t => t.carrier_id !== user.id);     
-
+      // CORREÇÃO DO FILTRO (Issue 1):
+      // Filtra para remover as viagens onde EU sou o motorista
+      const othersTrips = response.data.filter(trip => trip.carrier_id !== user.id);
       
-      setTrips(response.data);
+      setTrips(othersTrips);
     } catch (error) {
-      toast.error('Erro ao carregar viagens');
+      // Só mostra erro se não for cancelamento ou erro de auth temporário
       console.error(error);
+      if (error.response?.status !== 401) {
+        toast.error('Erro ao carregar viagens');
+      }
     } finally {
       setLoading(false);
     }
@@ -55,9 +68,8 @@ const BrowseTripsPage = () => {
     fetchTrips(filters);
   };
 
-  // Ajustado para evitar conflito com o clique do Card
   const handleCreateMatch = async (e, tripId) => {
-    e.stopPropagation(); // Impede que o clique no botão abra a página de detalhes
+    e.stopPropagation();
     navigate('/criar-combinacao', { state: { tripId } });
   };
 
@@ -83,7 +95,7 @@ const BrowseTripsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="glass border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -168,7 +180,6 @@ const BrowseTripsPage = () => {
             {trips.map((trip) => (
               <Card 
                 key={trip.id} 
-                // AQUI ESTÁ A MUDANÇA: onClick para navegar aos detalhes
                 className="card-hover cursor-pointer hover:border-jungle transition-all" 
                 data-testid={`trip-card-${trip.id}`}
                 onClick={() => navigate(`/viagens/${trip.id}`)}
@@ -246,7 +257,6 @@ const BrowseTripsPage = () => {
                         {trip.status === 'published' ? 'Disponível' : trip.status}
                       </Badge>
                       <Button 
-                        // Alterado para passar o evento 'e' e parar propagação
                         onClick={(e) => handleCreateMatch(e, trip.id)}
                         className="bg-jungle hover:bg-jungle-800"
                         data-testid={`match-btn-${trip.id}`}
