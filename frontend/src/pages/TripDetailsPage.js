@@ -66,7 +66,7 @@ const TripDetailsPage = () => {
         <div className="lg:col-span-2 space-y-6">
           
           {/* MAPA - AQUI A MÁGICA ACONTECE */}
-          <Card className="overflow-hidden border-2 border-jungle/10 h-[450px]">
+          <Card className="overflow-hidden border-2 border-jungle/10 h-[300px] md:h-[450px]">
             <RouteMap 
                 // Passando as props individuais conforme seu RouteMap.js pede
                 originCity={trip.origin.city}
