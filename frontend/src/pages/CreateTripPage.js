@@ -426,30 +426,56 @@ const CreateTripPage = () => {
                 {formData.isRecurring ? 'Horário e Início' : 'Data e Hora'}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0 grid grid-cols-2 gap-3 md:gap-4">
+            <CardContent className="p-4 md:p-6 pt-0 space-y-4">
+              <MobileDatePicker
+                label={formData.isRecurring ? 'Primeira viagem' : 'Data de Partida'}
+                value={formData.departureDate}
+                onChange={(value) => handleChange('departureDate', value)}
+                showFutureYears={true}
+                futureYearsCount={2}
+                minYear={new Date().getFullYear()}
+                required
+                data-testid="departure-date"
+              />
+              
+              {/* Time Select - Mobile Optimized */}
               <div>
-                <Label htmlFor="departureDate" className="text-xs md:text-sm">
-                  {formData.isRecurring ? 'Primeira viagem' : 'Data de Partida'}
-                </Label>
-                <Input
-                  id="departureDate"
-                  type="date"
-                  value={formData.departureDate}
-                  onChange={(e) => handleChange('departureDate', e.target.value)}
-                  required
-                  className="h-11 md:h-12 mt-1.5 text-base"
-                />
-              </div>
-              <div>
-                <Label htmlFor="departureTime" className="text-xs md:text-sm">Horário</Label>
-                <Input
-                  id="departureTime"
-                  type="time"
-                  value={formData.departureTime}
-                  onChange={(e) => handleChange('departureTime', e.target.value)}
-                  required
-                  className="h-11 md:h-12 mt-1.5 text-base"
-                />
+                <Label className="text-xs md:text-sm mb-2 block">Horário de Partida</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select 
+                    value={formData.departureTime?.split(':')[0] || ''} 
+                    onValueChange={(h) => {
+                      const m = formData.departureTime?.split(':')[1] || '00';
+                      handleChange('departureTime', `${h}:${m}`);
+                    }}
+                  >
+                    <SelectTrigger className="h-11 md:h-12 text-base">
+                      <SelectValue placeholder="Hora" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0')).map((h) => (
+                        <SelectItem key={h} value={h}>{h}h</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={formData.departureTime?.split(':')[1] || ''} 
+                    onValueChange={(m) => {
+                      const h = formData.departureTime?.split(':')[0] || '08';
+                      handleChange('departureTime', `${h}:${m}`);
+                    }}
+                  >
+                    <SelectTrigger className="h-11 md:h-12 text-base">
+                      <SelectValue placeholder="Min" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="00">00</SelectItem>
+                      <SelectItem value="15">15</SelectItem>
+                      <SelectItem value="30">30</SelectItem>
+                      <SelectItem value="45">45</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
