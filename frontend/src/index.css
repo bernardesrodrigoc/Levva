@@ -26,7 +26,52 @@
   }
 
   .card-hover {
-    @apply transition-transform hover:-translate-y-1 hover:shadow-md;
+    @apply transition-all hover:-translate-y-1 hover:shadow-lg active:scale-[0.98];
+  }
+
+  /* Mobile-first touch interactions */
+  .touch-active {
+    @apply active:bg-muted/50 transition-colors;
+  }
+
+  /* Better tap targets for mobile */
+  .tap-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Mobile-friendly spacing */
+  .mobile-container {
+    @apply px-4 md:px-6 lg:px-8;
+  }
+
+  /* Safe area padding for notched devices */
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* Smooth scrolling */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Mobile-optimized text */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Loading skeleton animation */
+  .skeleton {
+    @apply animate-pulse bg-muted rounded;
   }
 }
 
