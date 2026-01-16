@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Package, TruckIcon, Check, ArrowRight } from '@phosphor-icons/react';
+import { Package, TruckIcon, Check, ArrowRight, MapPin, Calendar, User } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -14,15 +14,25 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const CreateMatchPage = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { tripId, shipmentId } = location.state || {};
   
+  // IDs vindos da navegação anterior
+  const { tripId: targetTripId, shipmentId: targetShipmentId } = location.state || {};
+  
+  // Dados do alvo (o que estamos tentando combinar)
+  const [targetTrip, setTargetTrip] = useState(null);
+  const [targetShipment, setTargetShipment] = useState(null);
+
+  // Meus dados (para escolher a contraparte)
   const [myTrips, setMyTrips] = useState([]);
   const [myShipments, setMyShipments] = useState([]);
-  const [selectedTripId, setSelectedTripId] = useState(tripId || '');
-  const [selectedShipmentId, setSelectedShipmentId] = useState(shipmentId || '');
+  
+  // Seleção
+  const [selectedTripId, setSelectedTripId] = useState('');
+  const [selectedShipmentId, setSelectedShipmentId] = useState('');
+  
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -31,23 +41,51 @@ const CreateMatchPage = () => {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [tripsRes, shipmentsRes] = await Promise.all([
+      const promises = [
         axios.get(`${API}/trips/my-trips`, { headers }),
         axios.get(`${API}/shipments/my-shipments`, { headers })
-      ]);
+      ];
 
-      // Filter only published
-      const availableTrips = tripsRes.data.filter(t => t.status === 'published');
-      const availableShipments = shipmentsRes.data.filter(s => s.status === 'published');
+      // Se temos um ID alvo vindo de outra tela, buscamos os detalhes dele
+      if (targetTripId) {
+        promises.push(axios.get(`${API}/trips/${targetTripId}`, { headers }));
+      }
+      if (targetShipmentId) {
+        promises.push(axios.get(`${API}/shipments/${targetShipmentId}`, { headers }));
+      }
 
-      setMyTrips(availableTrips);
-      setMyShipments(availableShipments);
+      const results = await Promise.all(promises);
+      
+      // Processa Meus Dados
+      const myTripsData = results[0].data.filter(t => t.status === 'published');
+      const myShipmentsData = results[1].data.filter(s => s.status === 'published');
+      
+      setMyTrips(myTripsData);
+      setMyShipments(myShipmentsData);
+
+      // Processa Dados Alvo (se houver)
+      if (targetTripId) {
+        setTargetTrip(results[2].data);
+        setSelectedTripId(targetTripId); // Já seleciona automaticamente
+      }
+      
+      // Ajuste de índice dependendo se targetTripId existia ou não
+      const shipmentIndex = targetTripId ? 3 : 2;
+      if (targetShipmentId && results[shipmentIndex]) {
+        setTargetShipment(results[shipmentIndex].data);
+        setSelectedShipmentId(targetShipmentId); // Já seleciona automaticamente
+      }
+
     } catch (error) {
-      toast.error('Erro ao carregar dados');
-      console.error(error);
+      console.error("Erro detalhado:", error);
+      // Ignora 404 se for apenas um detalhe faltando, mas avisa erro geral
+      if (error.response?.status !== 404) {
+        toast.error('Erro ao carregar dados para combinação.');
+      }
     } finally {
       setLoading(false);
     }
@@ -55,7 +93,7 @@ const CreateMatchPage = () => {
 
   const handleCreateMatch = async () => {
     if (!selectedTripId || !selectedShipmentId) {
-      toast.error('Selecione uma viagem e um envio');
+      toast.error('É necessário ter uma viagem e um envio selecionados.');
       return;
     }
 
@@ -82,6 +120,10 @@ const CreateMatchPage = () => {
     }
   };
 
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('pt-BR');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -90,139 +132,151 @@ const CreateMatchPage = () => {
     );
   }
 
+  // Lógica de Renderização:
+  // Cenário 1: Sou um Remetente vendo uma Viagem (Target Trip existe)
+  // Cenário 2: Sou um Transportador vendo um Envio (Target Shipment existe)
+  // Cenário 3: Manual (escolho ambos da minha lista - raro)
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="glass border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Package size={32} weight="duotone" className="text-jungle" />
             <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate(-1)} data-testid="back-btn">
-            Voltar
-          </Button>
+          <Button variant="ghost" onClick={() => navigate(-1)}>Voltar</Button>
         </div>
       </header>
 
       <div className="container mx-auto px-6 py-8 max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-heading font-bold mb-2">Criar Combinação</h1>
-          <p className="text-muted-foreground">Selecione uma viagem e um envio para combinar</p>
+          <h1 className="text-3xl font-heading font-bold mb-2">Finalizar Combinação</h1>
+          <p className="text-muted-foreground">Confirme os detalhes do transporte</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* My Trips */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TruckIcon size={24} weight="duotone" className="text-jungle" />
-                Minhas Viagens Disponíveis
-              </CardTitle>
-              <CardDescription>
-                {myTrips.length} viagem(ns) publicada(s)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {myTrips.length === 0 ? (
-                <div className="text-center py-8">
-                  <TruckIcon size={48} className="mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">Você não tem viagens disponíveis</p>
-                  <Button onClick={() => navigate('/criar-viagem')} variant="outline">
-                    Criar Viagem
-                  </Button>
-                </div>
-              ) : (
-                <RadioGroup value={selectedTripId} onValueChange={setSelectedTripId}>
-                  <div className="space-y-3">
-                    {myTrips.map((trip) => (
-                      <div key={trip.id} className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-muted/50">
-                        <RadioGroupItem value={trip.id} id={`trip-${trip.id}`} />
-                        <Label htmlFor={`trip-${trip.id}`} className="flex-1 cursor-pointer">
-                          <div>
-                            <p className="font-semibold">
-                              {trip.origin.city} → {trip.destination.city}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(trip.departure_date).toLocaleDateString('pt-BR')} • {trip.vehicle_type}
-                            </p>
-                          </div>
-                        </Label>
-                        {selectedTripId === trip.id && (
-                          <Check size={20} className="text-jungle" />
-                        )}
-                      </div>
-                    ))}
+          
+          {/* COLUNA DA ESQUERDA: VIAGEM */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <TruckIcon className="text-jungle" /> Viagem Selecionada
+            </h2>
+            
+            {targetTrip ? (
+              // Se veio de Buscar Viagens, mostra o card fixo da viagem alvo
+              <Card className="border-2 border-jungle/20 bg-jungle/5">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>{targetTrip.origin.city} → {targetTrip.destination.city}</CardTitle>
+                        <CardDescription className="flex items-center gap-2 mt-1">
+                            <User size={16} /> {targetTrip.carrier_name}
+                        </CardDescription>
+                    </div>
+                    <Badge className="bg-jungle">Selecionado</Badge>
                   </div>
-                </RadioGroup>
-              )}
-            </CardContent>
-          </Card>
+                </CardHeader>
+                <CardContent className="grid gap-2 text-sm">
+                    <div className="flex items-center gap-2"><Calendar size={16} /> {formatDate(targetTrip.departure_date)}</div>
+                    <div className="flex items-center gap-2"><TruckIcon size={16} /> {targetTrip.vehicle_type}</div>
+                    <div className="font-bold text-jungle mt-2">R$ {targetTrip.price_per_kg?.toFixed(2)} / kg</div>
+                </CardContent>
+              </Card>
+            ) : (
+              // Se não, lista minhas viagens para eu escolher (caso eu seja o transportador)
+              <Card>
+                <CardHeader><CardTitle>Minhas Viagens</CardTitle></CardHeader>
+                <CardContent>
+                    {myTrips.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">Você não tem viagens cadastradas.</p>
+                    ) : (
+                        <RadioGroup value={selectedTripId} onValueChange={setSelectedTripId}>
+                            {myTrips.map(trip => (
+                                <div key={trip.id} className="flex items-center space-x-3 border p-3 rounded hover:bg-muted">
+                                    <RadioGroupItem value={trip.id} id={`trip-${trip.id}`} />
+                                    <Label htmlFor={`trip-${trip.id}`} className="flex-1 cursor-pointer">
+                                        {trip.origin.city} → {trip.destination.city} <span className="text-xs text-muted-foreground">({formatDate(trip.departure_date)})</span>
+                                    </Label>
+                                </div>
+                            ))}
+                        </RadioGroup>
+                    )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-          {/* My Shipments */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package size={24} weight="duotone" className="text-lime" />
-                Meus Envios Disponíveis
-              </CardTitle>
-              <CardDescription>
-                {myShipments.length} envio(s) publicado(s)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {myShipments.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package size={48} className="mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">Você não tem envios disponíveis</p>
-                  <Button onClick={() => navigate('/criar-envio')} variant="outline">
-                    Criar Envio
-                  </Button>
-                </div>
-              ) : (
-                <RadioGroup value={selectedShipmentId} onValueChange={setSelectedShipmentId}>
-                  <div className="space-y-3">
-                    {myShipments.map((shipment) => (
-                      <div key={shipment.id} className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-muted/50">
-                        <RadioGroupItem value={shipment.id} id={`shipment-${shipment.id}`} />
-                        <Label htmlFor={`shipment-${shipment.id}`} className="flex-1 cursor-pointer">
-                          <div>
-                            <p className="font-semibold">
-                              {shipment.origin.city} → {shipment.destination.city}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {shipment.package.weight_kg}kg • {shipment.package.category}
-                            </p>
-                          </div>
-                        </Label>
-                        {selectedShipmentId === shipment.id && (
-                          <Check size={20} className="text-lime" />
-                        )}
-                      </div>
-                    ))}
+          {/* COLUNA DA DIREITA: ENVIO */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Package className="text-lime" /> Envio Selecionado
+            </h2>
+
+            {targetShipment ? (
+               // Se veio de Buscar Envios, mostra o card fixo do envio alvo
+               <Card className="border-2 border-lime/20 bg-lime/5">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>{targetShipment.origin.city} → {targetShipment.destination.city}</CardTitle>
+                        <CardDescription>{targetShipment.package.description}</CardDescription>
+                    </div>
+                    <Badge className="bg-lime-600 hover:bg-lime-700">Selecionado</Badge>
                   </div>
-                </RadioGroup>
-              )}
-            </CardContent>
-          </Card>
+                </CardHeader>
+                <CardContent className="grid gap-2 text-sm">
+                    <div className="flex items-center gap-2"><User size={16} /> {targetShipment.sender_name}</div>
+                    <div className="font-bold mt-2">{targetShipment.package.weight_kg} kg</div>
+                </CardContent>
+              </Card>
+            ) : (
+              // Se não, lista MEUS envios para eu escolher (caso eu seja o remetente)
+              <Card>
+                <CardHeader>
+                    <CardTitle>Meus Envios Disponíveis</CardTitle>
+                    <CardDescription>Qual pacote você quer enviar nesta viagem?</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {myShipments.length === 0 ? (
+                        <div className="text-center py-6">
+                            <p className="text-muted-foreground mb-4">Você não tem envios cadastrados.</p>
+                            <Button variant="outline" size="sm" onClick={() => navigate('/criar-envio')}>Criar Novo Envio</Button>
+                        </div>
+                    ) : (
+                        <RadioGroup value={selectedShipmentId} onValueChange={setSelectedShipmentId}>
+                            {myShipments.map(shipment => (
+                                <div key={shipment.id} className="flex items-center space-x-3 border p-3 rounded hover:bg-muted">
+                                    <RadioGroupItem value={shipment.id} id={`ship-${shipment.id}`} />
+                                    <Label htmlFor={`ship-${shipment.id}`} className="flex-1 cursor-pointer">
+                                        <div className="font-semibold">{shipment.package.description || "Sem descrição"}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {shipment.origin.city} → {shipment.destination.city} • {shipment.package.weight_kg}kg
+                                        </div>
+                                    </Label>
+                                </div>
+                            ))}
+                        </RadioGroup>
+                    )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
         </div>
 
-        {/* Create Button */}
-        <div className="mt-8 flex justify-center">
-          <Button
+        {/* Botão de Ação */}
+        <div className="mt-10 flex justify-center">
+          <Button 
+            size="lg" 
+            className="w-full md:w-1/2 h-14 text-lg bg-jungle hover:bg-jungle-800 shadow-lg"
             onClick={handleCreateMatch}
             disabled={!selectedTripId || !selectedShipmentId || creating}
-            className="h-14 px-12 bg-jungle hover:bg-jungle-800 text-lg"
-            data-testid="create-match-btn"
           >
-            {creating ? 'Criando...' : (
-              <>
-                Criar Combinação
-                <ArrowRight size={24} className="ml-2" />
-              </>
-            )}
+            {creating ? 'Processando...' : 'Confirmar e Criar Combinação'} <ArrowRight className="ml-2" />
           </Button>
         </div>
+
       </div>
     </div>
   );
