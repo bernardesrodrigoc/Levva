@@ -401,32 +401,16 @@ const VerificationPage = () => {
                     currentImageUrl={formData.profilePhotoUrl}
                     maxSizeMB={5}
                   />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="w-48 h-48 rounded-full bg-muted flex items-center justify-center">
-                        <Camera size={48} className="text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <Input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={(e) => handleFileChange('profilePhoto', 'profilePhotoPreview', 'profilePhotoUrl', 'profile', e.target.files[0])}
-                    className="max-w-xs"
-                    disabled={uploadingFile === 'profile'}
-                    data-testid="profile-photo-input"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">Formatos aceitos: JPEG, PNG, WebP. Máximo 5MB</p>
+                  <p className="text-xs text-muted-foreground mt-3 text-center">Use uma foto com boa iluminação</p>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex gap-4 mt-6">
-              <Button type="button" variant="outline" className="flex-1 h-12" onClick={() => setStep(1)}>
+            <div className="flex gap-3 mt-6">
+              <Button type="button" variant="outline" className="flex-1 h-11 md:h-12" onClick={() => setStep(1)}>
                 Voltar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800" disabled={uploadingFile !== null}>
+              <Button type="submit" className="flex-1 h-11 md:h-12 bg-jungle hover:bg-jungle-800">
                 Continuar
               </Button>
             </div>
@@ -437,37 +421,37 @@ const VerificationPage = () => {
         {step === 3 && (
           <form onSubmit={handleSubmitStep3}>
             <Card data-testid="step3-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <IdentificationCard size={24} weight="duotone" className="text-jungle" />
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <IdentificationCard size={22} weight="duotone" className="text-jungle" />
                   Documentos
                 </CardTitle>
-                <CardDescription>RG ou CNH + Selfie com documento</CardDescription>
+                <CardDescription className="text-xs md:text-sm">RG ou CNH + Selfie com documento</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <FileUploadZone
+              <CardContent className="p-4 md:p-6 pt-0 space-y-4 md:space-y-6">
+                <ImageUploadWithCamera
+                  fileType="id_front"
                   label="Frente do Documento *"
-                  preview={formData.idFrontPreview}
-                  isUploading={uploadingFile === 'id_front'}
-                  isUploaded={!!formData.idFrontUrl}
-                  onFileSelect={(file) => handleFileChange('idFront', 'idFrontPreview', 'idFrontUrl', 'id_front', file)}
-                  testId="id-front-input"
+                  onUploadComplete={(url) => handlePhotoUpload('idFrontUrl', url)}
+                  currentImageUrl={formData.idFrontUrl}
+                  maxSizeMB={5}
                 />
 
-                <FileUploadZone
+                <ImageUploadWithCamera
+                  fileType="id_back"
                   label="Verso do Documento *"
-                  preview={formData.idBackPreview}
-                  isUploading={uploadingFile === 'id_back'}
-                  isUploaded={!!formData.idBackUrl}
-                  onFileSelect={(file) => handleFileChange('idBack', 'idBackPreview', 'idBackUrl', 'id_back', file)}
-                  testId="id-back-input"
+                  onUploadComplete={(url) => handlePhotoUpload('idBackUrl', url)}
+                  currentImageUrl={formData.idBackUrl}
+                  maxSizeMB={5}
                 />
 
-                <FileUploadZone
+                <ImageUploadWithCamera
+                  fileType="selfie"
                   label="Selfie com Documento *"
-                  preview={formData.selfiePreview}
-                  isUploading={uploadingFile === 'selfie'}
-                  isUploaded={!!formData.selfieUrl}
+                  onUploadComplete={(url) => handlePhotoUpload('selfieUrl', url)}
+                  currentImageUrl={formData.selfieUrl}
+                  maxSizeMB={5}
+                />
                   onFileSelect={(file) => handleFileChange('selfie', 'selfiePreview', 'selfieUrl', 'selfie', file)}
                   testId="selfie-input"
                 />
