@@ -1752,6 +1752,50 @@ async def delete_vehicle_direct(vehicle_id: str, user_id: str = Depends(get_curr
 
 app.include_router(api_router)
 
+
+
+
+# --- ADICIONE ISTO NO SERVER.PY (ANTES DE MATCHING ROUTES) ---
+
+@api_router.delete("/trips/{trip_id}")
+async def delete_trip(trip_id: str, user_id: str = Depends(get_current_user_id)):
+    # 1. Verifica se a viagem existe
+    trip = await trips_collection.find_one({"_id": ObjectId(trip_id)})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Viagem não encontrada")
+    
+    # 2. Verifica se o usuário é o dono
+    if trip["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+        
+    # 3. REGRA DE NEGÓCIO: Só pode excluir se não tiver match (status 'published')
+    if trip["status"] != TripStatus.PUBLISHED:
+        raise HTTPException(status_code=400, detail="Não é possível excluir uma viagem que já possui combinações ou foi concluída.")
+
+    # 4. Deleta
+    await trips_collection.delete_one({"_id": ObjectId(trip_id)})
+    return {"message": "Viagem excluída com sucesso"}
+
+@api_router.delete("/shipments/{shipment_id}")
+async def delete_shipment(shipment_id: str, user_id: str = Depends(get_current_user_id)):
+    shipment = await shipments_collection.find_one({"_id": ObjectId(shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Envio não encontrado")
+    
+    if shipment["sender_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+        
+    # REGRA DE NEGÓCIO: Só exclui se estiver publicado
+    if shipment["status"] != ShipmentStatus.PUBLISHED:
+        raise HTTPException(status_code=400, detail="Não é possível excluir um envio que já está em processo de entrega.")
+
+    await shipments_collection.delete_one({"_id": ObjectId(shipment_id)})
+    return {"message": "Envio excluído com sucesso"}
+
+
+
+
+
 # ============= WEBSOCKET ENDPOINTS =============
 @app.websocket("/ws/tracking/{match_id}/carrier")
 async def websocket_carrier_tracking(websocket: WebSocket, match_id: str, token: str = Query(...)):
