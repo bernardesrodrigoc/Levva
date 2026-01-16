@@ -8,6 +8,7 @@ class LevvaAPITester:
         self.base_url = base_url
         self.carrier_token = None
         self.sender_token = None
+        self.admin_token = None
         self.carrier_user_id = None
         self.sender_user_id = None
         self.trip_id = None
