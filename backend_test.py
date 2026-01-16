@@ -394,6 +394,164 @@ class LevvaAPITester:
                 print("❌ Our created shipment not found in filtered results")
         return False
 
+    def test_admin_login(self):
+        """Test admin login with provided credentials"""
+        success, response = self.run_test(
+            "Admin Login",
+            "POST",
+            "auth/login",
+            200,
+            data={
+                "email": "admin@levva.com",
+                "password": "adminpassword"
+            }
+        )
+        if success and 'token' in response:
+            self.admin_token = response['token']
+            print(f"✅ Admin login token: {self.admin_token[:20]}...")
+            return True
+        return False
+
+    def test_verify_carrier(self):
+        """Verify carrier user using admin privileges"""
+        if not self.admin_token or not self.carrier_user_id:
+            print("❌ Cannot verify carrier - missing admin token or carrier user ID")
+            return False
+            
+        # First submit verification documents for carrier
+        success, response = self.run_test(
+            "Submit Carrier Verification",
+            "POST",
+            "users/verify",
+            200,
+            data={
+                "cpf": "12345678901",
+                "birth_date": "1990-01-01",
+                "address": "Rua Test, 123, Belo Horizonte, MG",
+                "documents": {
+                    "id_front": "https://example.com/id_front.jpg",
+                    "id_back": "https://example.com/id_back.jpg"
+                }
+            },
+            token=self.carrier_token
+        )
+        
+        if not success:
+            print("❌ Failed to submit carrier verification documents")
+            return False
+            
+        # Get pending verifications to find the verification ID
+        success, response = self.run_test(
+            "Get Pending Verifications",
+            "GET",
+            "admin/verifications/pending",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success or not response:
+            print("❌ Failed to get pending verifications")
+            return False
+            
+        # Find our carrier's verification
+        verification_id = None
+        for verification in response:
+            if verification.get("user_id") == self.carrier_user_id:
+                verification_id = verification.get("id")
+                break
+                
+        if not verification_id:
+            print("❌ Could not find carrier verification in pending list")
+            return False
+            
+        # Approve the verification
+        success, response = self.run_test(
+            "Approve Carrier Verification",
+            "POST",
+            f"admin/verifications/{verification_id}/review",
+            200,
+            data={
+                "action": "approve",
+                "notes": "Test verification approval"
+            },
+            token=self.admin_token
+        )
+        
+        if success:
+            print("✅ Carrier verification approved")
+            return True
+        return False
+
+    def test_verify_sender(self):
+        """Verify sender user using admin privileges"""
+        if not self.admin_token or not self.sender_user_id:
+            print("❌ Cannot verify sender - missing admin token or sender user ID")
+            return False
+            
+        # First submit verification documents for sender
+        success, response = self.run_test(
+            "Submit Sender Verification",
+            "POST",
+            "users/verify",
+            200,
+            data={
+                "cpf": "98765432109",
+                "birth_date": "1985-05-15",
+                "address": "Av Test, 456, São Paulo, SP",
+                "documents": {
+                    "id_front": "https://example.com/sender_id_front.jpg",
+                    "id_back": "https://example.com/sender_id_back.jpg"
+                }
+            },
+            token=self.sender_token
+        )
+        
+        if not success:
+            print("❌ Failed to submit sender verification documents")
+            return False
+            
+        # Get pending verifications to find the verification ID
+        success, response = self.run_test(
+            "Get Pending Verifications (Sender)",
+            "GET",
+            "admin/verifications/pending",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success or not response:
+            print("❌ Failed to get pending verifications for sender")
+            return False
+            
+        # Find our sender's verification
+        verification_id = None
+        for verification in response:
+            if verification.get("user_id") == self.sender_user_id:
+                verification_id = verification.get("id")
+                break
+                
+        if not verification_id:
+            print("❌ Could not find sender verification in pending list")
+            return False
+            
+        # Approve the verification
+        success, response = self.run_test(
+            "Approve Sender Verification",
+            "POST",
+            f"admin/verifications/{verification_id}/review",
+            200,
+            data={
+                "action": "approve",
+                "notes": "Test verification approval"
+            },
+            token=self.admin_token
+        )
+        
+        if success:
+            print("✅ Sender verification approved")
+            return True
+        return False
+
     def test_health_check(self):
         """Test health check endpoint"""
         success, response = self.run_test(
