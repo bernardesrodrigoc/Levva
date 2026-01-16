@@ -218,7 +218,7 @@ class LevvaModularAPITester:
                 "length_cm": 35,
                 "width_cm": 25,
                 "height_cm": 20,
-                "weight_kg": 8,
+                "weight_kg": 4,  # Reduced to fit level_1 trust limit (5kg max)
                 "category": "Livros",
                 "description": "Coleção de livros raros"
             },
