@@ -73,31 +73,32 @@ const MatchSuggestionsPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-jungle"></div>
+        <div className="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-b-2 border-jungle"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-btn">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} data-testid="back-btn">
             Voltar
           </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8 max-w-4xl">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <Lightning size={32} weight="duotone" className="text-jungle" />
-            <h1 className="text-3xl font-heading font-bold">Sugestões Inteligentes</h1>
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-8 max-w-4xl">
+        {/* Title - Mobile Optimized */}
+        <div className="mb-4 md:mb-8">
+          <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+            <Lightning size={24} weight="duotone" className="text-jungle" />
+            <h1 className="text-xl md:text-3xl font-heading font-bold">Sugestões Inteligentes</h1>
           </div>
           <p className="text-muted-foreground">
             Combinações automáticas baseadas nas suas viagens e envios
