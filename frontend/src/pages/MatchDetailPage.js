@@ -349,87 +349,88 @@ const MatchDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-jungle"></div>
+        <div className="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-b-2 border-jungle"></div>
       </div>
     );
   }
 
   if (!match) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <p className="text-lg font-semibold mb-2">Combinação não encontrada</p>
-          <Button onClick={() => navigate('/dashboard')}>Voltar</Button>
+          <p className="text-base md:text-lg font-semibold mb-2">Combinação não encontrada</p>
+          <Button onClick={() => navigate('/dashboard')} size="sm">Voltar</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20"> {/* pb-20 para não cobrir com o menu mobile */}
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-btn">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} data-testid="back-btn">
             Voltar
           </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8 max-w-5xl">
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-8 max-w-5xl">
+        {/* Title - Mobile Optimized */}
+        <div className="mb-4 md:mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
           <div>
-            <h1 className="text-3xl font-heading font-bold mb-2">Detalhes da Combinação</h1>
-            <p className="text-muted-foreground">ID: {matchId?.slice(0, 12)}...</p>
+            <h1 className="text-xl md:text-3xl font-heading font-bold mb-1 md:mb-2">Detalhes da Combinação</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">ID: {matchId?.slice(0, 12)}...</p>
           </div>
           {getStatusBadge(match.status)}
         </div>
 
-        {/* Route Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Rota</CardTitle>
+        {/* Route Card - Mobile Optimized */}
+        <Card className="mb-4 md:mb-6">
+          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+            <CardTitle className="text-base md:text-lg">Rota</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <MapPin size={24} weight="fill" className="text-jungle" />
-                <div>
-                  <p className="font-semibold">{match.trip?.origin.city}, {match.trip?.origin.state}</p>
-                  <p className="text-sm text-muted-foreground">Origem</p>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="flex items-center gap-2 md:gap-4">
+              <div className="flex items-center gap-1.5 md:gap-2 flex-1 min-w-0">
+                <MapPin size={20} weight="fill" className="text-jungle flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm md:text-base truncate">{match.trip?.origin.city}</p>
+                  <p className="text-[10px] md:text-sm text-muted-foreground">Origem</p>
                 </div>
               </div>
-              <div className="flex-1 border-t-2 border-dashed" />
-              <div className="flex items-center gap-2 flex-1">
-                <MapPin size={24} weight="fill" className="text-lime" />
-                <div>
-                  <p className="font-semibold">{match.trip?.destination.city}, {match.trip?.destination.state}</p>
-                  <p className="text-sm text-muted-foreground">Destino</p>
+              <div className="flex-shrink-0 w-6 md:flex-1 border-t-2 border-dashed" />
+              <div className="flex items-center gap-1.5 md:gap-2 flex-1 min-w-0 justify-end md:justify-start">
+                <MapPin size={20} weight="fill" className="text-lime flex-shrink-0" />
+                <div className="min-w-0 text-right md:text-left">
+                  <p className="font-semibold text-sm md:text-base truncate">{match.trip?.destination.city}</p>
+                  <p className="text-[10px] md:text-sm text-muted-foreground">Destino</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Route Map / Live Tracking */}
-        <Card className="mb-6 overflow-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapTrifold size={24} weight="duotone" className="text-jungle" />
-              {match.status === 'in_transit' ? 'Rastreamento em Tempo Real' : 'Mapa da Rota'}
+        {/* Route Map / Live Tracking - Mobile Optimized */}
+        <Card className="mb-4 md:mb-6 overflow-hidden">
+          <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <MapTrifold size={20} weight="duotone" className="text-jungle" />
+              {match.status === 'in_transit' ? 'Rastreamento' : 'Mapa da Rota'}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs md:text-sm">
               {match.status === 'in_transit' 
-                ? 'Acompanhe a entrega em tempo real'
-                : 'Visualize o trajeto da entrega'
+                ? 'Acompanhe em tempo real'
+                : 'Visualize o trajeto'
               }
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             {/* Live Tracking for in_transit status */}
             {match.status === 'in_transit' ? (
               <LiveTrackingSection 
