@@ -286,81 +286,84 @@ const CreateShipmentPage = () => {
             </CardContent>
           </Card>
 
-          {/* Value & Photos */}
+          {/* Value & Photos - Mobile Optimized */}
           <Card data-testid="value-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CurrencyDollar size={24} weight="duotone" className="text-jungle" />
+            <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <CurrencyDollar size={20} weight="duotone" className="text-jungle" />
                 Valor e Fotos
               </CardTitle>
-              <CardDescription>Valor declarado e fotos do item</CardDescription>
+              <CardDescription className="text-xs md:text-sm">Valor declarado e fotos do item</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 md:p-6 pt-0 space-y-4">
               <div>
-                <Label htmlFor="declaredValue">Valor Declarado (R$)</Label>
+                <Label htmlFor="declaredValue" className="text-xs md:text-sm">Valor Declarado (R$)</Label>
                 <Input
                   id="declaredValue"
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   placeholder="100.00"
                   value={formData.declaredValue}
                   onChange={(e) => handleChange('declaredValue', e.target.value)}
                   required
-                  className="h-12 mt-2"
+                  className="h-11 md:h-12 mt-1.5 text-base"
                   data-testid="declared-value-input"
                 />
               </div>
 
-              {/* Photo placeholders */}
-              <div className="grid grid-cols-3 gap-4">
+              {/* Photo placeholders - Stack on mobile */}
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
                 <div className="text-center">
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-2">
-                    <Camera size={32} className="text-muted-foreground" />
+                  <div className="aspect-square md:aspect-video bg-muted rounded-lg flex items-center justify-center mb-1 md:mb-2">
+                    <Camera size={24} className="text-muted-foreground" />
                   </div>
-                  <span className="text-xs text-muted-foreground">Item visível</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">Item visível</span>
                 </div>
                 <div className="text-center">
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-2">
-                    <Camera size={32} className="text-muted-foreground" />
+                  <div className="aspect-square md:aspect-video bg-muted rounded-lg flex items-center justify-center mb-1 md:mb-2">
+                    <Camera size={24} className="text-muted-foreground" />
                   </div>
-                  <span className="text-xs text-muted-foreground">Embalagem aberta</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">Embalagem aberta</span>
                 </div>
                 <div className="text-center">
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center mb-2">
-                    <Camera size={32} className="text-muted-foreground" />
+                  <div className="aspect-square md:aspect-video bg-muted rounded-lg flex items-center justify-center mb-1 md:mb-2">
+                    <Camera size={24} className="text-muted-foreground" />
                   </div>
-                  <span className="text-xs text-muted-foreground">Embalagem fechada</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">Embalagem fechada</span>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-[10px] md:text-xs text-muted-foreground text-center">
                 Upload de fotos em breve. Por enquanto, fotos de exemplo serão usadas.
               </p>
             </CardContent>
           </Card>
 
-          {/* Legal Acceptance */}
+          {/* Legal Acceptance - Mobile Optimized */}
           <Alert className="border-yellow-500 bg-yellow-50">
-            <Warning size={20} className="text-yellow-600" />
+            <Warning size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
             <AlertDescription className="text-yellow-800">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2 md:gap-3">
                 <Checkbox
                   id="legalAcceptance"
                   checked={legalAcceptance}
                   onCheckedChange={setLegalAcceptance}
+                  className="mt-0.5"
                   data-testid="legal-acceptance-checkbox"
                 />
-                <label htmlFor="legalAcceptance" className="text-sm cursor-pointer">
-                  Declaro que o conteúdo é legal, não perecível e de baixo risco. Assumo total responsabilidade pelo item enviado e suas consequências.
+                <label htmlFor="legalAcceptance" className="text-xs md:text-sm cursor-pointer leading-relaxed">
+                  Declaro que o conteúdo é legal, não perecível e de baixo risco. Assumo total responsabilidade pelo item enviado.
                 </label>
               </div>
             </AlertDescription>
           </Alert>
 
-          <div className="flex gap-4">
+          {/* Action Buttons - Sticky on mobile */}
+          <div className="flex gap-3 md:gap-4 sticky bottom-20 md:static bg-background py-4 md:py-0 -mx-4 px-4 md:mx-0 md:px-0 border-t md:border-0">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-12"
+              className="flex-1 h-11 md:h-12 text-sm md:text-base"
               onClick={() => navigate('/dashboard')}
               data-testid="cancel-btn"
             >
@@ -368,7 +371,7 @@ const CreateShipmentPage = () => {
             </Button>
             <Button
               type="submit"
-              className="flex-1 h-12 bg-lime hover:bg-lime/90 text-black"
+              className="flex-1 h-11 md:h-12 bg-lime hover:bg-lime/90 text-black text-sm md:text-base font-semibold"
               disabled={loading || !legalAcceptance}
               data-testid="submit-shipment-btn"
             >
