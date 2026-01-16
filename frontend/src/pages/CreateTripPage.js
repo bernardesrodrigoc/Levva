@@ -208,7 +208,7 @@ const CreateTripPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-12">
+    <div className="min-h-screen bg-background pb-20"> {/* pb-20 para o menu mobile */}
       {/* Header */}
       <header className="glass border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -239,14 +239,17 @@ const CreateTripPage = () => {
               <CardDescription>Clique no mapa ou busque o endereço de onde você vai partir</CardDescription>
             </CardHeader>
             <CardContent>
-              <LocationPicker
-                label="Origem"
-                value={origin}
-                onChange={setOrigin}
-                markerColor="green"
-                placeholder="Buscar endereço de partida..."
-                testIdPrefix="origin"
-              />
+              {/* RESPONSIVIDADE: Wrapper para altura do mapa */}
+              <div className="h-[300px] md:h-[400px] w-full rounded-lg overflow-hidden border">
+                  <LocationPicker
+                    label="Origem"
+                    value={origin}
+                    onChange={setOrigin}
+                    markerColor="green"
+                    placeholder="Buscar endereço de partida..."
+                    testIdPrefix="origin"
+                  />
+              </div>
             </CardContent>
           </Card>
 
@@ -257,14 +260,17 @@ const CreateTripPage = () => {
               <CardDescription>Clique no mapa ou busque o endereço de destino</CardDescription>
             </CardHeader>
             <CardContent>
-              <LocationPicker
-                label="Destino"
-                value={destination}
-                onChange={setDestination}
-                markerColor="red"
-                placeholder="Buscar endereço de destino..."
-                testIdPrefix="destination"
-              />
+              {/* RESPONSIVIDADE: Wrapper para altura do mapa */}
+              <div className="h-[300px] md:h-[400px] w-full rounded-lg overflow-hidden border">
+                  <LocationPicker
+                    label="Destino"
+                    value={destination}
+                    onChange={setDestination}
+                    markerColor="red"
+                    placeholder="Buscar endereço de destino..."
+                    testIdPrefix="destination"
+                  />
+              </div>
             </CardContent>
           </Card>
 
