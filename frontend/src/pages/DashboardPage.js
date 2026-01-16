@@ -127,18 +127,19 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-8"> {/* Padding bottom extra para mobile nav */}
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             {user?.role === 'admin' && (
               <Button 
                 onClick={() => navigate('/admin')} 
+                size="sm"
                 className="hidden md:flex bg-jungle hover:bg-jungle-800"
                 data-testid="admin-panel-btn"
               >
@@ -167,16 +168,18 @@ const DashboardPage = () => {
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-heading font-bold mb-2">Olá, {user?.name?.split(' ')[0]}!</h1>
-          <p className="text-muted-foreground">Bem-vindo ao seu painel de controle</p>
+      <div className="container mx-auto px-4 md:px-6 py-4 md:py-8">
+        {/* Welcome Section - Mobile Optimized */}
+        <div className="mb-4 md:mb-8">
+          <h1 className="text-2xl md:text-4xl font-heading font-bold mb-1 md:mb-2">
+            Olá, {user?.name?.split(' ')[0]}!
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground">Seu painel de controle</p>
         </div>
 
         {/* Verification Alert */}
         {verificationStatus && (
-          <div className="mb-8">
+          <div className="mb-4 md:mb-8">
             <VerificationAlert verificationStatus={verificationStatus} />
           </div>
         )}
@@ -184,20 +187,23 @@ const DashboardPage = () => {
         {/* Admin Quick Access (Mobile) */}
         {user?.role === 'admin' && (
           <Card 
-            className="mb-8 border-2 border-jungle bg-jungle/5 cursor-pointer card-hover md:hidden"
+            className="mb-4 md:mb-8 border-2 border-jungle bg-jungle/5 cursor-pointer card-hover md:hidden"
             onClick={() => navigate('/admin')}
           >
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-jungle rounded-full flex items-center justify-center">
                   <User size={20} className="text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-jungle">Painel Admin</p>
+                  <p className="font-semibold text-jungle text-sm">Painel Admin</p>
                   <p className="text-xs text-muted-foreground">Gerenciar plataforma</p>
                 </div>
               </div>
               <ArrowRight size={20} className="text-jungle" />
+            </CardContent>
+          </Card>
+        )}
             </CardContent>
           </Card>
         )}
