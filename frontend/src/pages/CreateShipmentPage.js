@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LocationPicker from '@/components/LocationPicker';
+import ImageUpload from '@/components/ImageUpload';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -32,13 +33,17 @@ const CreateShipmentPage = () => {
     category: '',
     description: '',
     declaredValue: '',
-    photoItemVisible: 'https://via.placeholder.com/300x200?text=Foto+Item',
-    photoPackagingOpen: 'https://via.placeholder.com/300x200?text=Embalagem+Aberta',
-    photoPackagingSealed: 'https://via.placeholder.com/300x200?text=Embalagem+Fechada'
+    photoItemVisible: null,
+    photoPackagingOpen: null,
+    photoPackagingSealed: null
   });
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePhotoUpload = (field, url) => {
+    handleChange(field, url);
   };
 
   const handleSubmit = async (e) => {
