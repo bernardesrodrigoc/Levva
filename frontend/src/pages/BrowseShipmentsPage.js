@@ -68,16 +68,22 @@ const BrowseShipmentsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Header */}
+    <div className="min-h-screen bg-background pb-24 md:pb-8">
+      {/* Header - Mobile Optimized */}
       <header className="glass border-b sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Package size={32} weight="duotone" className="text-jungle" />
-            <span className="text-2xl font-heading font-bold text-jungle">Levva</span>
+            <Package size={28} weight="duotone" className="text-jungle" />
+            <span className="text-xl md:text-2xl font-heading font-bold text-jungle">Levva</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} data-testid="back-to-dashboard-btn">
-            Voltar ao Dashboard
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate('/dashboard')} 
+            data-testid="back-to-dashboard-btn"
+          >
+            <span className="hidden md:inline">Voltar ao Dashboard</span>
+            <span className="md:hidden">Voltar</span>
           </Button>
         </div>
       </header>
