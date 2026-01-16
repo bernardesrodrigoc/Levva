@@ -14,7 +14,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const BrowseTripsPage = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +38,10 @@ const BrowseTripsPage = () => {
       const response = await axios.get(`${API}/trips?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      const othersTrips = response.data.filter(t => t.carrier_id !== user.id);     
+
+      
       setTrips(response.data);
     } catch (error) {
       toast.error('Erro ao carregar viagens');
