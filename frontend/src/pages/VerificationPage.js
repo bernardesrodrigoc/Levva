@@ -232,40 +232,135 @@ const VerificationPage = () => {
         </Alert>
 
         {/* Progress */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-3xl font-heading font-bold">Verificação de Identidade</h1>
-            <span className="text-sm text-muted-foreground">Etapa {step} de {user?.role === 'carrier' || user?.role === 'both' ? 4 : 3}</span>
+            <h1 className="text-2xl md:text-3xl font-heading font-bold">Verificação</h1>
+            <span className="text-xs md:text-sm text-muted-foreground">Etapa {step} de {user?.role === 'carrier' || user?.role === 'both' ? 4 : 3}</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
 
-        {/* Step 1: Personal Info */}
+        {/* Step 1: Personal Info - REORGANIZED */}
         {step === 1 && (
           <form onSubmit={handleSubmitStep1}>
             <Card data-testid="step1-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <IdentificationCard size={24} weight="duotone" className="text-jungle" />
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <IdentificationCard size={22} weight="duotone" className="text-jungle" />
                   Dados Pessoais
                 </CardTitle>
-                <CardDescription>Informações básicas para sua identificação</CardDescription>
+                <CardDescription className="text-xs md:text-sm">Informações básicas para sua identificação</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="cpf">CPF *</Label>
+              <CardContent className="p-4 md:p-6 pt-0 space-y-4">
+                
+                {/* CEP PRIMEIRO - com auto-preenchimento */}
+                <div className="p-4 bg-jungle/5 rounded-lg border border-jungle/20">
+                  <p className="text-xs text-jungle font-medium mb-3">Digite seu CEP para preencher o endereço automaticamente:</p>
+                  <CEPInput
+                    value={formData.zipCode}
+                    onChange={(value) => handleChange('zipCode', value)}
+                    onAddressFound={handleAddressFound}
+                    label="CEP *"
+                    required
+                    data-testid="cep-input"
+                  />
+                </div>
+
+                {/* Endereço (preenchido automaticamente) */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="col-span-2">
+                    <Label className="text-xs md:text-sm">Rua/Logradouro *</Label>
                     <Input
-                      id="cpf"
-                      placeholder="000.000.000-00"
-                      value={formData.cpf}
-                      onChange={(e) => handleChange('cpf', e.target.value)}
+                      placeholder="Rua, Avenida..."
+                      value={formData.address}
+                      onChange={(e) => handleChange('address', e.target.value)}
                       required
-                      className="h-11 md:h-12 mt-2"
-                      data-testid="cpf-input"
+                      className="h-11 md:h-12 mt-1.5 text-base"
+                      data-testid="address-input"
                     />
                   </div>
                   <div>
+                    <Label className="text-xs md:text-sm">Número *</Label>
+                    <Input
+                      placeholder="123"
+                      value={formData.number}
+                      onChange={(e) => handleChange('number', e.target.value)}
+                      required
+                      className="h-11 md:h-12 mt-1.5 text-base"
+                      data-testid="number-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs md:text-sm">Complemento</Label>
+                    <Input
+                      placeholder="Apto, Bloco..."
+                      value={formData.complement}
+                      onChange={(e) => handleChange('complement', e.target.value)}
+                      className="h-11 md:h-12 mt-1.5 text-base"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs md:text-sm">Bairro *</Label>
+                    <Input
+                      value={formData.neighborhood}
+                      onChange={(e) => handleChange('neighborhood', e.target.value)}
+                      required
+                      className="h-11 md:h-12 mt-1.5 text-base"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs md:text-sm">Cidade *</Label>
+                    <Input
+                      value={formData.city}
+                      onChange={(e) => handleChange('city', e.target.value)}
+                      required
+                      className="h-11 md:h-12 mt-1.5 text-base"
+                      data-testid="city-input"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs md:text-sm">Estado *</Label>
+                    <Select 
+                      value={formData.state} 
+                      onValueChange={(value) => handleChange('state', value)}
+                    >
+                      <SelectTrigger className="h-11 md:h-12 mt-1.5 text-base" data-testid="state-select">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {BRAZILIAN_STATES.map((state) => (
+                          <SelectItem key={state.value} value={state.value}>
+                            {state.value} - {state.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Dados pessoais */}
+                <div className="border-t pt-4 mt-4">
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground mb-3">Informações pessoais:</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs md:text-sm">CPF *</Label>
+                      <Input
+                        placeholder="000.000.000-00"
+                        value={formData.cpf}
+                        onChange={(e) => handleChange('cpf', e.target.value)}
+                        required
+                        className="h-11 md:h-12 mt-1.5 text-base"
+                        inputMode="numeric"
+                        data-testid="cpf-input"
+                      />
+                    </div>
                     <MobileDatePicker
                       label="Data de Nascimento *"
                       value={formData.birthDate}
@@ -277,47 +372,6 @@ const VerificationPage = () => {
                     />
                   </div>
                 </div>
-
-                <div>
-                  <Label htmlFor="address">Endereço Completo *</Label>
-                  <Input
-                    id="address"
-                    placeholder="Rua, número, complemento"
-                    value={formData.address}
-                    onChange={(e) => handleChange('address', e.target.value)}
-                    required
-                    className="h-11 md:h-12 mt-2"
-                    data-testid="address-input"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-                  <div>
-                    <Label htmlFor="city">Cidade *</Label>
-                    <Input
-                      id="city"
-                      value={formData.city}
-                      onChange={(e) => handleChange('city', e.target.value)}
-                      required
-                      className="h-11 md:h-12 mt-2"
-                      data-testid="city-input"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="state">Estado *</Label>
-                    <Input
-                      id="state"
-                      maxLength={2}
-                      placeholder="SP"
-                      value={formData.state}
-                      onChange={(e) => handleChange('state', e.target.value.toUpperCase())}
-                      required
-                      className="h-12 mt-2"
-                      data-testid="state-input"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="zipCode">CEP *</Label>
                     <Input
                       id="zipCode"
                       placeholder="00000-000"
