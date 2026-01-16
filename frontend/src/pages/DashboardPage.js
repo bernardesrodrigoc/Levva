@@ -163,7 +163,6 @@ const DashboardPage = () => {
                 <SignOut size={20} />
               </Button>
             </div>
-            {/* Menu Hamburguer Mobile poderia vir aqui, mas usamos BottomNav */}
           </div>
         </div>
       </header>
@@ -288,7 +287,8 @@ const DashboardPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 md:w-12 md:h-12 bg-jungle/10 rounded-xl flex items-center justify-center">
-                        <TruckIcon size={20} md:size={24} weight="duotone" className="text-jungle" />
+                        {/* CORREÇÃO: size único para evitar erro de sintaxe */}
+                        <TruckIcon size={24} weight="duotone" className="text-jungle" />
                       </div>
                       <div>
                         <CardTitle className="text-base md:text-lg">Criar Viagem</CardTitle>
@@ -305,7 +305,7 @@ const DashboardPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                        <Car size={20} md:size={24} weight="duotone" className="text-slate-600" />
+                        <Car size={24} weight="duotone" className="text-slate-600" />
                       </div>
                       <div>
                         <CardTitle className="text-base md:text-lg">Meus Veículos</CardTitle>
@@ -326,7 +326,7 @@ const DashboardPage = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 md:w-12 md:h-12 bg-lime/10 rounded-xl flex items-center justify-center">
-                      <Package size={20} md:size={24} weight="duotone" className="text-lime" />
+                      <Package size={24} weight="duotone" className="text-lime" />
                     </div>
                     <div>
                       <CardTitle className="text-base md:text-lg">Criar Envio</CardTitle>
@@ -346,7 +346,7 @@ const DashboardPage = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-jungle rounded-xl flex items-center justify-center">
-                  <Lightning size={20} md:size={24} weight="fill" className="text-white" />
+                  <Lightning size={24} weight="fill" className="text-white" />
                 </div>
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base md:text-lg">
@@ -376,7 +376,7 @@ const DashboardPage = () => {
             <CardHeader className="p-4 md:p-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                  <MapTrifold size={20} md:size={24} weight="duotone" className="text-jungle" />
+                  <MapTrifold size={24} weight="duotone" className="text-jungle" />
                 </div>
                 <div>
                   <CardTitle className="text-base md:text-lg">Buscar Viagens</CardTitle>
@@ -390,7 +390,7 @@ const DashboardPage = () => {
             <CardHeader className="p-4 md:p-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                  <Package size={20} md:size={24} weight="duotone" className="text-lime" />
+                  <Package size={24} weight="duotone" className="text-lime" />
                 </div>
                 <div>
                   <CardTitle className="text-base md:text-lg">Buscar Envios</CardTitle>
