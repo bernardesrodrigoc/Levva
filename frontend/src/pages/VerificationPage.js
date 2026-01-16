@@ -452,17 +452,14 @@ const VerificationPage = () => {
                   currentImageUrl={formData.selfieUrl}
                   maxSizeMB={5}
                 />
-                  onFileSelect={(file) => handleFileChange('selfie', 'selfiePreview', 'selfieUrl', 'selfie', file)}
-                  testId="selfie-input"
-                />
               </CardContent>
             </Card>
 
-            <div className="flex gap-4 mt-6">
-              <Button type="button" variant="outline" className="flex-1 h-12" onClick={() => setStep(2)}>
+            <div className="flex gap-3 mt-6">
+              <Button type="button" variant="outline" className="flex-1 h-11 md:h-12" onClick={() => setStep(2)}>
                 Voltar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800" disabled={uploadingFile !== null}>
+              <Button type="submit" className="flex-1 h-11 md:h-12 bg-jungle hover:bg-jungle-800">
                 {(user?.role === 'carrier' || user?.role === 'both') ? 'Continuar' : 'Enviar para Verificação'}
               </Button>
             </div>
@@ -473,30 +470,29 @@ const VerificationPage = () => {
         {step === 4 && (
           <form onSubmit={handleSubmitStep4}>
             <Card data-testid="step4-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <IdentificationCard size={24} weight="duotone" className="text-jungle" />
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <IdentificationCard size={22} weight="duotone" className="text-jungle" />
                   CNH - Carteira de Motorista
                 </CardTitle>
-                <CardDescription>Obrigatório para transportadores</CardDescription>
+                <CardDescription className="text-xs md:text-sm">Obrigatório para transportadores</CardDescription>
               </CardHeader>
-              <CardContent>
-                <FileUploadZone
+              <CardContent className="p-4 md:p-6 pt-0">
+                <ImageUploadWithCamera
+                  fileType="license"
                   label="CNH (frente e verso ou aberta) *"
-                  preview={formData.driverLicensePreview}
-                  isUploading={uploadingFile === 'license'}
-                  isUploaded={!!formData.driverLicenseUrl}
-                  onFileSelect={(file) => handleFileChange('driverLicense', 'driverLicensePreview', 'driverLicenseUrl', 'license', file)}
-                  testId="driver-license-input"
+                  onUploadComplete={(url) => handlePhotoUpload('driverLicenseUrl', url)}
+                  currentImageUrl={formData.driverLicenseUrl}
+                  maxSizeMB={5}
                 />
               </CardContent>
             </Card>
 
-            <div className="flex gap-4 mt-6">
-              <Button type="button" variant="outline" className="flex-1 h-12" onClick={() => setStep(3)}>
+            <div className="flex gap-3 mt-6">
+              <Button type="button" variant="outline" className="flex-1 h-11 md:h-12" onClick={() => setStep(3)}>
                 Voltar
               </Button>
-              <Button type="submit" className="flex-1 h-12 bg-jungle hover:bg-jungle-800" disabled={loading || uploadingFile !== null}>
+              <Button type="submit" className="flex-1 h-11 md:h-12 bg-jungle hover:bg-jungle-800" disabled={loading}>
                 {loading ? 'Enviando...' : 'Enviar para Verificação'}
               </Button>
             </div>
