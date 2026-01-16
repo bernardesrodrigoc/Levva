@@ -20,6 +20,8 @@ import MatchSuggestionsPage from '@/pages/MatchSuggestionsPage';
 import { PaymentSuccessPage, PaymentFailurePage, PaymentPendingPage } from '@/pages/PaymentResultPage';
 import VehiclesPage from './pages/VehiclesPage';
 import TripDetailsPage from '@/pages/TripDetailsPage'; // <--- IMPORTAÇÃO NOVA
+import MyTripsPage from '@/pages/MyTripsPage'; // <--- NOVO
+import MyShipmentsPage from '@/pages/MyShipmentsPage'; // <--- NOVO
 import '@/App.css';
 
 function App() {
@@ -141,6 +143,12 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+           <Route path="/minhas-viagens" element={<ProtectedRoute><MyTripsPage /></ProtectedRoute>} />
+           <Route path="/meus-envios" element={<ProtectedRoute><MyShipmentsPage /></ProtectedRoute>} />
+
+
+            
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/payment/failure" element={<PaymentFailurePage />} />
           <Route path="/payment/pending" element={<PaymentPendingPage />} />
