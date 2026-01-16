@@ -520,16 +520,15 @@ const CreateTripPage = () => {
                       ))}
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="recurringEndDate" className="text-xs md:text-sm">Data final (opcional)</Label>
-                    <Input
-                      id="recurringEndDate"
-                      type="date"
-                      value={formData.recurringEndDate}
-                      onChange={(e) => handleChange('recurringEndDate', e.target.value)}
-                      className="h-11 md:h-12 mt-1.5 text-base"
-                    />
-                  </div>
+                  <MobileDatePicker
+                    label="Data final (opcional)"
+                    value={formData.recurringEndDate}
+                    onChange={(value) => handleChange('recurringEndDate', value)}
+                    showFutureYears={true}
+                    futureYearsCount={2}
+                    minYear={new Date().getFullYear()}
+                    data-testid="recurring-end-date"
+                  />
                 </div>
               )}
             </CardContent>
