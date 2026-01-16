@@ -100,83 +100,81 @@ const MatchSuggestionsPage = () => {
             <Lightning size={24} weight="duotone" className="text-jungle" />
             <h1 className="text-xl md:text-3xl font-heading font-bold">Sugestões Inteligentes</h1>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Combinações automáticas baseadas nas suas viagens e envios
           </p>
         </div>
 
         {suggestions.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className="text-center py-10 md:py-12">
             <CardContent>
-              <Lightning size={48} className="mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma sugestão encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                Crie viagens ou envios para receber sugestões automáticas de combinação.
+              <Lightning size={40} className="mx-auto text-muted-foreground mb-3 md:mb-4" />
+              <h3 className="text-base md:text-lg font-semibold mb-1 md:mb-2">Nenhuma sugestão encontrada</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Crie viagens ou envios para receber sugestões.
               </p>
-              <div className="flex gap-4 justify-center">
-                <Button onClick={() => navigate('/criar-viagem')} variant="outline">
+              <div className="flex flex-col md:flex-row gap-2 md:gap-4 justify-center">
+                <Button onClick={() => navigate('/criar-viagem')} variant="outline" size="sm" className="md:size-default">
                   Criar Viagem
                 </Button>
-                <Button onClick={() => navigate('/criar-envio')} className="bg-jungle hover:bg-jungle-800">
+                <Button onClick={() => navigate('/criar-envio')} className="bg-jungle hover:bg-jungle-800" size="sm">
                   Criar Envio
                 </Button>
               </div>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {suggestions.map((suggestion, index) => (
               <Card key={index} className="card-hover" data-testid={`suggestion-${index}`}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
+                <CardHeader className="p-4 md:p-6 pb-2">
+                  <div className="flex items-start md:items-center justify-between gap-2">
+                    <CardTitle className="text-sm md:text-base flex items-center gap-1.5 md:gap-2">
                       {suggestion.type === 'trip_for_shipment' ? (
                         <>
-                          <TruckIcon size={20} className="text-jungle" />
-                          Viagem disponível para seu envio
+                          <TruckIcon size={18} className="text-jungle flex-shrink-0" />
+                          <span className="line-clamp-1">Viagem para seu envio</span>
                         </>
                       ) : (
                         <>
-                          <Package size={20} className="text-lime" />
-                          Envio disponível para sua viagem
+                          <Package size={18} className="text-lime flex-shrink-0" />
+                          <span className="line-clamp-1">Envio para sua viagem</span>
                         </>
                       )}
                     </CardTitle>
                     {getScoreBadge(suggestion.match_score)}
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    {/* Route */}
-                    <div className="flex items-center gap-2">
+                <CardContent className="p-4 md:p-6 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                    {/* Route - Mobile Optimized */}
+                    <div className="flex items-center gap-1.5 md:gap-2">
                       <div className="flex items-center gap-1">
-                        <MapPin size={16} className="text-jungle" />
-                        <span className="font-medium">{suggestion.origin}</span>
+                        <MapPin size={14} className="text-jungle" />
+                        <span className="font-medium text-sm">{suggestion.origin}</span>
                       </div>
-                      <ArrowRight size={16} className="text-muted-foreground" />
+                      <ArrowRight size={14} className="text-muted-foreground" />
                       <div className="flex items-center gap-1">
-                        <MapPin size={16} className="text-lime" />
-                        <span className="font-medium">{suggestion.destination}</span>
+                        <MapPin size={14} className="text-lime" />
+                        <span className="font-medium text-sm">{suggestion.destination}</span>
                       </div>
                     </div>
 
                     {/* User Info */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <Star size={16} weight="fill" className="text-yellow-500" />
-                        <span className="text-sm">
-                          {suggestion.type === 'trip_for_shipment' 
-                            ? `${suggestion.carrier_name} (${suggestion.carrier_rating > 0 ? suggestion.carrier_rating.toFixed(1) : 'Novo'})`
-                            : `${suggestion.sender_name} (${suggestion.sender_rating > 0 ? suggestion.sender_rating.toFixed(1) : 'Novo'})`
-                          }
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <Star size={14} weight="fill" className="text-yellow-500" />
+                      <span className="text-xs md:text-sm">
+                        {suggestion.type === 'trip_for_shipment' 
+                          ? `${suggestion.carrier_name} (${suggestion.carrier_rating > 0 ? suggestion.carrier_rating.toFixed(1) : 'Novo'})`
+                          : `${suggestion.sender_name} (${suggestion.sender_rating > 0 ? suggestion.sender_rating.toFixed(1) : 'Novo'})`
+                        }
+                      </span>
                     </div>
 
                     {/* Date */}
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} className="text-muted-foreground" />
-                      <span className="text-sm">{formatDate(suggestion.departure_time)}</span>
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <Calendar size={14} className="text-muted-foreground" />
+                      <span className="text-xs md:text-sm">{formatDate(suggestion.departure_date)}</span>
                     </div>
                   </div>
 
