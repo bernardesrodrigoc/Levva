@@ -291,7 +291,7 @@ const CreateShipmentPage = () => {
             </CardContent>
           </Card>
 
-          {/* Value & Photos - Mobile Optimized */}
+          {/* Value & Photos - Mobile Optimized with Real Uploads */}
           <Card data-testid="value-card">
             <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
               <CardTitle className="flex items-center gap-2 text-base md:text-lg">
@@ -317,30 +317,42 @@ const CreateShipmentPage = () => {
                 />
               </div>
 
-              {/* Photo placeholders - Stack on mobile */}
-              <div className="grid grid-cols-3 gap-2 md:gap-4">
-                <div className="text-center">
-                  <div className="aspect-square md:aspect-video bg-muted rounded-lg flex items-center justify-center mb-1 md:mb-2">
-                    <Camera size={24} className="text-muted-foreground" />
+              {/* Real Photo Uploads */}
+              <div>
+                <Label className="text-xs md:text-sm mb-2 block">Fotos do Pacote (Opcional)</Label>
+                <div className="grid grid-cols-3 gap-2 md:gap-3">
+                  <div>
+                    <ImageUpload
+                      fileType="package"
+                      label="Item"
+                      onUploadComplete={(url) => handlePhotoUpload('photoItemVisible', url)}
+                      maxSizeMB={5}
+                    />
+                    <span className="text-[10px] md:text-xs text-muted-foreground block text-center mt-1">Item visível</span>
                   </div>
-                  <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">Item visível</span>
-                </div>
-                <div className="text-center">
-                  <div className="aspect-square md:aspect-video bg-muted rounded-lg flex items-center justify-center mb-1 md:mb-2">
-                    <Camera size={24} className="text-muted-foreground" />
+                  <div>
+                    <ImageUpload
+                      fileType="package"
+                      label="Aberta"
+                      onUploadComplete={(url) => handlePhotoUpload('photoPackagingOpen', url)}
+                      maxSizeMB={5}
+                    />
+                    <span className="text-[10px] md:text-xs text-muted-foreground block text-center mt-1">Embalagem aberta</span>
                   </div>
-                  <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">Embalagem aberta</span>
-                </div>
-                <div className="text-center">
-                  <div className="aspect-square md:aspect-video bg-muted rounded-lg flex items-center justify-center mb-1 md:mb-2">
-                    <Camera size={24} className="text-muted-foreground" />
+                  <div>
+                    <ImageUpload
+                      fileType="package"
+                      label="Fechada"
+                      onUploadComplete={(url) => handlePhotoUpload('photoPackagingSealed', url)}
+                      maxSizeMB={5}
+                    />
+                    <span className="text-[10px] md:text-xs text-muted-foreground block text-center mt-1">Embalagem fechada</span>
                   </div>
-                  <span className="text-[10px] md:text-xs text-muted-foreground leading-tight">Embalagem fechada</span>
                 </div>
+                <p className="text-[10px] md:text-xs text-muted-foreground text-center mt-2">
+                  Toque para tirar foto ou selecionar da galeria
+                </p>
               </div>
-              <p className="text-[10px] md:text-xs text-muted-foreground text-center">
-                Upload de fotos em breve. Por enquanto, fotos de exemplo serão usadas.
-              </p>
             </CardContent>
           </Card>
 
