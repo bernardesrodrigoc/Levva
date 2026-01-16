@@ -402,6 +402,20 @@ async def list_trips(
     
     return trips
 
+
+# --- ADICIONE ISTO NO SERVER.PY PARA PERMITIR VER DETALHES DA VIAGEM ---
+@api_router.get("/trips/{trip_id}", response_model=TripResponse)
+async def get_trip_details(trip_id: str, user_id: str = Depends(get_current_user_id)):
+    try:
+        trip = await trips_collection.find_one({"_id": ObjectId(trip_id)})
+        if not trip:
+            raise HTTPException(status_code=404, detail="Viagem não encontrada")
+        
+        trip["id"] = str(trip.pop("_id"))
+        return trip
+    except Exception:
+        raise HTTPException(status_code=404, detail="ID de viagem inválido")
+
 @api_router.get("/trips/my-trips")
 async def get_my_trips(user_id: str = Depends(get_current_user_id)):
     trips = await trips_collection.find({"carrier_id": user_id}).to_list(100)
