@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Truck, Calendar, MapPin, Package, User, ArrowLeft, CheckCircle } from '@phosphor-icons/react';
+import { Truck, Calendar, MapPin, User, ArrowLeft, Package } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import axios from 'axios';
-import RouteMap from '@/components/RouteMap'; // Importa nosso novo mapa
+import RouteMap from '@/components/RouteMap'; // Seu componente de mapa corrigido
 import { useAuth } from '@/context/AuthContext';
 
 const getBackendUrl = () => {
@@ -17,7 +17,7 @@ const getBackendUrl = () => {
 const API = `${getBackendUrl()}/api`;
 
 const TripDetailsPage = () => {
-  const { id } = useParams();
+  const { tripId } = useParams(); // Pega o ID da URL
   const navigate = useNavigate();
   const { token, user } = useAuth();
   const [trip, setTrip] = useState(null);
@@ -26,11 +26,7 @@ const TripDetailsPage = () => {
   useEffect(() => {
     const fetchTrip = async () => {
       try {
-        // Ajuste a rota se necessário (ex: /trips/{id})
-        // Como não criamos rota específica "publica" de detalhe único no server.py ainda,
-        // vamos supor que você vai usar a rota de match ou criar um GET /trips/{id} simples
-        // SE DER ERRO 404 aqui, precisaremos adicionar @api_router.get("/trips/{trip_id}") no backend
-        const res = await axios.get(`${API}/trips/${id}`, {
+        const res = await axios.get(`${API}/trips/${tripId}`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         setTrip(res.data);
@@ -42,9 +38,9 @@ const TripDetailsPage = () => {
       }
     };
     fetchTrip();
-  }, [id, token]);
+  }, [tripId, token]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando detalhes...</div>;
   if (!trip) return <div className="min-h-screen flex items-center justify-center">Viagem não encontrada</div>;
 
   return (
@@ -66,43 +62,55 @@ const TripDetailsPage = () => {
 
       <div className="container mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
         
-        {/* Coluna Esquerda: Informações */}
+        {/* Coluna Esquerda: Mapa e Rota */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* MAPA COM A ROTA */}
-          <Card className="overflow-hidden border-2 border-jungle/10 h-[400px]">
+          {/* MAPA - AQUI A MÁGICA ACONTECE */}
+          <Card className="overflow-hidden border-2 border-jungle/10 h-[450px]">
             <RouteMap 
-                origin={trip.origin} 
-                destination={trip.destination} 
-                routePolyline={trip.route_polyline} // A mágica acontece aqui
+                // Passando as props individuais conforme seu RouteMap.js pede
+                originCity={trip.origin.city}
+                originLat={trip.origin.lat}
+                originLng={trip.origin.lng}
+                originAddress={trip.origin.address}
+                
+                destinationCity={trip.destination.city}
+                destinationLat={trip.destination.lat}
+                destinationLng={trip.destination.lng}
+                destinationAddress={trip.destination.address}
+                
+                routePolyline={trip.route_polyline} // A string da cobrinha
+                showCorridor={true} // Mostrar o raio de desvio
+                corridorRadiusKm={trip.corridor_radius_km || 10}
+                height="100%"
             />
           </Card>
 
-          {/* Detalhes da Rota */}
+          {/* Card de Detalhes */}
           <Card>
-            <CardHeader><CardTitle>Detalhes do Trajeto</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Cronograma</CardTitle></CardHeader>
             <CardContent className="grid sm:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground uppercase font-bold">Saída</span>
-                    <div className="flex items-start gap-2">
-                        <MapPin className="text-jungle mt-1" weight="fill" />
+                <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                        <div className="mt-1"><MapPin className="text-jungle" weight="fill" size={24}/></div>
                         <div>
-                            <p className="font-semibold">{trip.origin.city}, {trip.origin.state}</p>
+                            <span className="text-xs text-muted-foreground uppercase font-bold">Partida</span>
+                            <p className="font-semibold text-lg">{trip.origin.city}, {trip.origin.state}</p>
                             <p className="text-sm text-muted-foreground">{trip.origin.address}</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-2 text-sm">
+                    <div className="flex items-center gap-2 pl-9 text-sm font-medium">
                         <Calendar className="text-jungle" />
                         {new Date(trip.departure_date).toLocaleDateString()} às {new Date(trip.departure_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground uppercase font-bold">Chegada</span>
-                    <div className="flex items-start gap-2">
-                        <MapPin className="text-red-500 mt-1" weight="fill" />
+                <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                        <div className="mt-1"><MapPin className="text-red-500" weight="fill" size={24}/></div>
                         <div>
-                            <p className="font-semibold">{trip.destination.city}, {trip.destination.state}</p>
+                            <span className="text-xs text-muted-foreground uppercase font-bold">Chegada</span>
+                            <p className="font-semibold text-lg">{trip.destination.city}, {trip.destination.state}</p>
                             <p className="text-sm text-muted-foreground">{trip.destination.address}</p>
                         </div>
                     </div>
@@ -111,7 +119,7 @@ const TripDetailsPage = () => {
           </Card>
         </div>
 
-        {/* Coluna Direita: Ação e Motorista */}
+        {/* Coluna Direita: Informações do Motorista e Ação */}
         <div className="space-y-6">
             <Card>
                 <CardHeader>
@@ -120,40 +128,47 @@ const TripDetailsPage = () => {
                             <User size={24} />
                         </div>
                         <div>
-                            <p className="font-bold">{trip.carrier_name}</p>
-                            <div className="flex items-center gap-1 text-sm text-yellow-500">
-                                ★ {trip.carrier_rating?.toFixed(1) || 'Nv'}
+                            <p className="font-bold text-lg">{trip.carrier_name}</p>
+                            <div className="flex items-center gap-1 text-sm text-yellow-500 font-medium">
+                                ★ {trip.carrier_rating?.toFixed(1) || 'Novo'}
                             </div>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <span className="text-sm">Veículo</span>
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border">
+                        <span className="text-sm text-muted-foreground">Veículo</span>
                         <div className="flex items-center gap-2 font-medium">
-                            <Truck /> {trip.vehicle_type === 'car' ? 'Carro' : trip.vehicle_type}
+                            <Truck size={18} /> 
+                            <span className="capitalize">{trip.vehicle_type === 'car' ? 'Carro' : trip.vehicle_type}</span>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                        <span className="text-sm">Espaço Livre</span>
-                        <span className="font-medium text-jungle">{trip.available_capacity_kg} kg</span>
+                    
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border">
+                        <span className="text-sm text-muted-foreground">Capacidade Livre</span>
+                        <span className="font-bold text-jungle">{trip.available_capacity_kg} kg</span>
+                    </div>
+
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border">
+                        <span className="text-sm text-muted-foreground">Raio de desvio</span>
+                        <span className="font-medium">{trip.corridor_radius_km || 10} km</span>
                     </div>
                     
-                    <div className="pt-4 border-t">
+                    <div className="pt-4 border-t mt-4">
                         <div className="flex justify-between items-end mb-4">
-                            <span className="text-muted-foreground">Preço sugerido</span>
-                            <span className="text-2xl font-bold text-jungle">
+                            <span className="text-muted-foreground font-medium">Preço estimado</span>
+                            <span className="text-3xl font-bold text-jungle">
                                 R$ {trip.price_per_kg?.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/kg</span>
                             </span>
                         </div>
 
                         {user?.id !== trip.carrier_id ? (
-                            <Button className="w-full bg-jungle hover:bg-jungle-800 h-12 text-lg">
-                                Solicitar Envio
+                            <Button className="w-full bg-jungle hover:bg-jungle-800 h-12 text-lg shadow-md">
+                                <Package className="mr-2" /> Solicitar Envio
                             </Button>
                         ) : (
-                            <Button variant="outline" className="w-full">
-                                Gerenciar Viagem
+                            <Button variant="outline" className="w-full border-jungle text-jungle hover:bg-jungle/10">
+                                Gerenciar Minha Viagem
                             </Button>
                         )}
                     </div>
