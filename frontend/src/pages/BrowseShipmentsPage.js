@@ -14,7 +14,8 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const BrowseShipmentsPage = () => {
-  const { token } = useAuth();
+  // ADICIONADO: user para poder filtrar
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,11 +24,16 @@ const BrowseShipmentsPage = () => {
     destinationCity: ''
   });
 
+  // CORREÇÃO: Só busca quando token e user existirem
   useEffect(() => {
-    fetchShipments();
-  }, []);
+    if (token && user) {
+      fetchShipments();
+    }
+  }, [token, user]);
 
   const fetchShipments = async (filterParams = {}) => {
+    if (!token) return; // Proteção extra
+
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -38,10 +44,16 @@ const BrowseShipmentsPage = () => {
       const response = await axios.get(`${API}/shipments?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setShipments(response.data);
+
+      // CORREÇÃO: Filtra para remover MEUS envios da lista
+      const othersShipments = response.data.filter(shipment => shipment.sender_id !== user.id);
+      
+      setShipments(othersShipments);
     } catch (error) {
-      toast.error('Erro ao carregar envios');
       console.error(error);
+      if (error.response?.status !== 401) {
+        toast.error('Erro ao carregar envios');
+      }
     } finally {
       setLoading(false);
     }
@@ -56,7 +68,7 @@ const BrowseShipmentsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="glass border-b sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
