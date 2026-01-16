@@ -14,6 +14,10 @@ import mercadopago
 from routes import vehicles
 
 
+from models import VehicleCreate, VehicleDB 
+from auth import get_current_user_id
+
+
 from database import (
     db, users_collection, trips_collection, shipments_collection,
     matches_collection, payments_collection, ratings_collection,
@@ -1693,9 +1697,44 @@ async def stop_tracking(match_id: str, user_id: str = Depends(get_current_user_i
     
     return {"message": "Rastreamento parado"}
 
-# ============= REGISTRO DE ROTAS EXTERNAS =============
-# Adicione esta linha para ativar o arquivo vehicles.py que criamos
-app.include_router(vehicles.router, prefix="/api/vehicles", tags=["vehicles"])
+# ============= CÓDIGO DIRETO DE VEÍCULOS (NOVO) =============
+@api_router.post("/vehicles", response_model=VehicleDB)
+async def create_vehicle_direct(
+    vehicle_in: VehicleCreate, 
+    user_id: str = Depends(get_current_user_id)
+):
+    if vehicle_in.type in ["motorcycle", "car", "van", "truck"] and not vehicle_in.license_plate:
+         raise HTTPException(status_code=400, detail="Placa é obrigatória para veículos motorizados")
+
+    vehicle_data = vehicle_in.dict()
+    vehicle_data["owner_id"] = user_id 
+    vehicle_data["is_verified"] = False 
+    vehicle_data["created_at"] = datetime.now(timezone.utc)
+    
+    new_vehicle = await db.vehicles.insert_one(vehicle_data)
+    created_vehicle = await db.vehicles.find_one({"_id": new_vehicle.inserted_id})
+    created_vehicle["_id"] = str(created_vehicle["_id"])
+    
+    return VehicleDB(**created_vehicle)
+
+@api_router.get("/vehicles", response_model=List[VehicleDB])
+async def get_my_vehicles_direct(user_id: str = Depends(get_current_user_id)):
+    vehicles = await db.vehicles.find({"owner_id": user_id}).to_list(100)
+    results = []
+    for v in vehicles:
+        v["_id"] = str(v["_id"])
+        results.append(VehicleDB(**v))
+    return results
+
+@api_router.delete("/vehicles/{vehicle_id}")
+async def delete_vehicle_direct(vehicle_id: str, user_id: str = Depends(get_current_user_id)):
+    result = await db.vehicles.delete_one({"_id": ObjectId(vehicle_id), "owner_id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Veículo não encontrado")
+    return {"message": "Veículo removido"}
+
+# ============= REGISTRO DE ROTAS =============
+# app.include_router(vehicles.router, prefix="/api/vehicles", tags=["vehicles"]) <--- COMENTADO
 
 app.include_router(api_router)
 
