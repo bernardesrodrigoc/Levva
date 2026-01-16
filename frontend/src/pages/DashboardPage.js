@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TruckIcon, User, SignOut, Plus, MapTrifold, Lightning, Car } from '@phosphor-icons/react';
+import { 
+  Package, TruckIcon, User, SignOut, Plus, MapTrifold, Lightning, Car,
+  Clock, CheckCircle, X, Warning, ArrowRight, CurrencyDollar
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,10 +46,13 @@ const DashboardPage = () => {
         axios.get(`${API}/matches/my-matches`, { headers })
       ]);
 
+      // Ordena matches pelos mais recentes
+      const sortedMatches = matchesRes.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
       setStats({
         myTrips: tripsRes.data,
         myShipments: shipmentsRes.data,
-        myMatches: matchesRes.data
+        myMatches: sortedMatches
       });
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -97,6 +103,19 @@ const DashboardPage = () => {
       level_5: 'bg-yellow-100 text-yellow-700'
     };
     return colors[level] || colors.level_1;
+  };
+
+  // Helper para Status Visual
+  const getStatusConfig = (status) => {
+    const config = {
+      pending_payment: { label: 'Pagamento Pendente', color: 'bg-yellow-100 text-yellow-700', icon: CurrencyDollar },
+      paid: { label: 'Aguardando Coleta', color: 'bg-blue-100 text-blue-700', icon: Package },
+      in_transit: { label: 'Em Trânsito', color: 'bg-purple-100 text-purple-700', icon: TruckIcon },
+      delivered: { label: 'Entregue', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+      cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-700', icon: X },
+      disputed: { label: 'Em Disputa', color: 'bg-orange-100 text-orange-700', icon: Warning }
+    };
+    return config[status] || { label: status, color: 'bg-gray-100', icon: Package };
   };
 
   if (loading) {
@@ -151,7 +170,7 @@ const DashboardPage = () => {
       <div className="container mx-auto px-6 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-4xl font-heading font-bold mb-2">Olá, {user?.name}!</h1>
+          <h1 className="text-4xl font-heading font-bold mb-2">Olá, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-muted-foreground">Bem-vindo ao seu painel de controle</p>
         </div>
 
@@ -162,41 +181,86 @@ const DashboardPage = () => {
           </div>
         )}
 
-        {/* Admin Quick Access */}
-        {user?.role === 'admin' && (
-          <Card 
-            className="mb-8 border-2 border-jungle bg-jungle/5 cursor-pointer card-hover"
-            onClick={() => navigate('/admin')}
-            data-testid="admin-access-card"
-          >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-jungle rounded-full flex items-center justify-center">
-                    <User size={24} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-jungle">Painel Administrativo</p>
-                    <p className="text-sm text-muted-foreground">
-                      {adminStats?.pending_verifications || 0} verificações pendentes • {adminStats?.total_users || 0} usuários
-                    </p>
-                  </div>
-                </div>
-                <Button className="bg-jungle hover:bg-jungle-800">
-                  Acessar Painel Admin
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* --- LISTA DE COMBINAÇÕES ATIVAS (AQUI É O LUGAR IMPORTANTE) --- */}
+        <div className="mb-10">
+          <h2 className="text-2xl font-heading font-bold mb-4 flex items-center gap-2">
+            <Clock className="text-jungle" /> Entregas em Andamento
+          </h2>
+          
+          {stats.myMatches.length === 0 ? (
+             <Card className="text-center py-12 bg-muted/20 border-dashed">
+               <CardContent>
+                 <Package size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
+                 <h3 className="text-lg font-semibold">Nenhuma entrega ativa</h3>
+                 <p className="text-muted-foreground mb-6">Crie um envio ou uma viagem para começar.</p>
+               </CardContent>
+             </Card>
+          ) : (
+            <div className="grid gap-4">
+              {stats.myMatches.map((match) => {
+                const StatusInfo = getStatusConfig(match.status);
+                const StatusIcon = StatusInfo.icon;
+                const isCarrier = match.carrier_id === user.id;
+
+                return (
+                  <Card 
+                    key={match.id} 
+                    className="hover:border-jungle transition-all cursor-pointer group shadow-sm hover:shadow-md"
+                    onClick={() => navigate(`/match/${match.id}`)}
+                  >
+                    <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
+                      
+                      {/* Ícone Indicativo */}
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isCarrier ? 'bg-jungle/10 text-jungle' : 'bg-lime/10 text-lime-600'}`}>
+                        {isCarrier ? <TruckIcon size={24} weight="duotone" /> : <Package size={24} weight="duotone" />}
+                      </div>
+
+                      {/* Informações da Rota */}
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge className={StatusInfo.color}>
+                            <StatusIcon className="mr-1" size={12} /> {StatusInfo.label}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground uppercase font-bold tracking-wide">
+                            {isCarrier ? 'Você leva' : 'Seu pacote'}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 text-lg font-bold">
+                          {/* Usa Optional Chaining (?.) para evitar erro se trip for null */}
+                          <span>{match.trip?.origin?.city || 'Origem'}</span>
+                          <ArrowRight size={16} className="text-muted-foreground" />
+                          <span>{match.trip?.destination?.city || 'Destino'}</span>
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground">
+                          {match.shipment?.package?.description || "Encomenda"} • {match.shipment?.package?.weight_kg}kg
+                        </p>
+                      </div>
+
+                      {/* Preço e Botão */}
+                      <div className="text-right flex flex-col items-end gap-2">
+                        <span className="font-bold text-lg text-jungle">
+                          R$ {match.estimated_price?.toFixed(2)}
+                        </span>
+                        <Button size="sm" variant="ghost" className="group-hover:bg-jungle group-hover:text-white transition-colors">
+                          Acompanhar <ArrowRight className="ml-2" size={16} />
+                        </Button>
+                      </div>
+
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {/* ----------------------------------------------------------- */}
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          
-          {/* Lógica para Transportadores (Carrier ou Both) */}
           {(user?.role === 'carrier' || user?.role === 'both') && (
             <>
-              {/* Card Criar Viagem */}
               <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-viagem')} data-testid="create-trip-card">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -214,7 +278,6 @@ const DashboardPage = () => {
                 </CardHeader>
               </Card>
 
-              {/* Card Meus Veículos (NOVO) */}
               <Card className="card-hover cursor-pointer" onClick={() => navigate('/vehicles')} data-testid="my-vehicles-card">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -234,7 +297,6 @@ const DashboardPage = () => {
             </>
           )}
 
-          {/* Lógica para Remetentes (Sender ou Both) */}
           {(user?.role === 'sender' || user?.role === 'both') && (
             <Card className="card-hover cursor-pointer" onClick={() => handleCreateAction('/criar-envio')} data-testid="create-shipment-card">
               <CardHeader>
@@ -280,14 +342,14 @@ const DashboardPage = () => {
 
         {/* Trust Level and Browse Section */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
-          {/* Trust Level Card */}
           <TrustLevelCard />
           
-          {/* Browse Section */}
           <Card className="card-hover cursor-pointer" onClick={() => navigate('/viagens')} data-testid="browse-trips-card">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <MapTrifold size={24} weight="duotone" className="text-jungle" />
+                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                  <MapTrifold size={24} weight="duotone" className="text-jungle" />
+                </div>
                 <div>
                   <CardTitle>Buscar Viagens</CardTitle>
                   <CardDescription>Encontre transportadores</CardDescription>
@@ -299,7 +361,9 @@ const DashboardPage = () => {
           <Card className="card-hover cursor-pointer" onClick={() => navigate('/envios')} data-testid="browse-shipments-card">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <Package size={24} weight="duotone" className="text-lime" />
+                <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                  <Package size={24} weight="duotone" className="text-lime" />
+                </div>
                 <div>
                   <CardTitle>Buscar Envios</CardTitle>
                   <CardDescription>Encontre pacotes para transportar</CardDescription>
@@ -309,9 +373,9 @@ const DashboardPage = () => {
           </Card>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Card data-testid="my-trips-card">
+        {/* Stats Summary */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">Minhas Viagens</CardTitle>
             </CardHeader>
@@ -320,7 +384,7 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          <Card data-testid="my-shipments-card">
+          <Card>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground">Meus Envios</CardTitle>
             </CardHeader>
@@ -329,9 +393,9 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
 
-          <Card data-testid="my-matches-card">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">Combinações Ativas</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total de Matches</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{stats.myMatches.length}</p>
@@ -339,34 +403,6 @@ const DashboardPage = () => {
           </Card>
         </div>
 
-        {/* Recent Activity */}
-        {stats.myMatches.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-heading font-bold mb-4">Atividades Recentes</h2>
-            <div className="space-y-4">
-              {stats.myMatches.slice(0, 3).map((match) => (
-                <Card 
-                  key={match.id} 
-                  className="card-hover cursor-pointer" 
-                  onClick={() => navigate(`/match/${match.id}`)}
-                  data-testid={`match-card-${match.id}`}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold">Combinação #{match.id.slice(0, 8)}</p>
-                        <p className="text-sm text-muted-foreground">Status: {match.status}</p>
-                      </div>
-                      <Badge className="bg-jungle text-white">
-                        R$ {match.estimated_price?.toFixed(2)}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
