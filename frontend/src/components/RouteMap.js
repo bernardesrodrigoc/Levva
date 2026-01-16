@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle } from 'react-leaflet';
 import L from 'leaflet';
-import polyline from '@mapbox/polyline'; // <--- IMPORTANTE: Biblioteca para decodificar
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons in React-Leaflet
@@ -11,6 +10,54 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
+
+// --- FUNÇÃO NATIVA DE DECODIFICAÇÃO (Substitui @mapbox/polyline) ---
+// Isso evita erros de "Module not found" no build
+function decodePolyline(str, precision) {
+    var index = 0,
+        lat = 0,
+        lng = 0,
+        coordinates = [],
+        shift = 0,
+        result = 0,
+        byte = null,
+        latitude_change,
+        longitude_change,
+        factor = Math.pow(10, precision || 5);
+
+    if (!str) return [];
+
+    while (index < str.length) {
+        byte = null;
+        shift = 0;
+        result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        shift = result = 0;
+
+        do {
+            byte = str.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+        lat += latitude_change;
+        lng += longitude_change;
+
+        coordinates.push([lat / factor, lng / factor]);
+    }
+
+    return coordinates;
+}
+// ------------------------------------------------------------------
 
 // Custom icons
 const createIcon = (color) => new L.Icon({
@@ -36,7 +83,7 @@ const RouteMap = ({
   destinationLat,
   destinationLng,
   destinationAddress,
-  routePolyline = null,  // Pode vir como String (novo backend) ou Array (legado)
+  routePolyline = null, 
   corridorRadiusKm = 10,
   showCorridor = false,
   pickupLocation = null, 
@@ -47,22 +94,21 @@ const RouteMap = ({
 }) => {
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
-  const [decodedPath, setDecodedPath] = useState([]); // Estado para a rota processada
+  const [decodedPath, setDecodedPath] = useState([]);
 
-  // 1. Processa a Rota (Decodifica se for string)
+  // 1. Processa a Rota (Usa a função nativa agora)
   useEffect(() => {
     if (routePolyline) {
       if (typeof routePolyline === 'string') {
         try {
-          // Decodifica a string do OSRM/Google para [[lat,lng], ...]
-          const points = polyline.decode(routePolyline);
+          // Usa nossa função local em vez da biblioteca externa
+          const points = decodePolyline(routePolyline);
           setDecodedPath(points);
         } catch (e) {
           console.error("Erro ao decodificar rota:", e);
           setDecodedPath([]);
         }
       } else if (Array.isArray(routePolyline)) {
-        // Suporte legado se já for array
         setDecodedPath(routePolyline);
       }
     } else {
@@ -139,7 +185,6 @@ const RouteMap = ({
   if (pickupLocation?.lat) allPoints.push([pickupLocation.lat, pickupLocation.lng]);
   if (dropoffLocation?.lat) allPoints.push([dropoffLocation.lat, dropoffLocation.lng]);
   
-  // Adiciona os pontos da rota decodificada para o cálculo do zoom
   if (decodedPath.length > 0) allPoints.push(...decodedPath);
   
   const lats = allPoints.map(p => p[0]);
@@ -160,7 +205,6 @@ const RouteMap = ({
   else if (maxDiff < 10) zoom = 5;
   else zoom = 4;
 
-  // Se não tiver rota decodificada, usa linha reta entre origem e destino
   const displayPath = decodedPath.length > 0 ? decodedPath : [origin, destination];
 
   return (
@@ -175,7 +219,6 @@ const RouteMap = ({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* Rota Principal */}
       <Polyline
         positions={displayPath}
         color="#166534"
@@ -183,15 +226,13 @@ const RouteMap = ({
         opacity={0.8}
       />
       
-      {/* Visualização do Corredor (Círculos semi-transparentes) */}
-      {/* Importante: Usamos decodedPath aqui, pois routePolyline pode ser string */}
       {showCorridor && decodedPath.length > 0 && (
         <>
           {decodedPath.filter((_, i) => i % 10 === 0).map((point, idx) => (
             <Circle
               key={idx}
               center={point}
-              radius={corridorRadiusKm * 1000} // Convert km to meters
+              radius={corridorRadiusKm * 1000}
               pathOptions={{
                 color: '#166534',
                 fillColor: '#166534',
@@ -203,7 +244,6 @@ const RouteMap = ({
         </>
       )}
       
-      {/* Origin marker */}
       <Marker position={origin} icon={greenIcon}>
         <Popup>
           <strong>Origem</strong><br />
@@ -211,7 +251,6 @@ const RouteMap = ({
         </Popup>
       </Marker>
       
-      {/* Destination marker */}
       <Marker position={destination} icon={redIcon}>
         <Popup>
           <strong>Destino</strong><br />
@@ -219,7 +258,6 @@ const RouteMap = ({
         </Popup>
       </Marker>
       
-      {/* Pickup location */}
       {pickupLocation?.lat && pickupLocation?.lng && (
         <Marker position={[pickupLocation.lat, pickupLocation.lng]} icon={orangeIcon}>
           <Popup>
@@ -229,7 +267,6 @@ const RouteMap = ({
         </Marker>
       )}
       
-      {/* Dropoff location */}
       {dropoffLocation?.lat && dropoffLocation?.lng && (
         <Marker position={[dropoffLocation.lat, dropoffLocation.lng]} icon={orangeIcon}>
           <Popup>
@@ -239,7 +276,6 @@ const RouteMap = ({
         </Marker>
       )}
       
-      {/* Carrier location */}
       {carrierLocation && status === 'in_transit' && (
         <Marker position={carrierLocation} icon={blueIcon}>
           <Popup>
