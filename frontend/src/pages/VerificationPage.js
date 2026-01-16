@@ -71,90 +71,31 @@ const VerificationPage = () => {
     driverLicenseUrl: null
   });
 
-  // Upload file to R2 using presigned URL
-  const uploadFileToR2 = async (file, fileType) => {
-    try {
-      setUploadingFile(fileType);
-      
-      // Step 1: Get presigned URL from backend
-      const presignedResponse = await axios.post(
-        `${API}/uploads/presigned-url`,
-        {
-          file_type: fileType,
-          content_type: file.type
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      const { presigned_url, file_key, content_type } = presignedResponse.data;
-      
-      // Step 2: Upload directly to R2
-      await axios.put(presigned_url, file, {
-        headers: {
-          'Content-Type': content_type
-        }
-      });
-      
-      // Step 3: Confirm upload and get public URL
-      const confirmResponse = await axios.post(
-        `${API}/uploads/confirm`,
-        {
-          file_key: file_key,
-          file_type: fileType
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setUploadingFile(null);
-      return confirmResponse.data.file_url;
-      
-    } catch (error) {
-      console.error('Upload error:', error);
-      setUploadingFile(null);
-      throw error;
-    }
-  };
-
-  const handleFileChange = async (field, previewField, urlField, fileType, file) => {
-    if (file) {
-      // First show preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          [field]: file,
-          [previewField]: reader.result
-        }));
-      };
-      reader.readAsDataURL(file);
-      
-      // Then upload to R2
-      try {
-        const url = await uploadFileToR2(file, fileType);
-        setFormData(prev => ({
-          ...prev,
-          [urlField]: url
-        }));
-        toast.success('Arquivo enviado com sucesso!');
-      } catch (error) {
-        toast.error('Erro ao enviar arquivo. Tente novamente.');
-        setFormData(prev => ({
-          ...prev,
-          [field]: null,
-          [previewField]: null
-        }));
-      }
-    }
-  };
-
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Handle address auto-fill from CEP
+  const handleAddressFound = (address) => {
+    setFormData(prev => ({
+      ...prev,
+      address: address.street || prev.address,
+      neighborhood: address.neighborhood || prev.neighborhood,
+      city: address.city || prev.city,
+      state: address.state || prev.state,
+      complement: address.complement || prev.complement
+    }));
+  };
+
+  // Handle photo uploads
+  const handlePhotoUpload = (field, url) => {
+    setFormData(prev => ({ ...prev, [field]: url }));
+  };
+
   const handleSubmitStep1 = (e) => {
     e.preventDefault();
-    if (!formData.cpf || !formData.birthDate || !formData.address || !formData.city || !formData.state || !formData.zipCode) {
-      toast.error('Preencha todos os campos');
+    if (!formData.cpf || !formData.birthDate || !formData.zipCode || !formData.city || !formData.state) {
+      toast.error('Preencha todos os campos obrigatórios');
       return;
     }
     setStep(2);
