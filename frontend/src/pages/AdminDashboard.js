@@ -228,6 +228,54 @@ const AdminDashboard = () => {
     setShowDialog(true);
   };
 
+  const openRevokeDialog = (verification) => {
+    setSelectedVerification(verification);
+    setRevokeReason('');
+    setShowRevokeDialog(true);
+  };
+
+  const handleRevokeVerification = async () => {
+    if (!selectedVerification) return;
+
+    try {
+      await axios.post(
+        `${API}/admin/users/${selectedVerification.user_id}/revoke-verification`,
+        { reason: revokeReason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('Verificação revogada!');
+      setShowRevokeDialog(false);
+      setSelectedVerification(null);
+      setRevokeReason('');
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao revogar verificação');
+    }
+  };
+
+  const getTrustLevelName = (level) => {
+    const levels = {
+      level_1: 'Iniciante',
+      level_2: 'Verificado',
+      level_3: 'Confiável',
+      level_4: 'Experiente',
+      level_5: 'Elite'
+    };
+    return levels[level] || level;
+  };
+
+  const getTrustLevelColor = (level) => {
+    const colors = {
+      level_1: 'bg-gray-100 text-gray-700',
+      level_2: 'bg-blue-100 text-blue-700',
+      level_3: 'bg-green-100 text-green-700',
+      level_4: 'bg-purple-100 text-purple-700',
+      level_5: 'bg-yellow-100 text-yellow-700'
+    };
+    return colors[level] || 'bg-gray-100 text-gray-700';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
