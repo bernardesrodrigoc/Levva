@@ -23,7 +23,56 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 
 ## O Que Foi Implementado
 
-### Funcionalidades Core Concluídas:
+### ⭐ Sistema de Inteligência (19/01/2026) - NOVO
+
+#### 1. Precificação Dinâmica Inteligente
+**Arquivo:** `/app/backend/services/pricing_service.py`
+- Modelo de preço inspirado em ride-hailing (Uber, 99)
+- Componentes do preço:
+  - Base por distância (progressivo por faixas)
+  - Multiplicador por categoria de carga (documento, pequeno, médio, grande, extra grande)
+  - Volume + peso combinados (peso dimensional)
+  - Desvio da rota do transportador
+  - Demanda vs oferta na rota/data
+  - Capacidade restante da viagem (pricing progressivo)
+- Comissão da plataforma: 15-25% (por faixas de valor)
+- Preço único exibido ao usuário
+
+**Endpoints:**
+- `POST /api/intelligence/pricing/calculate` - Cálculo completo
+- `GET /api/intelligence/pricing/estimate` - Estimativa rápida (público)
+- `GET /api/intelligence/pricing/categories` - Categorias de carga
+
+#### 2. Sistema de Capacidade e Múltiplos Envios
+**Arquivo:** `/app/backend/services/capacity_service.py`
+- Múltiplos envios por viagem
+- Rastreamento de peso e volume usado/disponível
+- Prevenção automática de overbooking
+- % de capacidade exibido ao transportador
+
+**Endpoints:**
+- `GET /api/intelligence/capacity/trip/{id}` - Status de capacidade
+- `GET /api/intelligence/capacity/check-fit` - Verificar se envio cabe
+- `GET /api/intelligence/capacity/available-trips` - Viagens com capacidade
+
+#### 3. Sugestões Inteligentes
+**Arquivo:** `/app/backend/services/suggestions_service.py`
+- Sugestões de datas com maior probabilidade de match
+- Pontos estratégicos de coleta/entrega por cidade
+- Agregação de envios próximos
+- Horários otimizados
+
+**Endpoints:**
+- `GET /api/intelligence/suggestions/dates` - Sugestões de data
+- `GET /api/intelligence/suggestions/locations` - Sugestões de local
+- `GET /api/intelligence/suggestions/time-slots` - Horários
+- `POST /api/intelligence/suggestions/comprehensive` - Tudo em uma chamada
+
+**Componentes Frontend:**
+- `SmartSuggestions.js` - Painel de sugestões inteligentes
+- `IntelligentPricing.js` - Estimativa de preço, categorias, capacidade
+
+### Funcionalidades Core Anteriores:
 1. **Sistema de Autenticação**
    - Registro de usuário com roles (sender, carrier, both, admin)
    - Login com JWT
