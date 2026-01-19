@@ -131,16 +131,16 @@ class PackageDetails(BaseModel):
     description: str
 
 class ShipmentPhotos(BaseModel):
-    item_visible: str
-    packaging_open: str
-    packaging_sealed: str
+    item_visible: Optional[str] = None
+    packaging_open: Optional[str] = None
+    packaging_sealed: Optional[str] = None
 
 class ShipmentCreate(BaseModel):
     origin: LocationData
     destination: LocationData
     package: PackageDetails
     declared_value: float
-    photos: ShipmentPhotos
+    photos: Optional[ShipmentPhotos] = None
     legal_acceptance: bool = True
     pickup_date: Optional[datetime] = None
 
