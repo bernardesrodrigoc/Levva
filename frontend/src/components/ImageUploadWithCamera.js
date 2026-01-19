@@ -66,52 +66,37 @@ const ImageUploadWithCamera = ({
     setUploadProgress(0);
 
     try {
-      const headers = { Authorization: `Bearer ${token}` };
+      // Use FormData for multipart upload through backend proxy
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('file_type', fileType);
 
-      // Step 1: Get presigned URL
       setUploadProgress(10);
-      const presignedResponse = await axios.post(
-        `${API}/uploads/presigned-url`,
+
+      // Upload directly to backend proxy (bypasses R2 CORS issues)
+      const response = await axios.post(
+        `${API}/uploads/direct`,
+        formData,
         {
-          file_type: fileType,
-          content_type: file.type
-        },
-        { headers }
-      );
-
-      const { presigned_url, file_key } = presignedResponse.data;
-      setUploadProgress(25);
-
-      // Step 2: Upload to R2 directly
-      await axios.put(presigned_url, file, {
-        headers: {
-          'Content-Type': file.type
-        },
-        onUploadProgress: (progressEvent) => {
-          const progress = Math.round((progressEvent.loaded * 50) / progressEvent.total) + 25;
-          setUploadProgress(progress);
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data'
+          },
+          onUploadProgress: (progressEvent) => {
+            const progress = Math.round((progressEvent.loaded * 80) / progressEvent.total) + 10;
+            setUploadProgress(progress);
+          }
         }
-      });
-
-      setUploadProgress(80);
-
-      // Step 3: Confirm upload and get public URL
-      const confirmResponse = await axios.post(
-        `${API}/uploads/confirm`,
-        {
-          file_key,
-          file_type: fileType
-        },
-        { headers }
       );
 
       setUploadProgress(100);
-      const finalUrl = confirmResponse.data.file_url;
-      setUploadedUrl(finalUrl);
+      
+      const { file_url, file_key } = response.data;
+      setUploadedUrl(file_url);
       
       // Callback with the URL
       if (onUploadComplete) {
-        onUploadComplete(finalUrl, file_key);
+        onUploadComplete(file_url, file_key);
       }
 
       toast.success('Foto enviada com sucesso!');
