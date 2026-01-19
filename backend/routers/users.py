@@ -28,22 +28,18 @@ async def submit_verification(
         # Normalize CPF - remove dots and dashes
         cpf_normalized = cpf.replace(".", "").replace("-", "").strip()
         
+        # Format variations to check
+        cpf_formatted = f"{cpf_normalized[:3]}.{cpf_normalized[3:6]}.{cpf_normalized[6:9]}-{cpf_normalized[9:]}"
+        
         # Check if CPF exists in verifications for another user
         existing_verification = await verifications_collection.find_one({
-            "cpf": {"$regex": f"^{cpf_normalized.replace('.', '\\.').replace('-', '\\-?')}$|^{cpf_normalized[:3]}\\.?{cpf_normalized[3:6]}\\.?{cpf_normalized[6:9]}\\-?{cpf_normalized[9:]}$", "$options": "i"},
+            "$or": [
+                {"cpf": cpf},
+                {"cpf": cpf_normalized},
+                {"cpf": cpf_formatted}
+            ],
             "user_id": {"$ne": user_id}
         })
-        
-        if not existing_verification:
-            # Also check with normalized CPF directly
-            existing_verification = await verifications_collection.find_one({
-                "$or": [
-                    {"cpf": cpf},
-                    {"cpf": cpf_normalized},
-                    {"cpf": f"{cpf_normalized[:3]}.{cpf_normalized[3:6]}.{cpf_normalized[6:9]}-{cpf_normalized[9:]}"}
-                ],
-                "user_id": {"$ne": user_id}
-            })
         
         if existing_verification:
             raise HTTPException(
