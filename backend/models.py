@@ -159,7 +159,7 @@ class ShipmentResponse(BaseModel):
     destination: LocationData
     package: PackageDetails
     declared_value: float
-    photos: ShipmentPhotos
+    photos: Optional[ShipmentPhotos] = None
     status: ShipmentStatus
     created_at: datetime
 
