@@ -18,7 +18,8 @@ from services.capacity_service import (
     get_trip_capacity_status,
     can_add_shipment_to_trip,
     find_trips_with_capacity,
-    calculate_volume_liters
+    calculate_volume_liters,
+    estimate_trip_slots
 )
 from services.suggestions_service import (
     get_date_suggestions,
