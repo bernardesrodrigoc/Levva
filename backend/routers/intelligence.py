@@ -304,13 +304,13 @@ async def get_matching_trips(
     pref_date = datetime.fromisoformat(request.preferred_date) if request.preferred_date else datetime.now(timezone.utc)
     
     matching_trips = await get_matching_trips_for_shipment(
-        origin_lat=origin_lat,
-        origin_lng=origin_lng,
-        dest_lat=dest_lat,
-        dest_lng=dest_lng,
-        weight_kg=weight_kg,
+        origin_lat=request.origin_lat,
+        origin_lng=request.origin_lng,
+        dest_lat=request.dest_lat,
+        dest_lng=request.dest_lng,
+        weight_kg=request.weight_kg,
         preferred_date=pref_date,
-        days_ahead=days_ahead
+        days_ahead=request.days_ahead
     )
     
     return {
