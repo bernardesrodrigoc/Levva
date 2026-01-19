@@ -1175,6 +1175,214 @@ const AdminDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* User Detail Dialog */}
+      <Dialog open={showUserDetailDialog} onOpenChange={setShowUserDetailDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Usuário</DialogTitle>
+            <DialogDescription>Informações completas do usuário</DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              {/* Basic Info */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Informações Básicas</CardTitle>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nome</p>
+                    <p className="font-medium">{selectedUser.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Telefone</p>
+                    <p className="font-medium">{selectedUser.phone || 'Não informado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Tipo de Conta</p>
+                    <Badge className={getRoleBadge(selectedUser.role).color}>
+                      {getRoleBadge(selectedUser.role).label}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Status de Verificação</p>
+                    <Badge className={getVerificationStatusBadge(selectedUser.verification_status).color}>
+                      {getVerificationStatusBadge(selectedUser.verification_status).label}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nível de Confiança</p>
+                    <Badge className={getTrustLevelColor(selectedUser.trust_level)}>
+                      {getTrustLevelName(selectedUser.trust_level)}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Data de Cadastro</p>
+                    <p className="font-medium">
+                      {selectedUser.created_at 
+                        ? new Date(selectedUser.created_at).toLocaleDateString('pt-BR', { 
+                            day: '2-digit', month: '2-digit', year: 'numeric', 
+                            hour: '2-digit', minute: '2-digit' 
+                          })
+                        : 'N/A'}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stats */}
+              {selectedUser.stats && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Estatísticas</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-4 gap-4 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-jungle">{selectedUser.total_deliveries || 0}</p>
+                      <p className="text-xs text-muted-foreground">Entregas</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">⭐ {selectedUser.rating?.toFixed(1) || '0.0'}</p>
+                      <p className="text-xs text-muted-foreground">Avaliação</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{selectedUser.stats.trips_created || 0}</p>
+                      <p className="text-xs text-muted-foreground">Viagens</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{selectedUser.stats.shipments_created || 0}</p>
+                      <p className="text-xs text-muted-foreground">Envios</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Verification Info */}
+              {selectedUser.verification && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Dados de Verificação</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">CPF</p>
+                      <p className="font-mono font-medium">{selectedUser.verification.cpf || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Data de Nascimento</p>
+                      <p className="font-medium">
+                        {selectedUser.verification.birth_date 
+                          ? new Date(selectedUser.verification.birth_date).toLocaleDateString('pt-BR')
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    {selectedUser.verification.address && (
+                      <div className="md:col-span-2">
+                        <p className="text-xs text-muted-foreground">Endereço</p>
+                        <p className="font-medium">
+                          {selectedUser.verification.address.street}, {selectedUser.verification.address.city} - {selectedUser.verification.address.state}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">Enviado em</p>
+                      <p className="font-medium">
+                        {selectedUser.verification.submitted_at 
+                          ? new Date(selectedUser.verification.submitted_at).toLocaleDateString('pt-BR')
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Revisado em</p>
+                      <p className="font-medium">
+                        {selectedUser.verification.reviewed_at 
+                          ? new Date(selectedUser.verification.reviewed_at).toLocaleDateString('pt-BR')
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="flex gap-4 pt-4">
+                <Button variant="outline" className="flex-1" onClick={() => setShowUserDetailDialog(false)}>
+                  Fechar
+                </Button>
+                {selectedUser.role !== 'admin' && (
+                  <Button 
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowUserDetailDialog(false);
+                      openDeleteUserDialog(selectedUser);
+                    }}
+                  >
+                    Excluir Usuário
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={showDeleteUserDialog} onOpenChange={setShowDeleteUserDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Excluir Usuário</DialogTitle>
+            <DialogDescription>
+              Esta ação é irreversível. Todos os dados do usuário serão permanentemente excluídos.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                <p className="font-semibold text-red-800">{selectedUser.name}</p>
+                <p className="text-sm text-red-700">{selectedUser.email}</p>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Atenção:</strong> Serão excluídos:
+                </p>
+                <ul className="text-sm text-yellow-700 list-disc list-inside mt-2">
+                  <li>Dados de verificação</li>
+                  <li>Viagens criadas</li>
+                  <li>Envios criados</li>
+                  <li>Mensagens enviadas</li>
+                </ul>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Motivo da Exclusão (opcional)</label>
+                <Textarea
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="Descreva o motivo da exclusão..."
+                  rows={2}
+                  className="mt-2"
+                />
+              </div>
+              <div className="flex gap-4">
+                <Button variant="outline" className="flex-1" onClick={() => setShowDeleteUserDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleDeleteUser} 
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  Confirmar Exclusão
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
