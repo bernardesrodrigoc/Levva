@@ -93,6 +93,79 @@ def get_strategic_points_for_city(city: str) -> List[dict]:
     return []
 
 
+def create_city_regex(city: str) -> str:
+    """
+    Create a flexible regex pattern for city name matching.
+    Handles variations like:
+    - "SaoPaulo" vs "São Paulo" vs "Sao Paulo"
+    - With/without accents
+    - With/without spaces
+    """
+    import re
+    
+    # Normalize: remove accents
+    normalized = normalize_city_name(city)
+    
+    # Split into words (handle camelCase like "SaoPaulo")
+    # Insert space before uppercase letters
+    words = re.sub(r'([a-z])([A-Z])', r'\1 \2', normalized)
+    words = words.split()
+    
+    if len(words) == 1:
+        # Single word - match with optional accents
+        # e.g., "saopaulo" should match "são paulo", "sao paulo", "São Paulo"
+        word = words[0]
+        # Create pattern that matches characters with optional accent variations
+        pattern_parts = []
+        i = 0
+        while i < len(word):
+            char = word[i]
+            if char == 'a':
+                pattern_parts.append('[aáàâã]')
+            elif char == 'e':
+                pattern_parts.append('[eéèê]')
+            elif char == 'i':
+                pattern_parts.append('[iíìî]')
+            elif char == 'o':
+                pattern_parts.append('[oóòôõ]')
+            elif char == 'u':
+                pattern_parts.append('[uúùû]')
+            elif char == 'c':
+                pattern_parts.append('[cç]')
+            else:
+                pattern_parts.append(char)
+            i += 1
+        
+        # Allow optional space or nothing between characters for compound words
+        pattern = ''.join(pattern_parts)
+        # Make spaces optional for compound city names
+        return pattern
+    else:
+        # Multiple words - create pattern for each word
+        word_patterns = []
+        for word in words:
+            pattern_parts = []
+            for char in word:
+                if char == 'a':
+                    pattern_parts.append('[aáàâã]')
+                elif char == 'e':
+                    pattern_parts.append('[eéèê]')
+                elif char == 'i':
+                    pattern_parts.append('[iíìî]')
+                elif char == 'o':
+                    pattern_parts.append('[oóòôõ]')
+                elif char == 'u':
+                    pattern_parts.append('[uúùû]')
+                elif char == 'c':
+                    pattern_parts.append('[cç]')
+                else:
+                    pattern_parts.append(char)
+            word_patterns.append(''.join(pattern_parts))
+        
+        # Join words with optional space
+        return r'\s*'.join(word_patterns)
+
+
 async def get_date_suggestions(
     origin_city: str,
     destination_city: str,
@@ -109,6 +182,10 @@ async def get_date_suggestions(
     if preferred_date is None:
         preferred_date = datetime.now()
     
+    # Create flexible regex patterns for city matching
+    origin_pattern = create_city_regex(origin_city)
+    dest_pattern = create_city_regex(destination_city)
+    
     suggestions = []
     
     # Look at next N days
@@ -119,16 +196,16 @@ async def get_date_suggestions(
         
         # Count trips on this route/date
         trips_count = await trips_collection.count_documents({
-            "origin.city": {"$regex": origin_city, "$options": "i"},
-            "destination.city": {"$regex": destination_city, "$options": "i"},
+            "origin.city": {"$regex": origin_pattern, "$options": "i"},
+            "destination.city": {"$regex": dest_pattern, "$options": "i"},
             "departure_date": {"$gte": start_of_day, "$lt": end_of_day},
             "status": "published"
         })
         
         # Count shipments on this route
         shipments_count = await shipments_collection.count_documents({
-            "origin.city": {"$regex": origin_city, "$options": "i"},
-            "destination.city": {"$regex": destination_city, "$options": "i"},
+            "origin.city": {"$regex": origin_pattern, "$options": "i"},
+            "destination.city": {"$regex": dest_pattern, "$options": "i"},
             "status": "published"
         })
         
