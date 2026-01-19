@@ -21,6 +21,36 @@ async def submit_verification(
     user_id: str = Depends(get_current_user_id)
 ):
     """Submit user verification documents."""
+    cpf = verification_data.get("cpf")
+    
+    # Check if CPF is already registered by another user
+    if cpf:
+        # Normalize CPF - remove dots and dashes
+        cpf_normalized = cpf.replace(".", "").replace("-", "").strip()
+        
+        # Check if CPF exists in verifications for another user
+        existing_verification = await verifications_collection.find_one({
+            "cpf": {"$regex": f"^{cpf_normalized.replace('.', '\\.').replace('-', '\\-?')}$|^{cpf_normalized[:3]}\\.?{cpf_normalized[3:6]}\\.?{cpf_normalized[6:9]}\\-?{cpf_normalized[9:]}$", "$options": "i"},
+            "user_id": {"$ne": user_id}
+        })
+        
+        if not existing_verification:
+            # Also check with normalized CPF directly
+            existing_verification = await verifications_collection.find_one({
+                "$or": [
+                    {"cpf": cpf},
+                    {"cpf": cpf_normalized},
+                    {"cpf": f"{cpf_normalized[:3]}.{cpf_normalized[3:6]}.{cpf_normalized[6:9]}-{cpf_normalized[9:]}"}
+                ],
+                "user_id": {"$ne": user_id}
+            })
+        
+        if existing_verification:
+            raise HTTPException(
+                status_code=400, 
+                detail="Este CPF já está cadastrado em outra conta. Se você acredita que houve um erro, entre em contato com o suporte."
+            )
+    
     verification_doc = {
         "user_id": user_id,
         "cpf": verification_data.get("cpf"),
