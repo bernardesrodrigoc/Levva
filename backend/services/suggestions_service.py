@@ -111,15 +111,11 @@ def create_city_regex(city: str) -> str:
     words = re.sub(r'([a-z])([A-Z])', r'\1 \2', normalized)
     words = words.split()
     
-    if len(words) == 1:
-        # Single word - match with optional accents
-        # e.g., "saopaulo" should match "são paulo", "sao paulo", "São Paulo"
-        word = words[0]
-        # Create pattern that matches characters with optional accent variations
+    # Create pattern for each word with accent variations
+    word_patterns = []
+    for word in words:
         pattern_parts = []
-        i = 0
-        while i < len(word):
-            char = word[i]
+        for char in word:
             if char == 'a':
                 pattern_parts.append('[aáàâã]')
             elif char == 'e':
@@ -134,36 +130,11 @@ def create_city_regex(city: str) -> str:
                 pattern_parts.append('[cç]')
             else:
                 pattern_parts.append(char)
-            i += 1
-        
-        # Allow optional space or nothing between characters for compound words
-        pattern = ''.join(pattern_parts)
-        # Make spaces optional for compound city names
-        return pattern
-    else:
-        # Multiple words - create pattern for each word
-        word_patterns = []
-        for word in words:
-            pattern_parts = []
-            for char in word:
-                if char == 'a':
-                    pattern_parts.append('[aáàâã]')
-                elif char == 'e':
-                    pattern_parts.append('[eéèê]')
-                elif char == 'i':
-                    pattern_parts.append('[iíìî]')
-                elif char == 'o':
-                    pattern_parts.append('[oóòôõ]')
-                elif char == 'u':
-                    pattern_parts.append('[uúùû]')
-                elif char == 'c':
-                    pattern_parts.append('[cç]')
-                else:
-                    pattern_parts.append(char)
-            word_patterns.append(''.join(pattern_parts))
-        
-        # Join words with optional space
-        return r'\s*'.join(word_patterns)
+        word_patterns.append(''.join(pattern_parts))
+    
+    # Join words with OPTIONAL space (\\s* means 0 or more spaces)
+    # This allows "SaoPaulo" to match "São Paulo" and vice versa
+    return r'\s*'.join(word_patterns)
 
 
 async def get_date_suggestions(
