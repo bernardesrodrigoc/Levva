@@ -168,12 +168,25 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - **Iteration 2:** Backend 27/27, Frontend 100% (uploads R2 + pagamentos MP)
 - **Iteration 3:** Backend 13/13, Frontend 100% (sugestões + precificação + recorrência)
 - **Iteration 4:** Backend 17/17, Frontend 100% (notificações + GPS tracking)
+- **Iteration 5:** Backend 8/8, Frontend 100% (Upload de imagens via proxy - BUG FIX) ✅ (19/01/2026)
+
+## Correções Recentes
+
+### Bug Fix: Upload de Imagens (19/01/2026) ✅
+- **Problema:** Upload de imagens falhava com "Erro ao enviar foto. Tente novamente" devido a CORS do R2
+- **Causa:** Frontend tentava upload direto para R2 via presigned URL, bloqueado por CORS
+- **Solução:** Frontend atualizado para usar endpoint proxy `/api/uploads/direct`
+- **Arquivos modificados:**
+  - `/app/frontend/src/components/ImageUploadWithCamera.js` - função uploadToR2 agora usa multipart/form-data para backend
+- **Verificado:** 8/8 testes passaram, incluindo validação de tipo, tamanho e estrutura de resposta
 
 ## Backlog
 
-### P1 (Alta Prioridade) - Em progresso
+### P1 (Alta Prioridade) - Próximas tarefas
 - [x] GPS Tracking em tempo real (WebSockets) ✅
 - [x] Notificações in-app ✅
+- [x] **Upload de imagens funcionando** ✅
+- [ ] **Mover filtros de dados para backend** - Usuário não deve ver suas próprias viagens na página de busca
 - [ ] **Email via Resend** - Requer API key do usuário
 
 ### P2 (Média Prioridade)
