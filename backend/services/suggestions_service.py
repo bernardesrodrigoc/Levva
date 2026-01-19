@@ -69,12 +69,15 @@ def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> fl
 
 
 def normalize_city_name(city: str) -> str:
-    """Normalize city name by removing accents and converting to lowercase"""
+    """Normalize city name by removing accents, spaces and converting to lowercase"""
     import unicodedata
+    import re
     # Remove accents
     normalized = unicodedata.normalize('NFD', city)
     normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
-    return normalized.lower().strip()
+    # Remove spaces and special chars, keep only alphanumeric
+    normalized = re.sub(r'[^a-zA-Z0-9]', '', normalized)
+    return normalized.lower()
 
 
 def get_strategic_points_for_city(city: str) -> List[dict]:
