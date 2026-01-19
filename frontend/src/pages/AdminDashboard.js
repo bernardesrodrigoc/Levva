@@ -26,13 +26,16 @@ const AdminDashboard = () => {
   // Dados Principais
   const [stats, setStats] = useState(null);
   const [pendingVerifications, setPendingVerifications] = useState([]);
+  const [approvedVerifications, setApprovedVerifications] = useState([]);
   const [disputes, setDisputes] = useState([]);
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'approved'
   
   // Estados de Seleção e Modais
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [showDialog, setShowDialog] = useState(false); // Modal de Confirmação de Verificação
   const [showDisputeDialog, setShowDisputeDialog] = useState(false); // Modal de Detalhes da Disputa
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false); // Modal de Revogar
   
   // --- ESTADOS DO LIGHTBOX (NOVO) ---
   const [showImageDialog, setShowImageDialog] = useState(false);
@@ -42,6 +45,7 @@ const AdminDashboard = () => {
   // Estados de Formulário
   const [reviewAction, setReviewAction] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [revokeReason, setRevokeReason] = useState('');
   const [disputeNote, setDisputeNote] = useState('');
   const [resolutionType, setResolutionType] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
