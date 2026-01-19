@@ -27,15 +27,20 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [pendingVerifications, setPendingVerifications] = useState([]);
   const [approvedVerifications, setApprovedVerifications] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [disputes, setDisputes] = useState([]);
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'approved'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'approved', 'all-users'
+  const [userFilter, setUserFilter] = useState({ status: '', role: '' });
   
   // Estados de Seleção e Modais
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [showDialog, setShowDialog] = useState(false); // Modal de Confirmação de Verificação
   const [showDisputeDialog, setShowDisputeDialog] = useState(false); // Modal de Detalhes da Disputa
   const [showRevokeDialog, setShowRevokeDialog] = useState(false); // Modal de Revogar
+  const [showUserDetailDialog, setShowUserDetailDialog] = useState(false); // Modal de Detalhes do Usuário
+  const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false); // Modal de Excluir Usuário
   
   // --- ESTADOS DO LIGHTBOX (NOVO) ---
   const [showImageDialog, setShowImageDialog] = useState(false);
@@ -46,6 +51,7 @@ const AdminDashboard = () => {
   const [reviewAction, setReviewAction] = useState(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [revokeReason, setRevokeReason] = useState('');
+  const [deleteReason, setDeleteReason] = useState('');
   const [disputeNote, setDisputeNote] = useState('');
   const [resolutionType, setResolutionType] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
