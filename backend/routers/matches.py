@@ -104,8 +104,17 @@ async def get_match_suggestions(user_id: str = Depends(get_current_user_id)):
             
             if matches:
                 carrier = await users_collection.find_one({"_id": ObjectId(trip["carrier_id"])})
-                price_per_kg = trip.get("price_per_kg") or 5.0
-                estimated_price = shipment["package"]["weight_kg"] * price_per_kg
+                
+                # Use intelligent pricing
+                distance_km = haversine_distance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng)
+                package = shipment["package"]
+                
+                from services.pricing_service import calculate_simple_price
+                total_price, carrier_earnings, _ = calculate_simple_price(
+                    distance_km,
+                    package["weight_kg"],
+                    package.get("category", "medium")
+                )
                 
                 match_score = calculate_corridor_match_score(
                     match_details.get("pickup_distance_km", 0),
@@ -115,6 +124,12 @@ async def get_match_suggestions(user_id: str = Depends(get_current_user_id)):
                     shipment["package"]["weight_kg"],
                     trip.get("cargo_space", {}).get("max_weight_kg", 50)
                 )
+                
+                # Get capacity info
+                cargo_space = trip.get("cargo_space", {})
+                max_weight = cargo_space.get("max_weight_kg", 50)
+                available_weight = trip.get("available_weight_kg", max_weight)
+                capacity_percent = round((1 - available_weight / max_weight) * 100, 1) if max_weight > 0 else 0
                 
                 suggestions.append({
                     "type": "trip_for_shipment",
@@ -128,10 +143,13 @@ async def get_match_suggestions(user_id: str = Depends(get_current_user_id)):
                     "pickup_address": shipment["origin"].get("address"),
                     "dropoff_address": shipment["destination"].get("address"),
                     "departure_date": trip.get("departure_date"),
-                    "estimated_price": estimated_price,
+                    "estimated_price": total_price,
+                    "carrier_earnings": carrier_earnings,
                     "match_score": match_score,
                     "deviation_km": match_details.get("total_deviation_km", 0),
-                    "corridor_radius_km": corridor_radius
+                    "corridor_radius_km": corridor_radius,
+                    "trip_capacity_used_percent": capacity_percent,
+                    "trip_available_weight_kg": available_weight
                 })
     
     # For each trip, find shipments within the route corridor
