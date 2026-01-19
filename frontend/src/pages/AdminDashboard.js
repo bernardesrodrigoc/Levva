@@ -284,6 +284,71 @@ const AdminDashboard = () => {
     return colors[level] || 'bg-gray-100 text-gray-700';
   };
 
+  const getVerificationStatusBadge = (status) => {
+    const badges = {
+      verified: { color: 'bg-green-100 text-green-700', label: 'Verificado' },
+      pending: { color: 'bg-yellow-100 text-yellow-700', label: 'Pendente' },
+      rejected: { color: 'bg-red-100 text-red-700', label: 'Rejeitado' },
+      not_submitted: { color: 'bg-gray-100 text-gray-700', label: 'Não enviado' }
+    };
+    return badges[status] || badges.not_submitted;
+  };
+
+  const getRoleBadge = (role) => {
+    const badges = {
+      sender: { color: 'bg-blue-100 text-blue-700', label: 'Remetente' },
+      carrier: { color: 'bg-purple-100 text-purple-700', label: 'Transportador' },
+      both: { color: 'bg-indigo-100 text-indigo-700', label: 'Ambos' },
+      admin: { color: 'bg-red-100 text-red-700', label: 'Admin' }
+    };
+    return badges[role] || { color: 'bg-gray-100 text-gray-700', label: role };
+  };
+
+  const openUserDetailDialog = async (userId) => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.get(`${API}/admin/users/${userId}`, { headers });
+      setSelectedUser(res.data);
+      setShowUserDetailDialog(true);
+    } catch (error) {
+      toast.error('Erro ao carregar detalhes do usuário');
+    }
+  };
+
+  const openDeleteUserDialog = (user) => {
+    setSelectedUser(user);
+    setDeleteReason('');
+    setShowDeleteUserDialog(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await axios.delete(
+        `${API}/admin/users/${selectedUser.id}`,
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          data: { reason: deleteReason }
+        }
+      );
+
+      toast.success('Usuário excluído com sucesso!');
+      setShowDeleteUserDialog(false);
+      setSelectedUser(null);
+      setDeleteReason('');
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao excluir usuário');
+    }
+  };
+
+  const filteredUsers = allUsers.filter(u => {
+    if (userFilter.status && u.verification_status !== userFilter.status) return false;
+    if (userFilter.role && u.role !== userFilter.role) return false;
+    return true;
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
