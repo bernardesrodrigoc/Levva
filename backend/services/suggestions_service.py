@@ -68,12 +68,22 @@ def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> fl
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 
+def normalize_city_name(city: str) -> str:
+    """Normalize city name by removing accents and converting to lowercase"""
+    import unicodedata
+    # Remove accents
+    normalized = unicodedata.normalize('NFD', city)
+    normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    return normalized.lower().strip()
+
+
 def get_strategic_points_for_city(city: str) -> List[dict]:
     """Get strategic meeting points for a city"""
-    city_lower = city.lower().strip()
+    city_normalized = normalize_city_name(city)
     
     for city_name, points in STRATEGIC_POINTS.items():
-        if city_name.lower() in city_lower or city_lower in city_name.lower():
+        city_name_normalized = normalize_city_name(city_name)
+        if city_name_normalized in city_normalized or city_normalized in city_name_normalized:
             return points
     
     # Return empty if city not found
