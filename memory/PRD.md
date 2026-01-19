@@ -129,6 +129,45 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - **Usuário teste (carrier):** teste@levva.com / password123
 - **Usuário teste (sender):** remetente_sp_1768238849@levva.com / teste123
 
+## Arquitetura de Código
+
+### Backend Refatorado (18/01/2026)
+O backend foi reestruturado de um único `server.py` (1900+ linhas) para arquitetura modular:
+```
+/app/backend/
+├── server.py              # Entry point (216 linhas)
+├── core/
+│   ├── config.py          # Settings via pydantic-settings
+│   └── exceptions.py      # Exception handlers
+├── routers/
+│   ├── __init__.py        # create_api_router()
+│   ├── auth.py            # /auth/*
+│   ├── users.py           # /users/*
+│   ├── trips.py           # /trips/*
+│   ├── shipments.py       # /shipments/*
+│   ├── matches.py         # /matches/*
+│   ├── payments.py        # /payments/*
+│   ├── uploads.py         # /uploads/* (proxy para R2) ✅ FIX 19/01
+│   ├── admin.py           # /admin/*
+│   ├── notifications.py   # /notifications/*
+│   └── tracking.py        # /tracking/*
+├── schemas/               # Pydantic models
+├── services/              # Business logic
+│   ├── trust_service.py
+│   ├── route_service.py
+│   └── notification_service.py
+├── models.py              # Modelos compartilhados
+├── database.py            # MongoDB connection
+├── auth.py                # JWT utilities
+└── websocket_manager.py   # GPS tracking WebSockets
+```
+
+### Frontend Mobile-First
+Componentes otimizados para mobile:
+- `MobileDatePicker.js` - Seletor de data amigável
+- `CEPInput.js` - Auto-preenchimento via ViaCEP
+- `ImageUploadWithCamera.js` - Camera + Galeria (corrigido 19/01)
+
 ## Arquivos Principais
 ```
 /app/backend/
