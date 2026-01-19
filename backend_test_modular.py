@@ -4,7 +4,7 @@ from datetime import datetime, date
 import json
 
 class LevvaModularAPITester:
-    def __init__(self, base_url="https://freight-match-12.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://shipmate-122.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.carrier_token = None
         self.sender_token = None
