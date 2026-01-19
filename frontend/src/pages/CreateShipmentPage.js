@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, Cube, CurrencyDollar, Camera, Warning } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import LocationPicker from '@/components/LocationPicker';
 import ImageUpload from '@/components/ImageUpload';
+import { PriceEstimate, CargoCategories } from '@/components/IntelligentPricing';
+import SmartSuggestions from '@/components/SmartSuggestions';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
