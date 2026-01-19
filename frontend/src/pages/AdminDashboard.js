@@ -668,12 +668,12 @@ const AdminDashboard = () => {
                 <div className="flex gap-4 mb-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Label className="text-sm">Status:</Label>
-                    <Select value={userFilter.status} onValueChange={(v) => setUserFilter(prev => ({ ...prev, status: v }))}>
+                    <Select value={userFilter.status || 'all'} onValueChange={(v) => setUserFilter(prev => ({ ...prev, status: v === 'all' ? '' : v }))}>
                       <SelectTrigger className="w-[150px]">
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="verified">Verificado</SelectItem>
                         <SelectItem value="pending">Pendente</SelectItem>
                         <SelectItem value="rejected">Rejeitado</SelectItem>
@@ -682,12 +682,12 @@ const AdminDashboard = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Label className="text-sm">Tipo:</Label>
-                    <Select value={userFilter.role} onValueChange={(v) => setUserFilter(prev => ({ ...prev, role: v }))}>
+                    <Select value={userFilter.role || 'all'} onValueChange={(v) => setUserFilter(prev => ({ ...prev, role: v === 'all' ? '' : v }))}>
                       <SelectTrigger className="w-[150px]">
                         <SelectValue placeholder="Todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="sender">Remetente</SelectItem>
                         <SelectItem value="carrier">Transportador</SelectItem>
                         <SelectItem value="both">Ambos</SelectItem>
