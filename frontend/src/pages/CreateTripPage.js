@@ -283,6 +283,41 @@ const CreateTripPage = () => {
             </CardContent>
           </Card>
 
+          {/* Smart Suggestions for Trip */}
+          {origin?.city && destination?.city && (
+            <SmartSuggestions
+              originCity={origin.city}
+              destinationCity={destination.city}
+              originLat={origin.lat}
+              originLng={origin.lng}
+              destLat={destination.lat}
+              destLng={destination.lng}
+              isShipment={false}
+              onSelectDate={(date) => {
+                const selectedDate = new Date(date);
+                handleChange('departureDate', selectedDate.toISOString().split('T')[0]);
+              }}
+              onSelectOriginLocation={(loc) => {
+                setOrigin(prev => ({
+                  ...prev,
+                  lat: loc.lat,
+                  lng: loc.lng,
+                  address: loc.name
+                }));
+                toast.success(`Local de partida atualizado: ${loc.name}`);
+              }}
+              onSelectDestLocation={(loc) => {
+                setDestination(prev => ({
+                  ...prev,
+                  lat: loc.lat,
+                  lng: loc.lng,
+                  address: loc.name
+                }));
+                toast.success(`Local de chegada atualizado: ${loc.name}`);
+              }}
+            />
+          )}
+
           {/* Route Corridor - Mobile Optimized */}
           <Card data-testid="corridor-card">
             <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
