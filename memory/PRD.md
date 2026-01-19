@@ -72,6 +72,23 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - `SmartSuggestions.js` - Painel de sugestões inteligentes
 - `IntelligentPricing.js` - Estimativa de preço, categorias, capacidade
 
+#### 4. Integração UI (Fase 2)
+- Sugestões integradas em `CreateShipmentPage.js`
+- Sugestões integradas em `CreateTripPage.js`
+- Capacidade e ganhos exibidos em `MatchSuggestionsPage.js`
+- Callbacks para aplicar sugestões de data/local automaticamente
+
+#### 5. Notificações Automatizadas (Fase 3)
+**Arquivo:** `/app/backend/notification_service.py`
+- Novos tipos de notificação:
+  - `SUGGESTED_DATE_AVAILABLE` - Datas com mais transportadores
+  - `SUGGESTED_LOCATION` - Pontos estratégicos
+  - `CAPACITY_LOW_WARNING` - Aviso de capacidade baixa
+  - `BETTER_PRICE_AVAILABLE` - Preço melhor disponível
+- Email automático para eventos críticos (pagamento, entrega, disputas)
+- Template HTML responsivo para emails
+- Funções de conveniência: `notify_capacity_warning`, `notify_new_match_available`
+
 ### Funcionalidades Core Anteriores:
 1. **Sistema de Autenticação**
    - Registro de usuário com roles (sender, carrier, both, admin)
