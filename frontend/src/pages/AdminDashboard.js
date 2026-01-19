@@ -660,6 +660,118 @@ const AdminDashboard = () => {
                 )}
               </>
             )}
+
+            {/* All Users Tab */}
+            {activeTab === 'all-users' && (
+              <>
+                {/* Filters */}
+                <div className="flex gap-4 mb-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Status:</Label>
+                    <Select value={userFilter.status} onValueChange={(v) => setUserFilter(prev => ({ ...prev, status: v }))}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="verified">Verificado</SelectItem>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="rejected">Rejeitado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm">Tipo:</Label>
+                    <Select value={userFilter.role} onValueChange={(v) => setUserFilter(prev => ({ ...prev, role: v }))}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todos</SelectItem>
+                        <SelectItem value="sender">Remetente</SelectItem>
+                        <SelectItem value="carrier">Transportador</SelectItem>
+                        <SelectItem value="both">Ambos</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-sm text-muted-foreground self-center">
+                    Exibindo {filteredUsers.length} de {allUsers.length} usuários
+                  </p>
+                </div>
+
+                {filteredUsers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhum usuário encontrado</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredUsers.map((u) => {
+                      const statusBadge = getVerificationStatusBadge(u.verification_status);
+                      const roleBadge = getRoleBadge(u.role);
+                      return (
+                        <Card key={u.id} className="border hover:border-jungle/30 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between gap-4 flex-wrap">
+                              <div className="flex items-center gap-3 min-w-[200px]">
+                                <div className="w-10 h-10 bg-jungle/10 rounded-full flex items-center justify-center">
+                                  <Users size={20} className="text-jungle" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold">{u.name}</p>
+                                  <p className="text-sm text-muted-foreground">{u.email}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <Badge className={roleBadge.color}>{roleBadge.label}</Badge>
+                                <Badge className={statusBadge.color}>{statusBadge.label}</Badge>
+                              </div>
+
+                              <div className="flex items-center gap-4 text-sm">
+                                <div className="text-center">
+                                  <p className="font-semibold">{u.total_deliveries || 0}</p>
+                                  <p className="text-xs text-muted-foreground">Entregas</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="font-semibold">⭐ {u.rating?.toFixed(1) || '0.0'}</p>
+                                  <p className="text-xs text-muted-foreground">Avaliação</p>
+                                </div>
+                              </div>
+
+                              <div className="text-sm">
+                                <p className="text-xs text-muted-foreground">Cadastrado em</p>
+                                <p>{u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : 'N/A'}</p>
+                              </div>
+
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openUserDetailDialog(u.id)}
+                                >
+                                  Detalhes
+                                </Button>
+                                {u.role !== 'admin' && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => openDeleteUserDialog(u)}
+                                  >
+                                    Excluir
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
