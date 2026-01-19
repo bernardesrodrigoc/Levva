@@ -65,6 +65,92 @@ async def get_pending_verifications(user: dict = Depends(get_current_admin_user)
     return result
 
 
+@router.get("/verifications/approved")
+async def get_approved_verifications(user: dict = Depends(get_current_admin_user)):
+    """Get approved verification requests."""
+    verifications = await verifications_collection.find({"status": "approved"}).sort("reviewed_at", -1).to_list(200)
+    
+    result = []
+    for verification in verifications:
+        user_data = await users_collection.find_one({"_id": ObjectId(verification["user_id"])})
+        if user_data:
+            verification["id"] = str(verification.pop("_id"))
+            verification["user_name"] = user_data["name"]
+            verification["user_email"] = user_data["email"]
+            verification["user_role"] = user_data["role"]
+            verification["user_phone"] = user_data.get("phone", "")
+            verification["trust_level"] = user_data.get("trust_level", "level_1")
+            verification["total_deliveries"] = user_data.get("total_deliveries", 0)
+            verification["rating"] = user_data.get("rating", 0)
+            result.append(verification)
+    
+    return result
+
+
+@router.get("/users")
+async def get_all_users(
+    status: str = None,
+    role: str = None,
+    user: dict = Depends(get_current_admin_user)
+):
+    """Get all users with optional filters."""
+    query = {}
+    if status:
+        query["verification_status"] = status
+    if role:
+        query["role"] = role
+    
+    users = await users_collection.find(query).sort("created_at", -1).to_list(500)
+    
+    result = []
+    for u in users:
+        result.append({
+            "id": str(u["_id"]),
+            "name": u["name"],
+            "email": u["email"],
+            "phone": u.get("phone", ""),
+            "role": u["role"],
+            "verification_status": u.get("verification_status", "pending"),
+            "trust_level": u.get("trust_level", "level_1"),
+            "total_deliveries": u.get("total_deliveries", 0),
+            "rating": u.get("rating", 0),
+            "created_at": u.get("created_at").isoformat() if u.get("created_at") else None
+        })
+    
+    return result
+
+
+@router.post("/users/{user_id}/revoke-verification")
+async def revoke_user_verification(user_id: str, data: dict, user: dict = Depends(get_current_admin_user)):
+    """Revoke a user's verification status."""
+    target_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    reason = data.get("reason", "Verificação revogada pelo administrador")
+    
+    # Update user verification status
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"verification_status": VerificationStatus.REJECTED}}
+    )
+    
+    # Update verification record
+    await verifications_collection.update_one(
+        {"user_id": user_id, "status": "approved"},
+        {
+            "$set": {
+                "status": "revoked",
+                "revoked_at": datetime.now(timezone.utc),
+                "revoked_by": str(user["_id"]),
+                "revoke_reason": reason
+            }
+        }
+    )
+    
+    return {"message": "Verificação revogada", "user_id": user_id}
+
+
 @router.post("/verifications/{verification_id}/review")
 async def review_verification(
     verification_id: str,
