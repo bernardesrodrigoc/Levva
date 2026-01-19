@@ -184,7 +184,6 @@ async def estimate_capacity_slots(
         avg_package_weight_kg,
         avg_package_volume_liters
     )
-    }
 
 
 @router.get("/capacity/available-trips")
