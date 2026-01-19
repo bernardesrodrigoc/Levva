@@ -315,8 +315,8 @@ async def get_matching_trips(
     
     return {
         "shipment_location": {
-            "origin": {"lat": origin_lat, "lng": origin_lng},
-            "destination": {"lat": dest_lat, "lng": dest_lng}
+            "origin": {"lat": request.origin_lat, "lng": request.origin_lng},
+            "destination": {"lat": request.dest_lat, "lng": request.dest_lng}
         },
         "matching_criteria": "geospatial_corridor",
         "total_matching_trips": len(matching_trips),
