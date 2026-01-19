@@ -436,7 +436,7 @@ const AdminDashboard = () => {
             <CardDescription>Gerencie verificações pendentes e aprovadas</CardDescription>
             
             {/* Tabs */}
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-4 flex-wrap">
               <Button
                 variant={activeTab === 'pending' ? 'default' : 'outline'}
                 onClick={() => setActiveTab('pending')}
@@ -450,6 +450,13 @@ const AdminDashboard = () => {
                 className={activeTab === 'approved' ? 'bg-jungle hover:bg-jungle-800' : ''}
               >
                 Aprovadas ({approvedVerifications.length})
+              </Button>
+              <Button
+                variant={activeTab === 'all-users' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('all-users')}
+                className={activeTab === 'all-users' ? 'bg-jungle hover:bg-jungle-800' : ''}
+              >
+                Todos os Usuários ({allUsers.length})
               </Button>
             </div>
           </CardHeader>
