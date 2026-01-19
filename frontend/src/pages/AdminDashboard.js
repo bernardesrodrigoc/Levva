@@ -75,16 +75,18 @@ const AdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [statsRes, verificationsRes, approvedRes, disputesRes] = await Promise.all([
+      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/verifications/pending`, { headers }),
         axios.get(`${API}/admin/verifications/approved`, { headers }),
+        axios.get(`${API}/admin/users`, { headers }),
         axios.get(`${API}/admin/disputes`, { headers }).catch(() => ({ data: [] }))
       ]);
       
       setStats(statsRes.data);
       setPendingVerifications(verificationsRes.data);
       setApprovedVerifications(approvedRes.data);
+      setAllUsers(usersRes.data);
       setDisputes(disputesRes.data);
       
     } catch (error) {
