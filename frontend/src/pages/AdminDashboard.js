@@ -939,6 +939,50 @@ const AdminDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Revoke Verification Dialog */}
+      <Dialog open={showRevokeDialog} onOpenChange={setShowRevokeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Revogar Verificação</DialogTitle>
+            <DialogDescription>
+              Esta ação irá revogar a verificação do usuário. Ele não poderá mais usar as funcionalidades da plataforma até ser verificado novamente.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedVerification && (
+            <div className="space-y-4">
+              <div className="bg-muted/20 p-4 rounded-lg">
+                <p className="font-semibold">{selectedVerification.user_name}</p>
+                <p className="text-sm text-muted-foreground">{selectedVerification.user_email}</p>
+                <p className="text-sm font-mono mt-1">CPF: {selectedVerification.cpf}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Motivo da Revogação *</label>
+                <Textarea
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                  placeholder="Descreva o motivo da revogação..."
+                  rows={3}
+                  className="mt-2"
+                />
+              </div>
+              <div className="flex gap-4">
+                <Button variant="outline" className="flex-1" onClick={() => setShowRevokeDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleRevokeVerification} 
+                  variant="destructive"
+                  className="flex-1"
+                  disabled={!revokeReason.trim()}
+                >
+                  Confirmar Revogação
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
