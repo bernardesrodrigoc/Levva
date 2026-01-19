@@ -230,27 +230,80 @@ async def create_match(
     shipment_id: str,
     user_id: str = Depends(get_current_user_id)
 ):
-    """Create a match between a trip and shipment."""
+    """Create a match between a trip and shipment with intelligent pricing."""
     trip = await trips_collection.find_one({"_id": ObjectId(trip_id)})
     shipment = await shipments_collection.find_one({"_id": ObjectId(shipment_id)})
     
     if not trip or not shipment:
         raise HTTPException(status_code=404, detail="Viagem ou envio não encontrado")
     
-    # Calculate price
-    price_per_kg = trip.get("price_per_kg") or 5.0
-    base_price = shipment["package"]["weight_kg"] * price_per_kg
-    platform_commission = base_price * 0.15
-    carrier_earnings = base_price - platform_commission
+    # Check capacity
+    package = shipment.get("package", {})
+    weight_kg = package.get("weight_kg", 1)
+    length_cm = package.get("length_cm", 20)
+    width_cm = package.get("width_cm", 20)
+    height_cm = package.get("height_cm", 20)
+    
+    can_fit, reason, _ = await can_add_shipment_to_trip(
+        trip_id, weight_kg, length_cm, width_cm, height_cm
+    )
+    
+    if not can_fit:
+        raise HTTPException(status_code=400, detail=reason)
+    
+    # Calculate intelligent price
+    distance_km = haversine_distance(
+        shipment["origin"].get("lat", 0), shipment["origin"].get("lng", 0),
+        shipment["destination"].get("lat", 0), shipment["destination"].get("lng", 0)
+    )
+    
+    # Calculate deviation from trip route
+    deviation_km = 0
+    if trip.get("route_polyline"):
+        pickup_dist = haversine_distance(
+            shipment["origin"].get("lat", 0), shipment["origin"].get("lng", 0),
+            trip["origin"].get("lat", 0), trip["origin"].get("lng", 0)
+        )
+        dropoff_dist = haversine_distance(
+            shipment["destination"].get("lat", 0), shipment["destination"].get("lng", 0),
+            trip["destination"].get("lat", 0), trip["destination"].get("lng", 0)
+        )
+        deviation_km = pickup_dist + dropoff_dist
+    
+    # Get current trip capacity usage
+    cargo_space = trip.get("cargo_space", {})
+    max_weight = cargo_space.get("max_weight_kg", 50)
+    used_weight = max_weight - trip.get("available_weight_kg", max_weight)
+    capacity_percent = (used_weight / max_weight * 100) if max_weight > 0 else 0
+    
+    price_result = await calculate_intelligent_price(
+        distance_km=distance_km,
+        deviation_km=deviation_km,
+        corridor_radius_km=trip.get("corridor_radius_km", 10),
+        weight_kg=weight_kg,
+        length_cm=length_cm,
+        width_cm=width_cm,
+        height_cm=height_cm,
+        category=package.get("category"),
+        trip_used_capacity_percent=capacity_percent,
+        origin_city=shipment["origin"].get("city", ""),
+        destination_city=shipment["destination"].get("city", ""),
+        departure_date=trip.get("departure_date", datetime.now(timezone.utc))
+    )
+    
+    total_price = price_result["total_price"]
+    carrier_earnings = price_result["carrier_earnings"]
+    platform_commission = price_result["_breakdown"]["platform_commission"]
     
     match_doc = {
         "trip_id": trip_id,
         "shipment_id": shipment_id,
         "carrier_id": trip["carrier_id"],
         "sender_id": shipment["sender_id"],
-        "estimated_price": base_price,
+        "estimated_price": total_price,
         "platform_commission": platform_commission,
         "carrier_earnings": carrier_earnings,
+        "pricing_breakdown": price_result["_breakdown"],
         "status": "pending_payment",
         "pickup_confirmed_at": None,
         "delivery_confirmed_at": None,
@@ -259,21 +312,41 @@ async def create_match(
     
     result = await matches_collection.insert_one(match_doc)
     
-    # Update statuses
-    await trips_collection.update_one(
-        {"_id": ObjectId(trip_id)},
-        {"$set": {"status": TripStatus.MATCHED}}
-    )
+    # Update trip status (keep as published to allow multiple shipments)
+    # Only update to MATCHED if this is significant capacity usage
+    await update_trip_available_capacity(trip_id)
+    
+    # Update shipment status
     await shipments_collection.update_one(
         {"_id": ObjectId(shipment_id)},
         {"$set": {"status": ShipmentStatus.MATCHED}}
     )
     
+    # Notify both parties
+    route = f"{shipment['origin'].get('city', '')} → {shipment['destination'].get('city', '')}"
+    await create_notification(
+        shipment["sender_id"],
+        NotificationType.MATCH_CREATED,
+        {"route": route, "amount": f"{total_price:.2f}"},
+        str(result.inserted_id)
+    )
+    await create_notification(
+        trip["carrier_id"],
+        NotificationType.MATCH_CREATED,
+        {"route": route, "amount": f"{total_price:.2f}"},
+        str(result.inserted_id)
+    )
+    
     return {
         "id": str(result.inserted_id),
-        "estimated_price": base_price,
+        "estimated_price": total_price,
         "carrier_earnings": carrier_earnings,
-        "platform_commission": platform_commission
+        "platform_commission": platform_commission,
+        "pricing_details": {
+            "distance_km": price_result["_breakdown"]["distance_km"],
+            "category": price_result["_breakdown"]["category_name"],
+            "deviation_km": price_result["_breakdown"]["deviation_km"]
+        }
     }
 
 
