@@ -5,12 +5,18 @@ Provides intelligent suggestions for:
 - Best dates/times with higher match probability
 - Strategic pickup/drop-off locations
 - Optimized grouping of nearby shipments
+
+MATCHING PRINCIPLE: Geospatial-first approach
+- Primary criterion: Coordinates + corridor radius
+- Secondary: Route polyline deviation
+- Fallback only: City name (when coordinates unavailable)
 """
 
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 import logging
 from collections import defaultdict
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +65,6 @@ STRATEGIC_POINTS = {
 
 def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Calculate distance between two points in km"""
-    import math
     R = 6371
     lat1_rad, lat2_rad = math.radians(lat1), math.radians(lat2)
     delta_lat = math.radians(lat2 - lat1)
@@ -68,122 +73,154 @@ def haversine_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> fl
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
 
-def normalize_city_name(city: str) -> str:
-    """Normalize city name by removing accents, spaces and converting to lowercase"""
-    import unicodedata
-    import re
-    # Remove accents
-    normalized = unicodedata.normalize('NFD', city)
-    normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
-    # Remove spaces and special chars, keep only alphanumeric
-    normalized = re.sub(r'[^a-zA-Z0-9]', '', normalized)
-    return normalized.lower()
+def point_to_polyline_distance(
+    point_lat: float, 
+    point_lng: float, 
+    polyline: List[List[float]]
+) -> float:
+    """
+    Calculate the minimum distance from a point to a polyline (in kilometers).
+    Reused from route_service for consistency.
+    """
+    if not polyline or len(polyline) < 2:
+        return float('inf')
+    
+    min_distance = float('inf')
+    
+    for i in range(len(polyline) - 1):
+        segment_start = polyline[i]
+        segment_end = polyline[i + 1]
+        
+        # Vector math for point-to-segment distance
+        line_vec = (segment_end[0] - segment_start[0], segment_end[1] - segment_start[1])
+        point_vec = (point_lat - segment_start[0], point_lng - segment_start[1])
+        
+        line_len_sq = line_vec[0] ** 2 + line_vec[1] ** 2
+        
+        if line_len_sq == 0:
+            distance = haversine_distance(point_lat, point_lng, segment_start[0], segment_start[1])
+        else:
+            t = max(0, min(1, (point_vec[0] * line_vec[0] + point_vec[1] * line_vec[1]) / line_len_sq))
+            closest_lat = segment_start[0] + t * line_vec[0]
+            closest_lng = segment_start[1] + t * line_vec[1]
+            distance = haversine_distance(point_lat, point_lng, closest_lat, closest_lng)
+        
+        min_distance = min(min_distance, distance)
+    
+    return min_distance
 
 
-def get_strategic_points_for_city(city: str) -> List[dict]:
-    """Get strategic meeting points for a city"""
-    city_normalized = normalize_city_name(city)
+def check_geospatial_match(
+    shipment_origin_lat: float,
+    shipment_origin_lng: float,
+    shipment_dest_lat: float,
+    shipment_dest_lng: float,
+    trip_origin_lat: float,
+    trip_origin_lng: float,
+    trip_dest_lat: float,
+    trip_dest_lng: float,
+    corridor_radius_km: float,
+    route_polyline: Optional[List[List[float]]] = None
+) -> Tuple[bool, dict]:
+    """
+    Check if a shipment matches a trip using geospatial criteria.
+    
+    Primary: Coordinate distance within corridor radius
+    Secondary: Route polyline deviation (if available)
+    
+    Returns (matches, details)
+    """
+    # If we have a route polyline, use it for precise matching
+    if route_polyline and len(route_polyline) >= 2:
+        pickup_distance = point_to_polyline_distance(
+            shipment_origin_lat, shipment_origin_lng, route_polyline
+        )
+        dropoff_distance = point_to_polyline_distance(
+            shipment_dest_lat, shipment_dest_lng, route_polyline
+        )
+        
+        matches = pickup_distance <= corridor_radius_km and dropoff_distance <= corridor_radius_km
+        
+        return matches, {
+            "match_type": "polyline_corridor",
+            "pickup_distance_km": round(pickup_distance, 2),
+            "dropoff_distance_km": round(dropoff_distance, 2),
+            "total_deviation_km": round(pickup_distance + dropoff_distance, 2),
+            "corridor_radius_km": corridor_radius_km
+        }
+    
+    # Fallback: Simple point-to-point distance matching
+    # Check if shipment origin is near trip origin AND shipment dest is near trip dest
+    origin_distance = haversine_distance(
+        shipment_origin_lat, shipment_origin_lng,
+        trip_origin_lat, trip_origin_lng
+    )
+    dest_distance = haversine_distance(
+        shipment_dest_lat, shipment_dest_lng,
+        trip_dest_lat, trip_dest_lng
+    )
+    
+    matches = origin_distance <= corridor_radius_km and dest_distance <= corridor_radius_km
+    
+    return matches, {
+        "match_type": "point_proximity",
+        "pickup_distance_km": round(origin_distance, 2),
+        "dropoff_distance_km": round(dest_distance, 2),
+        "total_deviation_km": round(origin_distance + dest_distance, 2),
+        "corridor_radius_km": corridor_radius_km
+    }
+
+
+def get_strategic_points_for_location(lat: float, lng: float, max_distance_km: float = 20) -> List[dict]:
+    """
+    Get strategic meeting points near a given location.
+    Uses coordinates, not city names.
+    """
+    nearby_points = []
     
     for city_name, points in STRATEGIC_POINTS.items():
-        city_name_normalized = normalize_city_name(city_name)
-        if city_name_normalized in city_normalized or city_normalized in city_name_normalized:
-            return points
+        for point in points:
+            distance = haversine_distance(lat, lng, point["lat"], point["lng"])
+            if distance <= max_distance_km:
+                nearby_points.append({
+                    **point,
+                    "city": city_name,
+                    "distance_km": round(distance, 1)
+                })
     
-    # Return empty if city not found
-    return []
-
-
-def create_city_regex(city: str) -> str:
-    """
-    Create a flexible regex pattern for city name matching.
-    Handles variations like:
-    - "SaoPaulo" vs "São Paulo" vs "Sao Paulo"
-    - "RiodeJaneiro" vs "Rio de Janeiro"
-    - With/without accents
-    - With/without spaces
-    """
-    import re
-    
-    # Known compound city patterns (to handle "RiodeJaneiro" correctly)
-    compound_cities = {
-        'riodejaneiro': ['rio', 'de', 'janeiro'],
-        'belohorizonte': ['belo', 'horizonte'],
-        'portoalegre': ['porto', 'alegre'],
-        'campogrande': ['campo', 'grande'],
-        'ribeirapreto': ['ribeira', 'preto'],
-        'saobernardo': ['sao', 'bernardo'],
-        'saojose': ['sao', 'jose'],
-        'saoluis': ['sao', 'luis'],
-        'juizdefora': ['juiz', 'de', 'fora'],
-    }
-    
-    # First normalize to lowercase without accents
-    import unicodedata
-    normalized = unicodedata.normalize('NFD', city)
-    normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
-    normalized_key = re.sub(r'[^a-zA-Z]', '', normalized).lower()
-    
-    # Check if it's a known compound city
-    if normalized_key in compound_cities:
-        words = compound_cities[normalized_key]
-    else:
-        # Try to split camelCase (SaoPaulo -> Sao Paulo)
-        spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', city)
-        # Also handle all-lowercase compounds by trying to find word boundaries
-        normalized_spaced = unicodedata.normalize('NFD', spaced)
-        normalized_spaced = ''.join(c for c in normalized_spaced if unicodedata.category(c) != 'Mn')
-        words = normalized_spaced.split()
-    
-    # Create pattern for each word with accent variations
-    word_patterns = []
-    for word in words:
-        # Remove any non-alphanumeric from word
-        word = re.sub(r'[^a-zA-Z]', '', word).lower()
-        if not word:
-            continue
-            
-        pattern_parts = []
-        for char in word:
-            if char == 'a':
-                pattern_parts.append('[aáàâãAÁÀÂÃ]')
-            elif char == 'e':
-                pattern_parts.append('[eéèêEÉÈÊ]')
-            elif char == 'i':
-                pattern_parts.append('[iíìîIÍÌÎ]')
-            elif char == 'o':
-                pattern_parts.append('[oóòôõOÓÒÔÕ]')
-            elif char == 'u':
-                pattern_parts.append('[uúùûUÚÙÛ]')
-            elif char == 'c':
-                pattern_parts.append('[cçCÇ]')
-            else:
-                pattern_parts.append(f'[{char.lower()}{char.upper()}]')
-        word_patterns.append(''.join(pattern_parts))
-    
-    # Join words with pattern that matches 0 or more spaces/no space
-    # This allows "SaoPaulo" to match "São Paulo" and vice versa
-    return r'[\s]*'.join(word_patterns)
+    # Sort by distance
+    nearby_points.sort(key=lambda x: x["distance_km"])
+    return nearby_points
 
 
 async def get_date_suggestions(
-    origin_city: str,
-    destination_city: str,
+    origin_lat: float,
+    origin_lng: float,
+    dest_lat: float,
+    dest_lng: float,
     preferred_date: datetime = None,
     is_shipment: bool = True,
-    days_ahead: int = 7
+    days_ahead: int = 7,
+    max_corridor_km: float = 50.0
 ) -> List[dict]:
     """
     Suggest dates with higher match probability.
-    Analyzes existing trips/shipments on similar routes.
+    
+    GEOSPATIAL-FIRST: Analyzes existing trips/shipments based on
+    coordinate proximity, not city names.
+    
+    Args:
+        origin_lat, origin_lng: Shipment origin coordinates
+        dest_lat, dest_lng: Shipment destination coordinates
+        preferred_date: Starting date for suggestions
+        is_shipment: True if looking for trips, False if looking for shipments
+        days_ahead: Number of days to analyze
+        max_corridor_km: Maximum corridor radius to consider for matching
     """
     from database import trips_collection, shipments_collection
     
     if preferred_date is None:
         preferred_date = datetime.now()
-    
-    # Create flexible regex patterns for city matching
-    origin_pattern = create_city_regex(origin_city)
-    dest_pattern = create_city_regex(destination_city)
     
     suggestions = []
     
@@ -193,28 +230,75 @@ async def get_date_suggestions(
         start_of_day = check_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_of_day = start_of_day + timedelta(days=1)
         
-        # Count trips on this route/date
-        trips_count = await trips_collection.count_documents({
-            "origin.city": {"$regex": origin_pattern, "$options": "i"},
-            "destination.city": {"$regex": dest_pattern, "$options": "i"},
-            "departure_date": {"$gte": start_of_day, "$lt": end_of_day},
-            "status": "published"
-        })
-        
-        # Count shipments on this route
-        shipments_count = await shipments_collection.count_documents({
-            "origin.city": {"$regex": origin_pattern, "$options": "i"},
-            "destination.city": {"$regex": dest_pattern, "$options": "i"},
-            "status": "published"
-        })
-        
-        # Calculate match probability
         if is_shipment:
-            # For shipments: more trips = higher probability
+            # Looking for trips that can carry this shipment
+            # Get all published trips for this date
+            trips = await trips_collection.find({
+                "departure_date": {"$gte": start_of_day, "$lt": end_of_day},
+                "status": "published"
+            }).to_list(100)
+            
+            # Filter by geospatial match
+            matching_trips = []
+            for trip in trips:
+                trip_origin_lat = trip.get("origin", {}).get("lat", 0)
+                trip_origin_lng = trip.get("origin", {}).get("lng", 0)
+                trip_dest_lat = trip.get("destination", {}).get("lat", 0)
+                trip_dest_lng = trip.get("destination", {}).get("lng", 0)
+                
+                # Skip trips without valid coordinates
+                if not all([trip_origin_lat, trip_origin_lng, trip_dest_lat, trip_dest_lng]):
+                    continue
+                
+                corridor_radius = trip.get("corridor_radius_km", 10.0)
+                route_polyline = trip.get("route_polyline")
+                
+                matches, details = check_geospatial_match(
+                    origin_lat, origin_lng, dest_lat, dest_lng,
+                    trip_origin_lat, trip_origin_lng, trip_dest_lat, trip_dest_lng,
+                    corridor_radius, route_polyline
+                )
+                
+                if matches:
+                    matching_trips.append({
+                        "trip": trip,
+                        "details": details
+                    })
+            
+            trips_count = len(matching_trips)
             match_score = min(100, trips_count * 25) if trips_count > 0 else 10
             availability = f"{trips_count} transportador(es) disponível(eis)"
+            
         else:
-            # For trips: more shipments = higher probability
+            # Looking for shipments for this trip
+            shipments = await shipments_collection.find({
+                "status": "published"
+            }).to_list(100)
+            
+            # Filter by geospatial match (treating input coords as trip coords)
+            matching_shipments = []
+            for shipment in shipments:
+                shipment_origin_lat = shipment.get("origin", {}).get("lat", 0)
+                shipment_origin_lng = shipment.get("origin", {}).get("lng", 0)
+                shipment_dest_lat = shipment.get("destination", {}).get("lat", 0)
+                shipment_dest_lng = shipment.get("destination", {}).get("lng", 0)
+                
+                if not all([shipment_origin_lat, shipment_origin_lng, shipment_dest_lat, shipment_dest_lng]):
+                    continue
+                
+                matches, details = check_geospatial_match(
+                    shipment_origin_lat, shipment_origin_lng, shipment_dest_lat, shipment_dest_lng,
+                    origin_lat, origin_lng, dest_lat, dest_lng,
+                    max_corridor_km, None
+                )
+                
+                if matches:
+                    matching_shipments.append({
+                        "shipment": shipment,
+                        "details": details
+                    })
+            
+            shipments_count = len(matching_shipments)
             match_score = min(100, shipments_count * 20) if shipments_count > 0 else 10
             availability = f"{shipments_count} envio(s) aguardando"
         
@@ -241,8 +325,8 @@ async def get_date_suggestions(
             "recommendation_level": recommendation,
             "reason": reason,
             "availability": availability,
-            "trips_available": trips_count,
-            "shipments_waiting": shipments_count
+            "trips_available": trips_count if is_shipment else 0,
+            "shipments_waiting": shipments_count if not is_shipment else 0
         })
     
     # Sort by match probability
@@ -251,67 +335,187 @@ async def get_date_suggestions(
     return suggestions
 
 
+async def get_matching_trips_for_shipment(
+    origin_lat: float,
+    origin_lng: float,
+    dest_lat: float,
+    dest_lng: float,
+    weight_kg: float = 1.0,
+    preferred_date: datetime = None,
+    days_ahead: int = 14
+) -> List[dict]:
+    """
+    Get trips that can carry a shipment based on geospatial matching.
+    
+    This is the core function for showing "compatible trips" during shipment creation.
+    Uses coordinate-based matching as primary criterion.
+    
+    Returns list of matching trips with match details.
+    """
+    from database import trips_collection, users_collection
+    
+    if preferred_date is None:
+        preferred_date = datetime.now()
+    
+    start_date = preferred_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = start_date + timedelta(days=days_ahead)
+    
+    # Get all published trips in date range with sufficient capacity
+    trips = await trips_collection.find({
+        "departure_date": {"$gte": start_date, "$lt": end_date},
+        "status": "published",
+        "$or": [
+            {"available_capacity_kg": {"$gte": weight_kg}},
+            {"cargo_space.max_weight_kg": {"$gte": weight_kg}},
+            {"available_capacity_kg": {"$exists": False}}
+        ]
+    }).to_list(100)
+    
+    matching_trips = []
+    
+    for trip in trips:
+        trip_origin_lat = trip.get("origin", {}).get("lat", 0)
+        trip_origin_lng = trip.get("origin", {}).get("lng", 0)
+        trip_dest_lat = trip.get("destination", {}).get("lat", 0)
+        trip_dest_lng = trip.get("destination", {}).get("lng", 0)
+        
+        # Skip trips without valid coordinates
+        if not all([trip_origin_lat, trip_origin_lng, trip_dest_lat, trip_dest_lng]):
+            logger.debug(f"Skipping trip {trip.get('_id')} - missing coordinates")
+            continue
+        
+        corridor_radius = trip.get("corridor_radius_km", 10.0)
+        route_polyline = trip.get("route_polyline")
+        
+        matches, details = check_geospatial_match(
+            origin_lat, origin_lng, dest_lat, dest_lng,
+            trip_origin_lat, trip_origin_lng, trip_dest_lat, trip_dest_lng,
+            corridor_radius, route_polyline
+        )
+        
+        if matches:
+            # Get carrier info
+            carrier = await users_collection.find_one({"_id": trip.get("carrier_id")})
+            if not carrier:
+                try:
+                    from bson import ObjectId
+                    carrier = await users_collection.find_one({"_id": ObjectId(trip.get("carrier_id"))})
+                except:
+                    carrier = None
+            
+            # Calculate match score
+            avg_deviation = details["total_deviation_km"] / 2
+            deviation_score = max(0, 40 * (1 - avg_deviation / corridor_radius))
+            rating_score = (carrier.get("rating", 0) / 5.0 * 30) if carrier else 0
+            
+            cargo_space = trip.get("cargo_space", {})
+            max_weight = cargo_space.get("max_weight_kg", 50)
+            available_weight = trip.get("available_capacity_kg", max_weight)
+            
+            if max_weight > 0:
+                capacity_ratio = weight_kg / max_weight
+                if 0.3 <= capacity_ratio <= 0.8:
+                    capacity_score = 20
+                elif capacity_ratio < 0.3:
+                    capacity_score = 10
+                else:
+                    capacity_score = 15
+            else:
+                capacity_score = 10
+            
+            match_score = min(100, deviation_score + rating_score + capacity_score + 10)
+            
+            matching_trips.append({
+                "trip_id": str(trip["_id"]),
+                "carrier_id": trip.get("carrier_id"),
+                "carrier_name": carrier.get("name", "Transportador") if carrier else "Transportador",
+                "carrier_rating": carrier.get("rating", 0) if carrier else 0,
+                "origin_city": trip.get("origin", {}).get("city", ""),
+                "destination_city": trip.get("destination", {}).get("city", ""),
+                "departure_date": trip.get("departure_date"),
+                "vehicle_type": trip.get("vehicle_type"),
+                "corridor_radius_km": corridor_radius,
+                "available_capacity_kg": available_weight,
+                "max_capacity_kg": max_weight,
+                "match_score": round(match_score, 1),
+                "match_details": details,
+                "price_per_kg": trip.get("price_per_kg")
+            })
+    
+    # Sort by match score (highest first)
+    matching_trips.sort(key=lambda x: x["match_score"], reverse=True)
+    
+    return matching_trips
+
+
 async def get_location_suggestions(
     user_lat: float,
     user_lng: float,
-    city: str,
     is_origin: bool = True
 ) -> List[dict]:
     """
     Suggest optimized locations for pickup/dropoff.
-    Considers strategic points and existing aggregation opportunities.
+    
+    Uses COORDINATES to find nearby strategic points and aggregation opportunities.
+    No city name dependency.
     """
     from database import shipments_collection
     
     suggestions = []
     
-    # 1. Strategic city points
-    strategic_points = get_strategic_points_for_city(city)
-    for point in strategic_points:
-        distance = haversine_distance(user_lat, user_lng, point["lat"], point["lng"])
-        if distance <= 15:  # Within 15km
-            suggestions.append({
-                "type": "strategic_point",
-                "name": point["name"],
-                "lat": point["lat"],
-                "lng": point["lng"],
-                "distance_km": round(distance, 1),
-                "reason": f"Ponto estratégico de fácil acesso ({point['type']})",
-                "benefit": "Local movimentado com mais opções de transportadores"
-            })
+    # 1. Strategic points near the user's location
+    strategic_points = get_strategic_points_for_location(user_lat, user_lng, max_distance_km=15)
+    for point in strategic_points[:5]:  # Limit to 5 nearest
+        suggestions.append({
+            "type": "strategic_point",
+            "name": point["name"],
+            "city": point.get("city", ""),
+            "lat": point["lat"],
+            "lng": point["lng"],
+            "distance_km": point["distance_km"],
+            "reason": f"Ponto estratégico de fácil acesso ({point['type']})",
+            "benefit": "Local movimentado com mais opções de transportadores"
+        })
     
     # 2. Check for nearby shipments (aggregation opportunity)
     location_field = "origin" if is_origin else "destination"
-    city_pattern = create_city_regex(city)
-    nearby_shipments = await shipments_collection.find({
-        f"{location_field}.city": {"$regex": city_pattern, "$options": "i"},
-        "status": "published"
-    }).to_list(50)
     
-    # Group nearby shipments
+    # Get all published shipments and filter by proximity
+    all_shipments = await shipments_collection.find({
+        "status": "published"
+    }).to_list(100)
+    
+    # Group nearby shipments by proximity clusters
     clusters = defaultdict(list)
-    for shipment in nearby_shipments:
-        loc = shipment[location_field]
+    for shipment in all_shipments:
+        loc = shipment.get(location_field, {})
         s_lat, s_lng = loc.get("lat", 0), loc.get("lng", 0)
+        
+        if not s_lat or not s_lng:
+            continue
+        
         distance = haversine_distance(user_lat, user_lng, s_lat, s_lng)
         
         if distance <= 5:  # Within 5km
             # Round to create clusters
             cluster_key = (round(s_lat, 2), round(s_lng, 2))
-            clusters[cluster_key].append(shipment)
+            clusters[cluster_key].append({
+                "shipment": shipment,
+                "distance": distance
+            })
     
     # Add aggregation suggestions for clusters with 2+ shipments
     for (cluster_lat, cluster_lng), cluster_shipments in clusters.items():
         if len(cluster_shipments) >= 2:
-            distance = haversine_distance(user_lat, user_lng, cluster_lat, cluster_lng)
+            avg_distance = sum(s["distance"] for s in cluster_shipments) / len(cluster_shipments)
             suggestions.append({
                 "type": "aggregation_point",
                 "name": f"Área com {len(cluster_shipments)} envios próximos",
                 "lat": cluster_lat,
                 "lng": cluster_lng,
-                "distance_km": round(distance, 1),
+                "distance_km": round(avg_distance, 1),
                 "reason": f"Agrupe sua {'coleta' if is_origin else 'entrega'} com outros envios",
-                "benefit": f"Transportadores preferem rotas com múltiplas coletas",
+                "benefit": "Transportadores preferem rotas com múltiplas coletas",
                 "nearby_shipments_count": len(cluster_shipments)
             })
     
@@ -326,44 +530,62 @@ async def get_location_suggestions(
 
 
 async def get_time_slot_suggestions(
-    origin_city: str,
-    destination_city: str,
-    date: datetime
+    origin_lat: float,
+    origin_lng: float,
+    dest_lat: float,
+    dest_lng: float,
+    date: datetime,
+    corridor_radius_km: float = 50.0
 ) -> List[dict]:
     """
     Suggest optimal time slots for a given date.
+    
+    Uses GEOSPATIAL matching to find trips, not city names.
     """
     from database import trips_collection
     
     start_of_day = date.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = start_of_day + timedelta(days=1)
     
-    # Create flexible regex patterns
-    origin_pattern = create_city_regex(origin_city)
-    dest_pattern = create_city_regex(destination_city)
-    
-    # Get trips on this day
+    # Get all trips on this day
     trips = await trips_collection.find({
-        "origin.city": {"$regex": origin_pattern, "$options": "i"},
-        "destination.city": {"$regex": dest_pattern, "$options": "i"},
         "departure_date": {"$gte": start_of_day, "$lt": end_of_day},
         "status": "published"
-    }).to_list(50)
+    }).to_list(100)
     
-    # Count trips by time slot
+    # Filter by geospatial match and count by time slot
     time_slots = defaultdict(int)
+    
     for trip in trips:
-        dep_time = trip.get("departure_date")
-        if dep_time:
-            hour = dep_time.hour
-            if 6 <= hour < 10:
-                time_slots["morning_early"] += 1
-            elif 10 <= hour < 14:
-                time_slots["morning_late"] += 1
-            elif 14 <= hour < 18:
-                time_slots["afternoon"] += 1
-            elif 18 <= hour < 22:
-                time_slots["evening"] += 1
+        trip_origin_lat = trip.get("origin", {}).get("lat", 0)
+        trip_origin_lng = trip.get("origin", {}).get("lng", 0)
+        trip_dest_lat = trip.get("destination", {}).get("lat", 0)
+        trip_dest_lng = trip.get("destination", {}).get("lng", 0)
+        
+        if not all([trip_origin_lat, trip_origin_lng, trip_dest_lat, trip_dest_lng]):
+            continue
+        
+        trip_corridor = trip.get("corridor_radius_km", corridor_radius_km)
+        route_polyline = trip.get("route_polyline")
+        
+        matches, _ = check_geospatial_match(
+            origin_lat, origin_lng, dest_lat, dest_lng,
+            trip_origin_lat, trip_origin_lng, trip_dest_lat, trip_dest_lng,
+            trip_corridor, route_polyline
+        )
+        
+        if matches:
+            dep_time = trip.get("departure_date")
+            if dep_time:
+                hour = dep_time.hour
+                if 6 <= hour < 10:
+                    time_slots["morning_early"] += 1
+                elif 10 <= hour < 14:
+                    time_slots["morning_late"] += 1
+                elif 14 <= hour < 18:
+                    time_slots["afternoon"] += 1
+                elif 18 <= hour < 22:
+                    time_slots["evening"] += 1
     
     suggestions = [
         {
@@ -399,45 +621,66 @@ async def get_time_slot_suggestions(
 
 
 async def get_comprehensive_suggestions(
-    origin_city: str,
-    destination_city: str,
     origin_lat: float,
     origin_lng: float,
     dest_lat: float,
     dest_lng: float,
+    weight_kg: float = 1.0,
     preferred_date: datetime = None,
     is_shipment: bool = True
 ) -> dict:
     """
     Get all suggestions in one call.
+    
+    Fully geospatial-based - no city name dependencies.
     """
+    if preferred_date is None:
+        preferred_date = datetime.now()
+    
+    # Date suggestions
     date_suggestions = await get_date_suggestions(
-        origin_city, destination_city, preferred_date, is_shipment
+        origin_lat, origin_lng, dest_lat, dest_lng,
+        preferred_date, is_shipment
     )
     
+    # Matching trips (for shipments)
+    matching_trips = []
+    if is_shipment:
+        matching_trips = await get_matching_trips_for_shipment(
+            origin_lat, origin_lng, dest_lat, dest_lng,
+            weight_kg, preferred_date
+        )
+    
+    # Location suggestions
     origin_location_suggestions = await get_location_suggestions(
-        origin_lat, origin_lng, origin_city, is_origin=True
+        origin_lat, origin_lng, is_origin=True
     )
     
     dest_location_suggestions = await get_location_suggestions(
-        dest_lat, dest_lng, destination_city, is_origin=False
+        dest_lat, dest_lng, is_origin=False
     )
     
     # Best date for time slots
-    best_date = datetime.fromisoformat(date_suggestions[0]["date"]) if date_suggestions else datetime.now()
+    best_date = datetime.fromisoformat(date_suggestions[0]["date"]) if date_suggestions else preferred_date
     time_suggestions = await get_time_slot_suggestions(
-        origin_city, destination_city, best_date
+        origin_lat, origin_lng, dest_lat, dest_lng, best_date
     )
     
     return {
         "dates": date_suggestions[:5],
+        "matching_trips": matching_trips[:10],
         "origin_locations": origin_location_suggestions,
         "destination_locations": dest_location_suggestions,
         "time_slots": time_suggestions,
         "best_recommendation": {
             "date": date_suggestions[0] if date_suggestions else None,
+            "trip": matching_trips[0] if matching_trips else None,
             "origin": origin_location_suggestions[0] if origin_location_suggestions else None,
             "destination": dest_location_suggestions[0] if dest_location_suggestions else None,
             "time": time_suggestions[0] if time_suggestions else None
+        },
+        "match_summary": {
+            "total_matching_trips": len(matching_trips),
+            "best_match_score": matching_trips[0]["match_score"] if matching_trips else 0
         }
     }
