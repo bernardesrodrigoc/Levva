@@ -93,36 +93,6 @@ def get_strategic_points_for_city(city: str) -> List[dict]:
     return []
 
 
-def suggest_meeting_point(
-    user_lat: float,
-    user_lng: float,
-    city: str,
-    max_distance_km: float = 10
-) -> Optional[dict]:
-    """
-    Suggest the best strategic meeting point for a user.
-    Returns the closest strategic point within max_distance.
-    """
-    points = get_strategic_points_for_city(city)
-    
-    if not points:
-        return None
-    
-    best_point = None
-    best_distance = float('inf')
-    
-    for point in points:
-        distance = haversine_distance(user_lat, user_lng, point["lat"], point["lng"])
-        if distance < best_distance and distance <= max_distance_km:
-            best_distance = distance
-            best_point = {
-                **point,
-                "distance_km": round(distance, 1)
-            }
-    
-    return best_point
-
-
 async def get_date_suggestions(
     origin_city: str,
     destination_city: str,
