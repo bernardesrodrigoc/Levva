@@ -43,6 +43,12 @@ class NotificationType(str, Enum):
     
     # System events
     TRUST_LEVEL_UP = "trust_level_up"
+    
+    # Smart suggestions (Phase 2)
+    SUGGESTED_DATE_AVAILABLE = "suggested_date_available"
+    SUGGESTED_LOCATION = "suggested_location"
+    CAPACITY_LOW_WARNING = "capacity_low_warning"
+    BETTER_PRICE_AVAILABLE = "better_price_available"
 
 
 # Notification templates in Portuguese
@@ -56,7 +62,7 @@ NOTIFICATION_TEMPLATES = {
     },
     NotificationType.MATCH_CREATED: {
         "title": "Combinação Criada",
-        "body": "Sua combinação para {route} foi criada. Aguardando pagamento.",
+        "body": "Sua combinação para {route} foi criada. Valor: R$ {amount}. Aguardando pagamento.",
         "icon": "package",
         "priority": "high",
         "send_email": True
@@ -143,6 +149,34 @@ NOTIFICATION_TEMPLATES = {
         "body": "Parabéns! Você subiu para o nível {new_level}. Novos benefícios desbloqueados!",
         "icon": "trending-up",
         "priority": "medium",
+        "send_email": False
+    },
+    NotificationType.SUGGESTED_DATE_AVAILABLE: {
+        "title": "Data Sugerida Disponível",
+        "body": "Encontramos mais transportadores disponíveis em {suggested_date} para sua rota {route}.",
+        "icon": "calendar",
+        "priority": "low",
+        "send_email": False
+    },
+    NotificationType.SUGGESTED_LOCATION: {
+        "title": "Local Sugerido",
+        "body": "O ponto {location_name} pode facilitar sua coleta/entrega em {city}.",
+        "icon": "map-pin",
+        "priority": "low",
+        "send_email": False
+    },
+    NotificationType.CAPACITY_LOW_WARNING: {
+        "title": "Capacidade Quase Esgotada",
+        "body": "Sua viagem para {route} está com {capacity_percent}% da capacidade usada. Restam {remaining_kg}kg.",
+        "icon": "alert-circle",
+        "priority": "medium",
+        "send_email": False
+    },
+    NotificationType.BETTER_PRICE_AVAILABLE: {
+        "title": "Preço Melhor Disponível",
+        "body": "Uma nova viagem com preço melhor está disponível para sua rota {route}.",
+        "icon": "dollar-sign",
+        "priority": "low",
         "send_email": False
     }
 }
