@@ -103,38 +103,47 @@ def create_city_regex(city: str) -> str:
     """
     import re
     
-    # Normalize: remove accents
-    normalized = normalize_city_name(city)
+    # First, try to split camelCase (SaoPaulo -> Sao Paulo)
+    # Then normalize each word
+    spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', city)
     
-    # Split into words (handle camelCase like "SaoPaulo")
-    # Insert space before uppercase letters
-    words = re.sub(r'([a-z])([A-Z])', r'\1 \2', normalized)
-    words = words.split()
+    # Remove accents but keep spaces
+    import unicodedata
+    normalized = unicodedata.normalize('NFD', spaced)
+    normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    
+    # Split into words
+    words = normalized.split()
     
     # Create pattern for each word with accent variations
     word_patterns = []
     for word in words:
+        # Remove any non-alphanumeric from word
+        word = re.sub(r'[^a-zA-Z]', '', word).lower()
+        if not word:
+            continue
+            
         pattern_parts = []
         for char in word:
             if char == 'a':
-                pattern_parts.append('[aáàâã]')
+                pattern_parts.append('[aáàâãAÁÀÂÃ]')
             elif char == 'e':
-                pattern_parts.append('[eéèê]')
+                pattern_parts.append('[eéèêEÉÈÊ]')
             elif char == 'i':
-                pattern_parts.append('[iíìî]')
+                pattern_parts.append('[iíìîIÍÌÎ]')
             elif char == 'o':
-                pattern_parts.append('[oóòôõ]')
+                pattern_parts.append('[oóòôõOÓÒÔÕ]')
             elif char == 'u':
-                pattern_parts.append('[uúùû]')
+                pattern_parts.append('[uúùûUÚÙÛ]')
             elif char == 'c':
-                pattern_parts.append('[cç]')
+                pattern_parts.append('[cçCÇ]')
             else:
-                pattern_parts.append(char)
+                pattern_parts.append(f'[{char.lower()}{char.upper()}]')
         word_patterns.append(''.join(pattern_parts))
     
-    # Join words with OPTIONAL space (\\s* means 0 or more spaces)
+    # Join words with pattern that matches 0 or more spaces/no space
     # This allows "SaoPaulo" to match "São Paulo" and vice versa
-    return r'\s*'.join(word_patterns)
+    return r'[\s]*'.join(word_patterns)
 
 
 async def get_date_suggestions(
