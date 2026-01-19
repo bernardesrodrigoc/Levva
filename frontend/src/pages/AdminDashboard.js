@@ -359,105 +359,226 @@ const AdminDashboard = () => {
         {/* Verifications Review */}
         <Card>
           <CardHeader>
-            <CardTitle>Verificações Pendentes</CardTitle>
-            <CardDescription>Clique nas imagens para ampliar. Revise e aprove identidades de usuários.</CardDescription>
+            <CardTitle>Verificações de Usuários</CardTitle>
+            <CardDescription>Gerencie verificações pendentes e aprovadas</CardDescription>
+            
+            {/* Tabs */}
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant={activeTab === 'pending' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('pending')}
+                className={activeTab === 'pending' ? 'bg-jungle hover:bg-jungle-800' : ''}
+              >
+                Pendentes ({pendingVerifications.length})
+              </Button>
+              <Button
+                variant={activeTab === 'approved' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('approved')}
+                className={activeTab === 'approved' ? 'bg-jungle hover:bg-jungle-800' : ''}
+              >
+                Aprovadas ({approvedVerifications.length})
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            {pendingVerifications.length === 0 ? (
-              <div className="text-center py-12">
-                <ShieldCheck size={48} className="mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Nenhuma verificação pendente</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingVerifications.map((verification) => (
-                  <Card key={verification.id} className="border-2 hover:border-jungle/30 transition-colors" data-testid={`verification-${verification.id}`}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-6 flex-wrap md:flex-nowrap">
-                        <div className="flex-1 min-w-[300px]">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 bg-jungle/10 rounded-full flex items-center justify-center">
-                              <Users size={24} className="text-jungle" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-lg">{verification.user_name}</p>
-                              <p className="text-sm text-muted-foreground">{verification.user_email}</p>
-                            </div>
-                            <Badge className="ml-2">{verification.user_role}</Badge>
-                          </div>
+            {/* Pending Verifications Tab */}
+            {activeTab === 'pending' && (
+              <>
+                {pendingVerifications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ShieldCheck size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhuma verificação pendente</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingVerifications.map((verification) => (
+                      <Card key={verification.id} className="border-2 hover:border-jungle/30 transition-colors" data-testid={`verification-${verification.id}`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between gap-6 flex-wrap md:flex-nowrap">
+                            <div className="flex-1 min-w-[300px]">
+                              <div className="flex items-center gap-3 mb-4">
+                                <div className="w-12 h-12 bg-jungle/10 rounded-full flex items-center justify-center">
+                                  <Users size={24} className="text-jungle" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-lg">{verification.user_name}</p>
+                                  <p className="text-sm text-muted-foreground">{verification.user_email}</p>
+                                </div>
+                                <Badge className="ml-2">{verification.user_role}</Badge>
+                              </div>
 
-                          <div className="grid md:grid-cols-2 gap-4 mb-4 bg-muted/20 p-4 rounded-lg">
-                            <div>
-                              <p className="text-xs text-muted-foreground">CPF</p>
-                              <p className="font-medium font-mono">{verification.cpf}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Data de Nascimento</p>
-                              <p className="font-medium">{new Date(verification.birth_date).toLocaleDateString('pt-BR')}</p>
-                            </div>
-                            <div className="md:col-span-2">
-                              <p className="text-xs text-muted-foreground">Endereço</p>
-                              <p className="font-medium">
-                                {verification.address.street}, {verification.address.city} - {verification.address.state}
-                              </p>
-                            </div>
-                          </div>
+                              <div className="grid md:grid-cols-2 gap-4 mb-4 bg-muted/20 p-4 rounded-lg">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">CPF</p>
+                                  <p className="font-medium font-mono">{verification.cpf}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Data de Nascimento</p>
+                                  <p className="font-medium">{new Date(verification.birth_date).toLocaleDateString('pt-BR')}</p>
+                                </div>
+                                <div className="md:col-span-2">
+                                  <p className="text-xs text-muted-foreground">Endereço</p>
+                                  <p className="font-medium">
+                                    {verification.address?.street}, {verification.address?.city} - {verification.address?.state}
+                                  </p>
+                                </div>
+                              </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <DocumentThumbnail 
-                                src={verification.documents.profile_photo} 
-                                title="Foto de Perfil" 
-                                verification={verification} 
-                            />
-                            <DocumentThumbnail 
-                                src={verification.documents.id_front} 
-                                title="Doc. Frente" 
-                                verification={verification} 
-                            />
-                            <DocumentThumbnail 
-                                src={verification.documents.id_back} 
-                                title="Doc. Verso" 
-                                verification={verification} 
-                            />
-                            <DocumentThumbnail 
-                                src={verification.documents.selfie} 
-                                title="Selfie" 
-                                verification={verification} 
-                            />
-                            {verification.documents.driver_license && (
-                                <DocumentThumbnail 
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {verification.documents?.profile_photo && (
+                                  <DocumentThumbnail 
+                                    src={verification.documents.profile_photo} 
+                                    title="Foto de Perfil" 
+                                    verification={verification} 
+                                  />
+                                )}
+                                {verification.documents?.id_front && (
+                                  <DocumentThumbnail 
+                                    src={verification.documents.id_front} 
+                                    title="Doc. Frente" 
+                                    verification={verification} 
+                                  />
+                                )}
+                                {verification.documents?.id_back && (
+                                  <DocumentThumbnail 
+                                    src={verification.documents.id_back} 
+                                    title="Doc. Verso" 
+                                    verification={verification} 
+                                  />
+                                )}
+                                {verification.documents?.selfie && (
+                                  <DocumentThumbnail 
+                                    src={verification.documents.selfie} 
+                                    title="Selfie" 
+                                    verification={verification} 
+                                  />
+                                )}
+                                {verification.documents?.driver_license && (
+                                  <DocumentThumbnail 
                                     src={verification.documents.driver_license} 
                                     title="CNH" 
                                     verification={verification} 
-                                />
-                            )}
-                          </div>
-                        </div>
+                                  />
+                                )}
+                              </div>
+                            </div>
 
-                        <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto mt-4 md:mt-0">
-                          <Button
-                            onClick={() => openReviewDialog(verification, 'approve')}
-                            className="bg-jungle hover:bg-jungle-800 flex-1 md:w-32"
-                            data-testid={`approve-btn-${verification.id}`}
-                          >
-                            <Check size={20} className="mr-2" />
-                            Aprovar
-                          </Button>
-                          <Button
-                            onClick={() => openReviewDialog(verification, 'reject')}
-                            variant="destructive"
-                            className="flex-1 md:w-32"
-                            data-testid={`reject-btn-${verification.id}`}
-                          >
-                            <X size={20} className="mr-2" />
-                            Rejeitar
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                            <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto mt-4 md:mt-0">
+                              <Button
+                                onClick={() => openReviewDialog(verification, 'approve')}
+                                className="bg-jungle hover:bg-jungle-800 flex-1 md:w-32"
+                                data-testid={`approve-btn-${verification.id}`}
+                              >
+                                <Check size={20} className="mr-2" />
+                                Aprovar
+                              </Button>
+                              <Button
+                                onClick={() => openReviewDialog(verification, 'reject')}
+                                variant="destructive"
+                                className="flex-1 md:w-32"
+                                data-testid={`reject-btn-${verification.id}`}
+                              >
+                                <X size={20} className="mr-2" />
+                                Rejeitar
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Approved Verifications Tab */}
+            {activeTab === 'approved' && (
+              <>
+                {approvedVerifications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ShieldCheck size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhuma verificação aprovada</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {approvedVerifications.map((verification) => (
+                      <Card key={verification.id} className="border hover:border-jungle/30 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-3 flex-1 min-w-[250px]">
+                              {verification.documents?.profile_photo ? (
+                                <img 
+                                  src={verification.documents.profile_photo} 
+                                  alt={verification.user_name}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-jungle/20"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-jungle/10 rounded-full flex items-center justify-center">
+                                  <Users size={24} className="text-jungle" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-semibold">{verification.user_name}</p>
+                                <p className="text-sm text-muted-foreground">{verification.user_email}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Badge>{verification.user_role}</Badge>
+                              <Badge className={getTrustLevelColor(verification.trust_level)}>
+                                {getTrustLevelName(verification.trust_level)}
+                              </Badge>
+                            </div>
+
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="text-center">
+                                <p className="font-semibold text-foreground">{verification.total_deliveries || 0}</p>
+                                <p className="text-xs">Entregas</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="font-semibold text-foreground">⭐ {verification.rating?.toFixed(1) || '0.0'}</p>
+                                <p className="text-xs">Avaliação</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 text-sm">
+                              <div>
+                                <p className="text-xs text-muted-foreground">CPF</p>
+                                <p className="font-mono text-sm">{verification.cpf}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Aprovado em</p>
+                                <p className="text-sm">
+                                  {verification.reviewed_at 
+                                    ? new Date(verification.reviewed_at).toLocaleDateString('pt-BR') 
+                                    : 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenImage(verification.documents?.profile_photo, 'Documentos', verification)}
+                              >
+                                Ver Docs
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => openRevokeDialog(verification)}
+                              >
+                                Revogar
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
