@@ -98,22 +98,41 @@ def create_city_regex(city: str) -> str:
     Create a flexible regex pattern for city name matching.
     Handles variations like:
     - "SaoPaulo" vs "São Paulo" vs "Sao Paulo"
+    - "RiodeJaneiro" vs "Rio de Janeiro"
     - With/without accents
     - With/without spaces
     """
     import re
     
-    # First, try to split camelCase (SaoPaulo -> Sao Paulo)
-    # Then normalize each word
-    spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', city)
+    # Known compound city patterns (to handle "RiodeJaneiro" correctly)
+    compound_cities = {
+        'riodejaneiro': ['rio', 'de', 'janeiro'],
+        'belohorizonte': ['belo', 'horizonte'],
+        'portoalegre': ['porto', 'alegre'],
+        'campogrande': ['campo', 'grande'],
+        'ribeirapreto': ['ribeira', 'preto'],
+        'saobernardo': ['sao', 'bernardo'],
+        'saojose': ['sao', 'jose'],
+        'saoluis': ['sao', 'luis'],
+        'juizdefora': ['juiz', 'de', 'fora'],
+    }
     
-    # Remove accents but keep spaces
+    # First normalize to lowercase without accents
     import unicodedata
-    normalized = unicodedata.normalize('NFD', spaced)
+    normalized = unicodedata.normalize('NFD', city)
     normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+    normalized_key = re.sub(r'[^a-zA-Z]', '', normalized).lower()
     
-    # Split into words
-    words = normalized.split()
+    # Check if it's a known compound city
+    if normalized_key in compound_cities:
+        words = compound_cities[normalized_key]
+    else:
+        # Try to split camelCase (SaoPaulo -> Sao Paulo)
+        spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', city)
+        # Also handle all-lowercase compounds by trying to find word boundaries
+        normalized_spaced = unicodedata.normalize('NFD', spaced)
+        normalized_spaced = ''.join(c for c in normalized_spaced if unicodedata.category(c) != 'Mn')
+        words = normalized_spaced.split()
     
     # Create pattern for each word with accent variations
     word_patterns = []
