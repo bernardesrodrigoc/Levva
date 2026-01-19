@@ -283,8 +283,9 @@ async def get_location_suggestions(
     
     # 2. Check for nearby shipments (aggregation opportunity)
     location_field = "origin" if is_origin else "destination"
+    city_pattern = create_city_regex(city)
     nearby_shipments = await shipments_collection.find({
-        f"{location_field}.city": {"$regex": city, "$options": "i"},
+        f"{location_field}.city": {"$regex": city_pattern, "$options": "i"},
         "status": "published"
     }).to_list(50)
     
