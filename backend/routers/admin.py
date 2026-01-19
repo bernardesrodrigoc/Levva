@@ -151,6 +151,90 @@ async def revoke_user_verification(user_id: str, data: dict, user: dict = Depend
     return {"message": "Verificação revogada", "user_id": user_id}
 
 
+@router.get("/users/{user_id}")
+async def get_user_details(user_id: str, user: dict = Depends(get_current_admin_user)):
+    """Get detailed user information."""
+    target_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Get verification info
+    verification = await verifications_collection.find_one({"user_id": user_id})
+    
+    # Get user's trips count
+    trips_count = await trips_collection.count_documents({"carrier_id": user_id})
+    
+    # Get user's shipments count
+    shipments_count = await shipments_collection.count_documents({"sender_id": user_id})
+    
+    # Get user's matches count
+    matches_count = await matches_collection.count_documents({
+        "$or": [{"carrier_id": user_id}, {"sender_id": user_id}]
+    })
+    
+    return {
+        "id": str(target_user["_id"]),
+        "name": target_user["name"],
+        "email": target_user["email"],
+        "phone": target_user.get("phone", ""),
+        "role": target_user["role"],
+        "verification_status": target_user.get("verification_status", "pending"),
+        "trust_level": target_user.get("trust_level", "level_1"),
+        "total_deliveries": target_user.get("total_deliveries", 0),
+        "rating": target_user.get("rating", 0),
+        "created_at": target_user.get("created_at").isoformat() if target_user.get("created_at") else None,
+        "verification": {
+            "cpf": verification.get("cpf") if verification else None,
+            "birth_date": verification.get("birth_date") if verification else None,
+            "address": verification.get("address") if verification else None,
+            "documents": verification.get("documents") if verification else None,
+            "status": verification.get("status") if verification else None,
+            "submitted_at": verification.get("submitted_at").isoformat() if verification and verification.get("submitted_at") else None,
+            "reviewed_at": verification.get("reviewed_at").isoformat() if verification and verification.get("reviewed_at") else None
+        } if verification else None,
+        "stats": {
+            "trips_created": trips_count,
+            "shipments_created": shipments_count,
+            "total_matches": matches_count
+        }
+    }
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(user_id: str, user: dict = Depends(get_current_admin_user)):
+    """Delete a user and all their data."""
+    target_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    # Prevent deleting admin users
+    if target_user.get("role") == "admin":
+        raise HTTPException(status_code=403, detail="Não é possível excluir usuários admin")
+    
+    # Check for active matches
+    active_matches = await matches_collection.count_documents({
+        "$or": [{"carrier_id": user_id}, {"sender_id": user_id}],
+        "status": {"$in": ["pending", "accepted", "paid", "in_transit"]}
+    })
+    
+    if active_matches > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Usuário possui {active_matches} entrega(s) em andamento. Conclua ou cancele antes de excluir."
+        )
+    
+    # Delete user's data
+    await verifications_collection.delete_many({"user_id": user_id})
+    await trips_collection.delete_many({"carrier_id": user_id})
+    await shipments_collection.delete_many({"sender_id": user_id})
+    await messages_collection.delete_many({"sender_id": user_id})
+    
+    # Delete the user
+    await users_collection.delete_one({"_id": ObjectId(user_id)})
+    
+    return {"message": "Usuário excluído com sucesso", "user_id": user_id}
+
+
 @router.post("/verifications/{verification_id}/review")
 async def review_verification(
     verification_id: str,
