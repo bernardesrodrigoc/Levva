@@ -358,6 +358,37 @@ const CreateShipmentPage = () => {
             </CardContent>
           </Card>
 
+          {/* Intelligent Price Estimate */}
+          {pickup?.lat && dropoff?.lat && parseFloat(formData.weightKg) > 0 && (
+            <PriceEstimate
+              originLat={pickup.lat}
+              originLng={pickup.lng}
+              destLat={dropoff.lat}
+              destLng={dropoff.lng}
+              originCity={pickup.city}
+              destinationCity={dropoff.city}
+              weightKg={parseFloat(formData.weightKg) || 1}
+              lengthCm={parseFloat(formData.lengthCm) || 20}
+              widthCm={parseFloat(formData.widthCm) || 20}
+              heightCm={parseFloat(formData.heightCm) || 20}
+              category={formData.category}
+            />
+          )}
+
+          {/* Smart Suggestions */}
+          {pickup?.city && dropoff?.city && (
+            <SmartSuggestions
+              originCity={pickup.city}
+              destinationCity={dropoff.city}
+              originLat={pickup.lat}
+              originLng={pickup.lng}
+              destLat={dropoff.lat}
+              destLng={dropoff.lng}
+              isShipment={true}
+              compact={true}
+            />
+          )}
+
           {/* Legal Acceptance - Mobile Optimized */}
           <Alert className="border-yellow-500 bg-yellow-50">
             <Warning size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
