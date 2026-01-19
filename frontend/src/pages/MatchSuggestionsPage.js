@@ -180,16 +180,35 @@ const MatchSuggestionsPage = () => {
 
                   {/* Footer - Mobile Optimized */}
                   <div className="mt-3 md:mt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 pt-3 border-t md:border-0 md:pt-0">
-                    <div className="flex items-center gap-3 md:gap-4">
+                    <div className="flex flex-wrap items-center gap-3 md:gap-4">
                       {suggestion.weight_kg && (
                         <div className="flex items-center gap-1 text-xs md:text-sm text-muted-foreground">
                           <Scales size={14} />
                           <span>{suggestion.weight_kg} kg</span>
                         </div>
                       )}
+                      {/* Capacity info */}
+                      {suggestion.trip_capacity_used_percent !== undefined && (
+                        <div className="flex items-center gap-1 text-xs md:text-sm">
+                          <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full ${suggestion.trip_capacity_used_percent >= 80 ? 'bg-red-500' : suggestion.trip_capacity_used_percent >= 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                              style={{ width: `${Math.min(suggestion.trip_capacity_used_percent, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-muted-foreground">
+                            {suggestion.trip_available_weight_kg?.toFixed(0)}kg disp.
+                          </span>
+                        </div>
+                      )}
                       <span className="font-bold text-jungle text-base md:text-lg">
                         R$ {suggestion.estimated_price?.toFixed(2)}
                       </span>
+                      {suggestion.carrier_earnings && (
+                        <span className="text-xs text-muted-foreground">
+                          (ganho: R$ {suggestion.carrier_earnings?.toFixed(2)})
+                        </span>
+                      )}
                     </div>
                     <Button
                       onClick={() => handleCreateMatch(suggestion.trip_id, suggestion.shipment_id)}
