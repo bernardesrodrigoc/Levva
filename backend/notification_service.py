@@ -448,3 +448,60 @@ async def notify_delivery_completed(sender_id: str, carrier_id: str, match_id: s
         {"route": route},
         match_id
     )
+
+
+async def notify_capacity_warning(carrier_id: str, trip_id: str, route: str, capacity_percent: float, remaining_kg: float):
+    """Notify carrier when trip capacity is getting low"""
+    if capacity_percent >= 80:
+        await create_notification(
+            carrier_id,
+            NotificationType.CAPACITY_LOW_WARNING,
+            {
+                "route": route,
+                "capacity_percent": f"{capacity_percent:.0f}",
+                "remaining_kg": f"{remaining_kg:.1f}"
+            },
+            trip_id
+        )
+
+
+async def notify_new_match_available(user_id: str, match_type: str, route: str, count: int = 1):
+    """Notify user about new match suggestions available"""
+    await create_notification(
+        user_id,
+        NotificationType.NEW_MATCH_SUGGESTION,
+        {
+            "match_type": match_type,
+            "route": route
+        }
+    )
+
+
+async def schedule_smart_notifications():
+    """
+    Background task to check and send smart notifications.
+    Should be called periodically (e.g., every hour).
+    """
+    from database import trips_collection, shipments_collection, users_collection
+    
+    # Find trips with low capacity
+    trips_with_low_capacity = await trips_collection.find({
+        "status": "published",
+        "capacity_utilization_percent": {"$gte": 80}
+    }).to_list(100)
+    
+    for trip in trips_with_low_capacity:
+        # Check if we already sent this notification recently
+        # (Could add a "last_capacity_notification" field to prevent spam)
+        route = f"{trip['origin']['city']} → {trip['destination']['city']}"
+        remaining_kg = trip.get("available_weight_kg", 0)
+        await notify_capacity_warning(
+            trip["carrier_id"],
+            str(trip["_id"]),
+            route,
+            trip["capacity_utilization_percent"],
+            remaining_kg
+        )
+    
+    logger.info(f"Smart notifications check completed. {len(trips_with_low_capacity)} capacity warnings sent.")
+
