@@ -15,6 +15,7 @@ from .chat import router as chat_router
 from .notifications import router as notifications_router
 from .tracking import router as tracking_router
 from .vehicles import router as vehicles_router
+from .intelligence import router as intelligence_router
 
 
 def create_api_router() -> APIRouter:
@@ -36,5 +37,6 @@ def create_api_router() -> APIRouter:
     api_router.include_router(notifications_router, prefix="/notifications", tags=["Notificações"])
     api_router.include_router(tracking_router, prefix="/tracking", tags=["Rastreamento GPS"])
     api_router.include_router(vehicles_router, prefix="/vehicles", tags=["Veículos"])
+    api_router.include_router(intelligence_router, prefix="/intelligence", tags=["Inteligência"])
     
     return api_router
