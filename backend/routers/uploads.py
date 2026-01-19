@@ -1,5 +1,5 @@
 """Upload routes for Cloudflare R2."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 import uuid
 import os
 import logging
@@ -16,6 +16,9 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Max file size: 10MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 def get_r2_client():
@@ -35,9 +38,80 @@ def get_r2_client():
     return None
 
 
+@router.post("/direct")
+async def upload_file_direct(
+    file: UploadFile = File(...),
+    file_type: str = Form(default="general"),
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Upload file directly through backend (proxy).
+    This bypasses CORS issues with R2.
+    """
+    r2_client = get_r2_client()
+    
+    if not r2_client:
+        raise HTTPException(status_code=503, detail="Serviço de upload não configurado")
+    
+    # Validate content type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/jpg"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Tipo de arquivo não suportado. Use: JPG, PNG ou WebP")
+    
+    # Read file content
+    try:
+        content = await file.read()
+        
+        # Validate file size
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo: 10MB")
+        
+        # Generate unique file key
+        upload_id = str(uuid.uuid4())
+        file_extension = file.content_type.split('/')[-1]
+        if file_extension == "jpg":
+            file_extension = "jpeg"
+        file_key = f"{file_type}/{user_id}/{upload_id}.{file_extension}"
+        
+        # Upload to R2
+        r2_client.put_object(
+            Bucket=settings.r2_bucket_name,
+            Key=file_key,
+            Body=content,
+            ContentType=file.content_type
+        )
+        
+        # Generate presigned URL for reading (valid for 7 days)
+        public_url = r2_client.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": settings.r2_bucket_name,
+                "Key": file_key
+            },
+            ExpiresIn=604800  # 7 days
+        )
+        
+        logger.info(f"File uploaded successfully: {file_key}")
+        
+        return {
+            "success": True,
+            "file_key": file_key,
+            "file_url": public_url,
+            "file_type": file_type,
+            "content_type": file.content_type,
+            "size_bytes": len(content)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro no upload: {e}")
+        raise HTTPException(status_code=500, detail="Erro ao fazer upload do arquivo")
+
+
 @router.post("/presigned-url")
 async def get_presigned_url(upload_data: UploadInitiate, user_id: str = Depends(get_current_user_id)):
-    """Generate presigned URL for file upload."""
+    """Generate presigned URL for file upload (requires CORS config on R2)."""
     r2_client = get_r2_client()
     
     if not r2_client:
