@@ -339,10 +339,14 @@ async def get_time_slot_suggestions(
     start_of_day = date.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = start_of_day + timedelta(days=1)
     
+    # Create flexible regex patterns
+    origin_pattern = create_city_regex(origin_city)
+    dest_pattern = create_city_regex(destination_city)
+    
     # Get trips on this day
     trips = await trips_collection.find({
-        "origin.city": {"$regex": origin_city, "$options": "i"},
-        "destination.city": {"$regex": destination_city, "$options": "i"},
+        "origin.city": {"$regex": origin_pattern, "$options": "i"},
+        "destination.city": {"$regex": dest_pattern, "$options": "i"},
         "departure_date": {"$gte": start_of_day, "$lt": end_of_day},
         "status": "published"
     }).to_list(50)
