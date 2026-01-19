@@ -3,8 +3,8 @@
 ## 🚀 Acesso Rápido
 
 ### URLs
-- **Frontend**: https://shipmate-122.preview.emergentagent.com
-- **Backend API**: https://shipmate-122.preview.emergentagent.com/api
+- **Frontend**: https://smart-logistics-25.preview.emergentagent.com
+- **Backend API**: https://smart-logistics-25.preview.emergentagent.com/api
 
 ### Credenciais Admin
 ```

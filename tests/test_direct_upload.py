@@ -7,7 +7,7 @@ import requests
 import os
 import io
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://shipmate-122.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://smart-logistics-25.preview.emergentagent.com')
 
 # Test credentials from review request
 TEST_USER_EMAIL = "upload_test@levva.com"
