@@ -166,6 +166,27 @@ async def check_shipment_fit(
     }
 
 
+@router.get("/capacity/estimate-slots")
+async def estimate_capacity_slots(
+    max_weight_kg: float,
+    max_volume_liters: float,
+    avg_package_weight_kg: float = 3,
+    avg_package_volume_liters: float = 15
+):
+    """
+    Estimate how many average packages can fit in a trip.
+    Useful for carriers planning their trip capacity.
+    No authentication required.
+    """
+    return estimate_trip_slots(
+        max_weight_kg,
+        max_volume_liters,
+        avg_package_weight_kg,
+        avg_package_volume_liters
+    )
+    }
+
+
 @router.get("/capacity/available-trips")
 async def find_available_trips(
     weight_kg: float,
