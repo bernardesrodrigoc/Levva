@@ -11,6 +11,12 @@ from models import TripStatus, ShipmentStatus, PaymentStatus
 from auth import get_current_user_id
 from route_service import check_shipment_matches_route, calculate_corridor_match_score, haversine_distance
 from notification_service import create_notification, NotificationType
+from services.pricing_service import calculate_intelligent_price
+from services.capacity_service import (
+    can_add_shipment_to_trip, 
+    update_trip_available_capacity,
+    calculate_volume_liters
+)
 
 router = APIRouter()
 
