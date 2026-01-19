@@ -273,15 +273,20 @@ async def suggest_dates(
     }
 
 
+class MatchingTripsRequest(BaseModel):
+    """Request for matching trips - GEOSPATIAL PRIMARY"""
+    origin_lat: float
+    origin_lng: float
+    dest_lat: float
+    dest_lng: float
+    weight_kg: float = 1.0
+    preferred_date: Optional[str] = None
+    days_ahead: int = 14
+
+
 @router.post("/suggestions/matching-trips")
 async def get_matching_trips(
-    origin_lat: float,
-    origin_lng: float,
-    dest_lat: float,
-    dest_lng: float,
-    weight_kg: float = 1.0,
-    preferred_date: Optional[str] = None,
-    days_ahead: int = 14,
+    request: MatchingTripsRequest,
     user_id: str = Depends(get_current_user_id)
 ):
     """
@@ -296,7 +301,7 @@ async def get_matching_trips(
     
     Returns trips sorted by match score (higher = better fit).
     """
-    pref_date = datetime.fromisoformat(preferred_date) if preferred_date else datetime.now(timezone.utc)
+    pref_date = datetime.fromisoformat(request.preferred_date) if request.preferred_date else datetime.now(timezone.utc)
     
     matching_trips = await get_matching_trips_for_shipment(
         origin_lat=origin_lat,
