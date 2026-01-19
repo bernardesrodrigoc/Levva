@@ -177,18 +177,45 @@ async def calculate_demand_supply_multiplier(
     start_of_day = date.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = start_of_day + timedelta(days=1)
     
+    # Create flexible regex for city matching (handles "SaoPaulo" vs "São Paulo")
+    def create_city_pattern(city: str) -> str:
+        import re
+        import unicodedata
+        # Remove accents
+        normalized = unicodedata.normalize('NFD', city)
+        normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+        normalized = re.sub(r'[^a-zA-Z0-9]', '', normalized).lower()
+        # Split camelCase
+        words = re.sub(r'([a-z])([A-Z])', r'\1 \2', normalized).split()
+        word_patterns = []
+        for word in words:
+            pattern_parts = []
+            for char in word:
+                if char == 'a': pattern_parts.append('[aáàâã]')
+                elif char == 'e': pattern_parts.append('[eéèê]')
+                elif char == 'i': pattern_parts.append('[iíìî]')
+                elif char == 'o': pattern_parts.append('[oóòôõ]')
+                elif char == 'u': pattern_parts.append('[uúùû]')
+                elif char == 'c': pattern_parts.append('[cç]')
+                else: pattern_parts.append(char)
+            word_patterns.append(''.join(pattern_parts))
+        return r'\s*'.join(word_patterns)
+    
+    origin_pattern = create_city_pattern(origin_city)
+    dest_pattern = create_city_pattern(destination_city)
+    
     # Count available trips (supply) on this route
     trips_count = await trips_collection.count_documents({
-        "origin.city": {"$regex": origin_city, "$options": "i"},
-        "destination.city": {"$regex": destination_city, "$options": "i"},
+        "origin.city": {"$regex": origin_pattern, "$options": "i"},
+        "destination.city": {"$regex": dest_pattern, "$options": "i"},
         "departure_date": {"$gte": start_of_day, "$lt": end_of_day},
         "status": "published"
     })
     
     # Count shipments waiting (demand) on this route
     shipments_count = await shipments_collection.count_documents({
-        "origin.city": {"$regex": origin_city, "$options": "i"},
-        "destination.city": {"$regex": destination_city, "$options": "i"},
+        "origin.city": {"$regex": origin_pattern, "$options": "i"},
+        "destination.city": {"$regex": dest_pattern, "$options": "i"},
         "status": "published"
     })
     
