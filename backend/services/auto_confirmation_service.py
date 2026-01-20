@@ -85,6 +85,29 @@ async def process_auto_confirmations():
                 {"$set": {"status": "completed", "confirmed_at": now, "auto_confirmed": True}}
             )
             
+            # Update shipment and trip to history status
+            from database import shipments_collection, trips_collection
+            from models import ShipmentStatus, TripStatus
+            
+            if match.get("shipment_id"):
+                await shipments_collection.update_one(
+                    {"_id": ObjectId(match["shipment_id"])},
+                    {"$set": {"status": ShipmentStatus.DELIVERED.value, "delivered_at": now}}
+                )
+            
+            if match.get("trip_id"):
+                await trips_collection.update_one(
+                    {"_id": ObjectId(match["trip_id"])},
+                    {"$set": {"status": TripStatus.COMPLETED.value, "completed_at": now}}
+                )
+            
+            # Update reputation
+            try:
+                from services.reputation_service import record_delivery_completed
+                await record_delivery_completed(match["sender_id"], match["carrier_id"], match_id)
+            except Exception as rep_err:
+                logger.warning(f"Failed to update reputation: {rep_err}")
+            
             logger.info(f"Auto-confirmed payment {payment['_id']} -> {new_status}")
             
         except Exception as e:
