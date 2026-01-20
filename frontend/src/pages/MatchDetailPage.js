@@ -775,6 +775,96 @@ const MatchDetailPage = () => {
             </Button>
           )}
 
+          {/* NEW: Payment Flow Actions */}
+          
+          {/* Transporter: Mark as Delivered */}
+          {canMarkDelivered && (
+            <Card className="border-jungle bg-jungle/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <TruckIcon size={24} className="text-jungle flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm">Entrega Realizada?</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Marque como entregue para iniciar o processo de confirmação pelo remetente.
+                    </p>
+                    <Button
+                      onClick={handleMarkDelivered}
+                      disabled={actionLoading}
+                      className="w-full mt-3 h-10 bg-jungle hover:bg-jungle-800"
+                      data-testid="mark-delivered-btn"
+                    >
+                      <CheckCircle size={18} className="mr-2" />
+                      {actionLoading ? 'Processando...' : 'Marcar como Entregue'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Sender: Confirm or Dispute */}
+          {canSenderConfirm && (
+            <Card className="border-orange-300 bg-orange-50">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Clock size={24} className="text-orange-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-sm text-orange-800">Entrega Marcada pelo Transportador</p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Confirme o recebimento para liberar o pagamento ao transportador.
+                      </p>
+                      {deliveryStatus?.time_remaining && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          ⏰ Auto-confirmação em: {deliveryStatus.time_remaining.days} dias e {deliveryStatus.time_remaining.hours} horas
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setShowConfirmDeliveryDialog(true)}
+                      className="flex-1 h-10 bg-green-600 hover:bg-green-700"
+                      data-testid="sender-confirm-btn"
+                    >
+                      <CheckCircle size={18} className="mr-1" />
+                      Confirmar Recebimento
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowDisputeDialog(true)}
+                      className="flex-1 h-10 border-red-300 text-red-600 hover:bg-red-50"
+                      data-testid="open-dispute-btn"
+                    >
+                      <XCircle size={18} className="mr-1" />
+                      Abrir Disputa
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Show current payment status */}
+          {deliveryStatus && deliveryStatus.status !== 'not_found' && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status do Pagamento</span>
+                  {getPaymentStatusBadge(deliveryStatus.status)}
+                </div>
+                {deliveryStatus.carrier_amount > 0 && (
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                    <span className="text-sm text-muted-foreground">Valor a receber</span>
+                    <span className="font-bold text-jungle">R$ {deliveryStatus.carrier_amount?.toFixed(2)}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {canRate && (
             <Button
               onClick={() => setShowRatingDialog(true)}
