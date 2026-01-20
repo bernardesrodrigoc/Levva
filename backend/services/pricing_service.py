@@ -263,10 +263,27 @@ async def calculate_intelligent_price(
     # Route info for demand/supply
     origin_city: str = None,
     destination_city: str = None,
-    departure_date: datetime = None
+    departure_date: datetime = None,
+    
+    # Transporter pricing (NEW)
+    transporter_price_per_km: float = None
 ) -> dict:
     """
     Calculate the complete intelligent price for a shipment.
+    
+    PRICING FORMULA:
+    ================
+    1. Base Price = distance_km * base_rate_per_km (platform default or transporter rate)
+    2. Weight Multiplier = 1 + (weight_kg - 1) * 0.02 (2% per extra kg)
+    3. Volume Multiplier = based on cargo category (document: 0.8, small: 0.9, medium: 1.0, large: 1.3, xl: 1.5)
+    4. Deviation Multiplier = 1.0 to 1.5 based on route deviation
+    5. Capacity Multiplier = 0.9 to 1.3 based on trip occupancy
+    6. Demand/Supply Multiplier = 0.9 to 1.3 based on route popularity
+    
+    Final Carrier Price = Base * Weight * Volume * Deviation * Capacity * Demand
+    Platform Fee = Carrier Price * commission_rate (10-18%)
+    Total Sender Price = Carrier Price + Platform Fee
+    
     Returns detailed breakdown (internal) and final user price.
     """
     
