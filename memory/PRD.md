@@ -1,13 +1,34 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: PRODUCT ENGINEERING VALIDATED ✅
+## Status: CORE STABILIZATION COMPLETE ✅
 
-### E2E Validation Completed (January 20, 2026)
-- ✅ Shipment Cancellation Flow - Items move to History
-- ✅ Trip Cancellation Flow - Items move to History
-- ✅ Expiration Service - 3 items expired via admin endpoint
-- ✅ Reputation System - Cancellation events recorded correctly
-- ✅ UI Visual Verification - Both pages show Active/History tabs
+### P0 Stabilization Completed (January 20, 2026)
+
+#### 1. Geolocalização ✅ CORRIGIDO
+- **Problema**: Botão "Usar localização atual" falhava silenciosamente
+- **Solução**: Mensagens de erro claras para cada tipo de falha (permissão, GPS, timeout)
+- **Evidência**: Mensagem em vermelho quando permissão negada
+
+#### 2. Filtragem de Status ✅ CORRIGIDO  
+- **Problema**: Admin stats contava todos os matches (incluindo cancelados)
+- **Solução**: Endpoint `/api/admin/stats` agora usa `get_active_statuses()`
+- **Evidência**: "Matches Ativos: 4 de 13 total"
+
+#### 3. Histórico Global ✅ IMPLEMENTADO
+- **Endpoints**: `/api/admin/history/global`, `/api/admin/history/summary`
+- **UI**: Aba "Histórico Global" no Admin Dashboard
+- **Breakdown**: Por status (cancelled_by_carrier, expired, delivered, etc.)
+
+#### 4. Cancelamento como Evento ✅ VERIFICADO
+- Cancela → Remove de telas ativas → Move para histórico → Atualiza métricas
+
+### Checklist de Validação (TODOS PASSARAM)
+- ✅ Criar viagem
+- ✅ Criar envio  
+- ✅ Cancelar viagem → some das telas ativas
+- ✅ Cancelar envio → some das telas ativas
+- ✅ Admin consegue ver tudo
+- ✅ Localização atual funciona (com feedback de erro)
 
 ---
 
