@@ -983,6 +983,121 @@ const MatchDetailPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Delivery Dialog (for Sender) */}
+      <Dialog open={showConfirmDeliveryDialog} onOpenChange={setShowConfirmDeliveryDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-700">
+              <CheckCircle size={24} />
+              Confirmar Recebimento
+            </DialogTitle>
+            <DialogDescription>
+              Ao confirmar, o pagamento será liberado para o transportador.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Observações (opcional)</Label>
+              <Textarea
+                value={confirmationNotes}
+                onChange={(e) => setConfirmationNotes(e.target.value)}
+                placeholder="Deixe um comentário sobre a entrega..."
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+            
+            <Alert className="border-green-200 bg-green-50">
+              <AlertDescription className="text-green-700 text-sm">
+                <strong>Importante:</strong> Após a confirmação, o valor de R$ {deliveryStatus?.carrier_amount?.toFixed(2)} será liberado para o transportador.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setShowConfirmDeliveryDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={handleConfirmDeliveryBySender}
+                disabled={actionLoading}
+                data-testid="confirm-delivery-dialog-btn"
+              >
+                {actionLoading ? 'Confirmando...' : 'Confirmar Recebimento'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dispute Dialog (for Sender) */}
+      <Dialog open={showDisputeDialog} onOpenChange={setShowDisputeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Warning size={24} />
+              Abrir Disputa
+            </DialogTitle>
+            <DialogDescription>
+              Se houve algum problema com a entrega, descreva abaixo para nossa equipe analisar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Motivo da Disputa *</Label>
+              <Textarea
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                placeholder="Ex: Pacote não foi entregue, item danificado, etc."
+                rows={2}
+                className="mt-1"
+                data-testid="dispute-reason-input"
+              />
+            </div>
+            
+            <div>
+              <Label>Detalhes Adicionais</Label>
+              <Textarea
+                value={disputeDetails}
+                onChange={(e) => setDisputeDetails(e.target.value)}
+                placeholder="Forneça mais detalhes sobre o problema..."
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+            
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertDescription className="text-yellow-700 text-sm">
+                <strong>Nota:</strong> O pagamento ficará retido até a resolução da disputa. Nossa equipe entrará em contato em até 24 horas.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setShowDisputeDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                variant="destructive"
+                className="flex-1"
+                onClick={handleOpenDispute}
+                disabled={actionLoading || !disputeReason.trim()}
+                data-testid="submit-dispute-btn"
+              >
+                {actionLoading ? 'Enviando...' : 'Abrir Disputa'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
