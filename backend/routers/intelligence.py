@@ -54,6 +54,7 @@ class PriceCalculationRequest(BaseModel):
     departure_date: Optional[datetime] = None
     deviation_km: float = 0
     trip_used_capacity_percent: float = 0
+    transporter_price_per_km: Optional[float] = None  # NEW: Use transporter's rate
 
 
 @router.post("/pricing/calculate")
@@ -63,6 +64,13 @@ async def calculate_price(
 ):
     """
     Calculate intelligent price for a shipment.
+    
+    PRICING FORMULA:
+    - Base = distance * (transporter_rate OR platform_default)
+    - Multipliers: weight (+2%/kg), volume, category, deviation, capacity, demand
+    - Platform Fee = carrier_price * commission_rate (10-18%)
+    - Total = carrier_price + platform_fee
+    
     Returns total price and carrier earnings.
     """
     distance_km = haversine_distance(
@@ -81,7 +89,8 @@ async def calculate_price(
         trip_used_capacity_percent=request.trip_used_capacity_percent,
         origin_city=request.origin_city,
         destination_city=request.destination_city,
-        departure_date=request.departure_date or datetime.now(timezone.utc)
+        departure_date=request.departure_date or datetime.now(timezone.utc),
+        transporter_price_per_km=request.transporter_price_per_km
     )
     
     return {
