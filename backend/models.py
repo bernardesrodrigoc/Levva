@@ -35,20 +35,35 @@ class ShipmentStatus(str, Enum):
     IN_TRANSIT = "in_transit"
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
+    CANCELLED_BY_SENDER = "cancelled_by_sender"
+    CANCELLED_BY_CARRIER = "cancelled_by_carrier"
 
 class TripStatus(str, Enum):
+    DRAFT = "draft"
     PUBLISHED = "published"
     MATCHED = "matched"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+    CANCELLED_BY_CARRIER = "cancelled_by_carrier"
+    CANCELLED_BY_SENDER = "cancelled_by_sender"
 
 class PaymentStatus(str, Enum):
+    PAYMENT_PENDING = "payment_pending"
+    PAID_ESCROW = "paid_escrow"
+    DELIVERED_BY_TRANSPORTER = "delivered_by_transporter"
+    CONFIRMED_BY_SENDER = "confirmed_by_sender"
+    AUTO_CONFIRMED_TIMEOUT = "auto_confirmed_timeout"
+    PAYOUT_READY = "payout_ready"
+    PAYOUT_COMPLETED = "payout_completed"
+    PAYOUT_BLOCKED_NO_PAYOUT_METHOD = "payout_blocked_no_payout_method"
+    DISPUTE_OPENED = "dispute_opened"
+    REFUNDED = "refunded"
+    # Legacy compatibility
     PENDING = "pending"
     PAID = "paid"
     ESCROWED = "escrowed"
     RELEASED = "released"
-    REFUNDED = "refunded"
 
 # User Models
 class UserRegister(BaseModel):
