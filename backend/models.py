@@ -37,6 +37,7 @@ class ShipmentStatus(str, Enum):
     CANCELLED = "cancelled"
     CANCELLED_BY_SENDER = "cancelled_by_sender"
     CANCELLED_BY_CARRIER = "cancelled_by_carrier"
+    EXPIRED = "expired"  # Auto-expired after timeout
 
 class TripStatus(str, Enum):
     DRAFT = "draft"
@@ -47,6 +48,20 @@ class TripStatus(str, Enum):
     CANCELLED = "cancelled"
     CANCELLED_BY_CARRIER = "cancelled_by_carrier"
     CANCELLED_BY_SENDER = "cancelled_by_sender"
+    EXPIRED = "expired"  # Auto-expired after departure date
+
+class MatchStatus(str, Enum):
+    """Match status for the match lifecycle."""
+    PENDING_PAYMENT = "pending_payment"
+    PAID = "paid"
+    IN_TRANSIT = "in_transit"
+    DELIVERED = "delivered"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+    CANCELLED_BY_SENDER = "cancelled_by_sender"
+    CANCELLED_BY_CARRIER = "cancelled_by_carrier"
+    EXPIRED = "expired"  # Auto-expired (payment timeout)
+    DISPUTED = "disputed"
 
 class PaymentStatus(str, Enum):
     PAYMENT_PENDING = "payment_pending"
