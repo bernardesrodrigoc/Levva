@@ -150,3 +150,85 @@ async def update_user_trust_level(user_id: str = Depends(get_current_user_id)):
         "current_level": old_level,
         "message": "Seu nível de confiança permanece o mesmo."
     }
+
+
+# ============ Payout Method Management ============
+
+from pydantic import BaseModel
+from typing import Optional
+
+class PixUpdateRequest(BaseModel):
+    pix_key: str
+    pix_type: str  # cpf, cnpj, email, phone, random
+
+
+@router.post("/payout-method")
+async def update_payout_method(
+    pix_data: PixUpdateRequest,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Update user's payout method (Pix).
+    Required to receive payouts.
+    """
+    valid_types = ["cpf", "cnpj", "email", "phone", "random"]
+    if pix_data.pix_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"Tipo de Pix inválido. Use: {', '.join(valid_types)}")
+    
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {
+            "$set": {
+                "pix_key": pix_data.pix_key,
+                "pix_type": pix_data.pix_type,
+                "pix_updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # Check for blocked payouts that can now be unblocked
+    from database import payments_collection, matches_collection
+    from models import PaymentStatus
+    
+    # Find matches where this user is the carrier
+    carrier_matches = await matches_collection.find({"carrier_id": user_id}).to_list(100)
+    match_ids = [str(m["_id"]) for m in carrier_matches]
+    
+    # Unblock any payouts
+    unblocked = await payments_collection.update_many(
+        {
+            "match_id": {"$in": match_ids},
+            "status": PaymentStatus.PAYOUT_BLOCKED_NO_PAYOUT_METHOD.value
+        },
+        {
+            "$set": {
+                "status": PaymentStatus.PAYOUT_READY.value,
+                "has_payout_method": True,
+                "payout_unblocked_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    return {
+        "message": "Método de pagamento atualizado com sucesso",
+        "pix_type": pix_data.pix_type,
+        "payouts_unblocked": unblocked.modified_count
+    }
+
+
+@router.get("/payout-method")
+async def get_payout_method(user_id: str = Depends(get_current_user_id)):
+    """Get user's current payout method."""
+    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    
+    has_pix = bool(user.get("pix_key"))
+    
+    return {
+        "has_payout_method": has_pix,
+        "pix_key": user.get("pix_key") if has_pix else None,
+        "pix_type": user.get("pix_type") if has_pix else None,
+        "updated_at": user.get("pix_updated_at").isoformat() if user.get("pix_updated_at") else None
+    }
