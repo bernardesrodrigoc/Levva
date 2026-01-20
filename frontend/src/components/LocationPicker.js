@@ -300,14 +300,23 @@ const LocationPicker = ({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className={`h-8 w-8 p-0 ${geoLoading ? 'animate-pulse' : ''}`}
               onClick={handleUseCurrentLocation}
+              disabled={geoLoading}
               title="Usar localização atual"
+              data-testid={`${testIdPrefix}-use-location`}
             >
-              <Crosshair size={16} />
+              <Crosshair size={16} className={geoLoading ? 'animate-spin' : ''} />
             </Button>
           </div>
         </div>
+        
+        {/* Geolocation Error Message */}
+        {geoError && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+            {geoError}
+          </div>
+        )}
         
         {/* Search Results Dropdown */}
         {showResults && searchResults.length > 0 && (
