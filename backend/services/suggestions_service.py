@@ -125,11 +125,18 @@ def check_geospatial_match(
     """
     Check if a shipment matches a trip using geospatial criteria.
     
-    Primary: Coordinate distance within corridor radius
-    Secondary: Route polyline deviation (if available)
+    Matching Logic:
+    1. If route_polyline exists: check if pickup/dropoff are within corridor of the route
+    2. Fallback: check if origins are close AND destinations are close
+    
+    Default corridor: 30km (generous for MVP to ensure matches are found)
     
     Returns (matches, details)
     """
+    # Use default corridor if not specified or too small
+    if not corridor_radius_km or corridor_radius_km < 5:
+        corridor_radius_km = 30.0  # Default 30km
+    
     # If we have a route polyline, use it for precise matching
     if route_polyline and len(route_polyline) >= 2:
         pickup_distance = point_to_polyline_distance(
