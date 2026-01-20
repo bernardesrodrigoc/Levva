@@ -530,6 +530,14 @@ const AdminDashboard = () => {
                 <Flag size={16} className="mr-1" />
                 Veículos Flaggeados ({flaggedVehicles.length})
               </Button>
+              <Button
+                variant={activeTab === 'payouts' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('payouts')}
+                className={activeTab === 'payouts' ? 'bg-green-600 hover:bg-green-700' : 'border-green-400 text-green-700'}
+              >
+                <Bank size={16} className="mr-1" />
+                Payouts ({readyPayouts.length})
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
