@@ -13,6 +13,7 @@ import LocationPicker from '@/components/LocationPicker';
 import ImageUpload from '@/components/ImageUpload';
 import { PriceEstimate, CargoCategories } from '@/components/IntelligentPricing';
 import SmartSuggestions from '@/components/SmartSuggestions';
+import MatchingTrips from '@/components/MatchingTrips';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
