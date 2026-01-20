@@ -45,6 +45,11 @@ const AdminDashboard = () => {
   const [globalHistory, setGlobalHistory] = useState({ trips: [], shipments: [], matches: [] });
   const [historyFilter, setHistoryFilter] = useState({ entity_type: null, status: null });
   
+  // Finance states
+  const [financeSummary, setFinanceSummary] = useState(null);
+  const [financeHistory, setFinanceHistory] = useState({ payments: [], total: 0 });
+  const [escrowDetails, setEscrowDetails] = useState({ escrow_items: [], total_held: 0 });
+  
   // Estados de Seleção e Modais
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
