@@ -255,7 +255,9 @@ class VehicleBase(BaseModel):
     
     # Dados Específicos de Veículo
     license_plate: Optional[str] = None
-    model: Optional[str] = None
+    brand: Optional[str] = None  # Marca (Honda, Fiat, etc.)
+    model: Optional[str] = None  # Modelo específico (Civic, Argo, etc.)
+    year: Optional[int] = None   # Ano do veículo
     color: Optional[str] = None
     
     # Capacidade Inteligente (Requirement #2 e #3)
