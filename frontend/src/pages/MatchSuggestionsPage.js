@@ -230,11 +230,12 @@ const MatchSuggestionsPage = () => {
                         className="bg-jungle hover:bg-jungle-800 flex-1 md:flex-none h-10 text-sm"
                         data-testid={`create-match-${index}`}
                       >
-                      {creating === `${suggestion.trip_id}-${suggestion.shipment_id}` 
-                        ? 'Criando...' 
-                        : 'Criar Combinação'
-                      }
-                    </Button>
+                        {creating === `${suggestion.trip_id}-${suggestion.shipment_id}` 
+                          ? 'Criando...' 
+                          : 'Criar Combinação'
+                        }
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
