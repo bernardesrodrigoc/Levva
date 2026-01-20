@@ -417,7 +417,7 @@ const VehiclesPage = () => {
 
                       {suggestion.sample_size > 0 && (
                         <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                          <TrendingUp size={12} />
+                          <TrendUp size={12} />
                           Baseado em {suggestion.sample_size} veículos similares na plataforma
                         </p>
                       )}
