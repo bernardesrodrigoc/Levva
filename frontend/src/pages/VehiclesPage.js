@@ -356,25 +356,77 @@ const VehiclesPage = () => {
               {['car', 'motorcycle', 'van', 'truck'].includes(newVehicle.type) && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
+                    <div className="relative">
                       <Label>Marca</Label>
                       <Input 
                         className="mt-1"
                         placeholder="Ex: Honda, Fiat" 
                         value={newVehicle.brand}
                         onChange={e => setNewVehicle({...newVehicle, brand: e.target.value})}
+                        onFocus={() => setShowBrandSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowBrandSuggestions(false), 200)}
                         data-testid="vehicle-brand-input"
                       />
+                      {/* Brand Autocomplete Dropdown */}
+                      {showBrandSuggestions && popularBrands.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-zinc-800 border rounded-md shadow-lg max-h-40 overflow-y-auto">
+                          {popularBrands
+                            .filter(b => !newVehicle.brand || b.brand?.toLowerCase().includes(newVehicle.brand.toLowerCase()))
+                            .slice(0, 6)
+                            .map((b, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-jungle/10 flex justify-between items-center"
+                                onMouseDown={() => {
+                                  setNewVehicle({...newVehicle, brand: b.brand});
+                                  setShowBrandSuggestions(false);
+                                }}
+                              >
+                                <span>{b.brand}</span>
+                                <span className="text-xs text-muted-foreground">{b.count} veículos</span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
                     </div>
-                    <div>
+                    <div className="relative">
                       <Label>Modelo</Label>
                       <Input 
                         className="mt-1"
                         placeholder="Ex: Civic, Argo" 
                         value={newVehicle.model}
                         onChange={e => setNewVehicle({...newVehicle, model: e.target.value})}
+                        onFocus={() => setShowModelSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
                         data-testid="vehicle-model-input"
                       />
+                      {/* Model Autocomplete Dropdown */}
+                      {showModelSuggestions && popularModels.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-zinc-800 border rounded-md shadow-lg max-h-40 overflow-y-auto">
+                          {popularModels
+                            .filter(m => {
+                              const matchesBrand = !newVehicle.brand || m.brand?.toLowerCase() === newVehicle.brand.toLowerCase();
+                              const matchesModel = !newVehicle.model || m.model?.toLowerCase().includes(newVehicle.model.toLowerCase());
+                              return matchesBrand && matchesModel;
+                            })
+                            .slice(0, 6)
+                            .map((m, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-jungle/10 flex justify-between items-center"
+                                onMouseDown={() => {
+                                  setNewVehicle({...newVehicle, brand: m.brand, model: m.model});
+                                  setShowModelSuggestions(false);
+                                }}
+                              >
+                                <span>{m.brand} {m.model}</span>
+                                <span className="text-xs text-muted-foreground">{m.count}</span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
