@@ -3,8 +3,8 @@
 ## 🚀 Acesso Rápido
 
 ### URLs
-- **Frontend**: https://levva-shipping.preview.emergentagent.com
-- **Backend API**: https://levva-shipping.preview.emergentagent.com/api
+- **Frontend**: https://logistic-mvp.preview.emergentagent.com
+- **Backend API**: https://logistic-mvp.preview.emergentagent.com/api
 
 ### Credenciais Admin
 ```
