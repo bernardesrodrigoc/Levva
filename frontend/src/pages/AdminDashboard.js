@@ -958,6 +958,160 @@ const AdminDashboard = () => {
                 )}
               </>
             )}
+
+            {/* Payouts Tab */}
+            {activeTab === 'payouts' && (
+              <>
+                {/* Payout Statistics */}
+                {payoutStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-blue-600">{payoutStats.pending_delivery}</p>
+                      <p className="text-xs text-muted-foreground">Em Entrega</p>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-yellow-600">{payoutStats.delivered_pending_confirm}</p>
+                      <p className="text-xs text-muted-foreground">Aguardando Confirm.</p>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-green-600">{payoutStats.ready_for_payout}</p>
+                      <p className="text-xs text-muted-foreground">Prontos p/ Pagar</p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-red-600">{payoutStats.payout_blocked}</p>
+                      <p className="text-xs text-muted-foreground">Bloqueados (sem Pix)</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Totals */}
+                {payoutStats && (
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg mb-6 flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total a Pagar (Transportadores)</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        R$ {(payoutStats.pending_payout_total || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">Taxa Plataforma</p>
+                      <p className="text-xl font-bold text-blue-600">
+                        R$ {(payoutStats.pending_platform_fee || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <Button onClick={handleRunAutoConfirm} variant="outline" size="sm">
+                      <Clock size={16} className="mr-1" />
+                      Executar Auto-Confirmação
+                    </Button>
+                  </div>
+                )}
+
+                {/* Ready Payouts List */}
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <CurrencyDollar size={20} className="text-green-600" />
+                  Prontos para Pagamento ({readyPayouts.length})
+                </h3>
+
+                {readyPayouts.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <CheckCircle size={48} className="mx-auto text-green-300 mb-3" />
+                    <p className="text-muted-foreground">Nenhum pagamento pendente!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 mb-8">
+                    {readyPayouts.map((payout) => (
+                      <Card key={payout.payment_id} className="border-green-200 bg-green-50/30">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between flex-wrap gap-4">
+                            <div>
+                              <p className="font-medium">Pagamento #{payout.payment_id.slice(-8)}</p>
+                              <p className="text-sm text-muted-foreground">
+                                Match: {payout.match_id?.slice(-8)} | Trip: {payout.trip_id?.slice(-8)}
+                              </p>
+                            </div>
+
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground">Total Pago</p>
+                              <p className="font-bold">R$ {payout.total_paid?.toFixed(2)}</p>
+                            </div>
+
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground">Taxa Plataforma</p>
+                              <p className="font-medium text-blue-600">R$ {payout.platform_fee?.toFixed(2)}</p>
+                            </div>
+
+                            <div className="text-center bg-green-100 px-3 py-2 rounded">
+                              <p className="text-xs text-muted-foreground">Valor Transportador</p>
+                              <p className="font-bold text-green-700">R$ {payout.carrier_amount?.toFixed(2)}</p>
+                            </div>
+
+                            <div className="text-sm">
+                              <p className="font-medium">{payout.carrier?.name}</p>
+                              <p className="text-xs text-muted-foreground">{payout.carrier?.email}</p>
+                              {payout.carrier?.pix_key && (
+                                <p className="text-xs font-mono text-green-600">
+                                  Pix ({payout.carrier?.pix_type}): {payout.carrier?.pix_key}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="text-sm text-right">
+                              <p className="text-xs text-muted-foreground">Confirmado em</p>
+                              <p>{payout.confirmed_at ? new Date(payout.confirmed_at).toLocaleDateString('pt-BR') : '-'}</p>
+                              <Badge variant="outline" className="mt-1 text-xs">
+                                {payout.confirmation_type === 'auto_timeout' ? 'Auto' : 'Manual'}
+                              </Badge>
+                            </div>
+
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleMarkPayoutComplete(payout.payment_id)}
+                            >
+                              <Check size={16} className="mr-1" />
+                              Marcar Pago
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {/* Blocked Payouts */}
+                {blockedPayouts.length > 0 && (
+                  <>
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-600">
+                      <Warning size={20} />
+                      Bloqueados - Sem Método de Pagamento ({blockedPayouts.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {blockedPayouts.map((payout) => (
+                        <Card key={payout.payment_id} className="border-red-200 bg-red-50/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                              <div>
+                                <p className="font-medium">Pagamento #{payout.payment_id.slice(-8)}</p>
+                                <Badge variant="destructive" className="mt-1">Sem Pix</Badge>
+                              </div>
+                              <div className="text-center bg-red-100 px-3 py-2 rounded">
+                                <p className="text-xs text-muted-foreground">Valor Retido</p>
+                                <p className="font-bold text-red-700">R$ {payout.carrier_amount?.toFixed(2)}</p>
+                              </div>
+                              <div className="text-sm">
+                                <p className="font-medium">{payout.carrier?.name}</p>
+                                <p className="text-xs text-muted-foreground">{payout.carrier?.email}</p>
+                              </div>
+                              <p className="text-sm text-red-600">{payout.reason}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
