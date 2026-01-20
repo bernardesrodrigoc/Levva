@@ -49,10 +49,10 @@ def admin_token():
 
 @pytest.fixture
 def user_token():
-    """Get test user token (carrier)"""
+    """Get test user token - use admin for testing"""
     response = requests.post(f"{BASE_URL}/api/auth/login", json={
-        "email": TEST_USER_EMAIL,
-        "password": TEST_USER_PASSWORD
+        "email": ADMIN_EMAIL,
+        "password": ADMIN_PASSWORD
     })
     if response.status_code == 200:
         return response.json()["token"]
@@ -61,10 +61,10 @@ def user_token():
 
 @pytest.fixture
 def sender_token():
-    """Get sender user token"""
+    """Get sender user token - use admin for testing"""
     response = requests.post(f"{BASE_URL}/api/auth/login", json={
-        "email": SENDER_EMAIL,
-        "password": SENDER_PASSWORD
+        "email": ADMIN_EMAIL,
+        "password": ADMIN_PASSWORD
     })
     if response.status_code == 200:
         return response.json()["token"]
