@@ -429,10 +429,40 @@ const MatchDetailPage = () => {
       pending_payment: { label: 'Aguardando Pagamento', color: 'bg-yellow-100 text-yellow-700' },
       paid: { label: 'Pago', color: 'bg-blue-100 text-blue-700' },
       in_transit: { label: 'Em Trânsito', color: 'bg-purple-100 text-purple-700' },
-      delivered: { label: 'Entregue', color: 'bg-jungle/10 text-jungle' }
+      delivered: { label: 'Entregue', color: 'bg-jungle/10 text-jungle' },
+      completed: { label: 'Concluído', color: 'bg-green-100 text-green-700' },
+      disputed: { label: 'Em Disputa', color: 'bg-red-100 text-red-700' },
+      cancelled: { label: 'Cancelado', color: 'bg-gray-100 text-gray-700' },
+      cancelled_by_carrier: { label: 'Cancelado pelo Transportador', color: 'bg-red-100 text-red-700' },
+      cancelled_by_sender: { label: 'Cancelado pelo Remetente', color: 'bg-red-100 text-red-700' }
     };
     const badge = badges[status] || { label: status, color: 'bg-gray-100 text-gray-700' };
     return <Badge className={badge.color}>{badge.label}</Badge>;
+  };
+
+  const getPaymentStatusBadge = (status) => {
+    const badges = {
+      payment_pending: { label: 'Aguardando Pagamento', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
+      paid_escrow: { label: 'Pago (em Escrow)', color: 'bg-blue-100 text-blue-700', icon: ShieldCheck },
+      escrowed: { label: 'Em Custódia', color: 'bg-blue-100 text-blue-700', icon: ShieldCheck },
+      paid: { label: 'Pago', color: 'bg-blue-100 text-blue-700', icon: CheckCircle },
+      delivered_by_transporter: { label: 'Entregue - Aguardando Confirmação', color: 'bg-orange-100 text-orange-700', icon: Clock },
+      confirmed_by_sender: { label: 'Entrega Confirmada', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+      auto_confirmed_timeout: { label: 'Confirmado Automaticamente', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+      payout_ready: { label: 'Pagamento Pronto', color: 'bg-lime/20 text-lime-700', icon: CurrencyDollar },
+      payout_completed: { label: 'Pagamento Efetuado', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+      payout_blocked_no_payout_method: { label: 'Pagamento Bloqueado - Sem Pix', color: 'bg-red-100 text-red-700', icon: XCircle },
+      dispute_opened: { label: 'Em Disputa', color: 'bg-red-100 text-red-700', icon: Warning },
+      refunded: { label: 'Reembolsado', color: 'bg-gray-100 text-gray-700', icon: XCircle }
+    };
+    const badge = badges[status] || { label: status || 'Desconhecido', color: 'bg-gray-100 text-gray-700', icon: Clock };
+    const IconComponent = badge.icon;
+    return (
+      <Badge className={`${badge.color} flex items-center gap-1`}>
+        <IconComponent size={14} />
+        {badge.label}
+      </Badge>
+    );
   };
 
   const isCarrier = user?.id === match?.carrier_id;
@@ -441,6 +471,12 @@ const MatchDetailPage = () => {
   const canConfirmPickup = isCarrier && match?.status === 'paid' && !match?.pickup_confirmed_at;
   const canConfirmDelivery = isCarrier && match?.status === 'in_transit' && !match?.delivery_confirmed_at;
   const canRate = match?.status === 'delivered' && !match?.rated;
+  
+  // New payment flow conditions
+  const paymentStatus = deliveryStatus?.status;
+  const canMarkDelivered = isCarrier && ['paid_escrow', 'escrowed', 'paid'].includes(paymentStatus);
+  const canSenderConfirm = isSender && paymentStatus === 'delivered_by_transporter';
+  const canOpenDispute = isSender && paymentStatus === 'delivered_by_transporter';
 
   if (loading) {
     return (
