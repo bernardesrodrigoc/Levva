@@ -24,15 +24,13 @@ class PayoutRequest:
     """Requisição de payout para o provider."""
     payout_id: str
     amount: float
-    currency: str = "BRL"
-    
     recipient_pix_key: str
     recipient_pix_type: str  # cpf, cnpj, email, phone, random
     recipient_name: str
-    
     description: str
     reference_id: str  # ID interno para reconciliação
     
+    currency: str = "BRL"
     metadata: Optional[Dict[str, Any]] = None
 
 
