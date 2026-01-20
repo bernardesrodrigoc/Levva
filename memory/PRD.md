@@ -216,6 +216,10 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - **Usuário teste (carrier):** teste@levva.com / password123
 - **Usuário teste (sender):** remetente_sp_1768238849@levva.com / teste123
 
+## Testes Automatizados
+- `/app/tests/test_geospatial_suggestions.py` - Testes do sistema geoespacial (14/16 passando)
+- `/app/test_reports/iteration_6.json` - Relatório de testes mais recente
+
 ## Arquitetura de Código
 
 ### Backend Refatorado (18/01/2026)
