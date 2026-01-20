@@ -349,13 +349,19 @@ async def get_matching_trips_for_shipment(
     dest_lng: float,
     weight_kg: float = 1.0,
     preferred_date: datetime = None,
-    days_ahead: int = 14
+    days_ahead: int = 14,
+    ignore_date: bool = False  # NEW: Option to find any matching trip regardless of date
 ) -> List[dict]:
     """
     Get trips that can carry a shipment based on geospatial matching.
     
     This is the core function for showing "compatible trips" during shipment creation.
     Uses coordinate-based matching as primary criterion.
+    
+    Matching criteria:
+    1. Geospatial: Shipment origin/dest within trip's corridor
+    2. Capacity: Trip has enough weight capacity
+    3. Date: Trip departs within the date range (unless ignore_date=True)
     
     Returns list of matching trips with match details.
     """
@@ -367,16 +373,24 @@ async def get_matching_trips_for_shipment(
     start_date = preferred_date.replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = start_date + timedelta(days=days_ahead)
     
-    # Get all published trips in date range with sufficient capacity
-    trips = await trips_collection.find({
-        "departure_date": {"$gte": start_date, "$lt": end_date},
-        "status": "published",
+    # Build query
+    query = {
+        "status": {"$in": ["published", TripStatus.PUBLISHED.value if hasattr(TripStatus, 'PUBLISHED') else "published"]},
         "$or": [
             {"available_capacity_kg": {"$gte": weight_kg}},
             {"cargo_space.max_weight_kg": {"$gte": weight_kg}},
             {"available_capacity_kg": {"$exists": False}}
         ]
-    }).to_list(100)
+    }
+    
+    # Add date filter unless ignored
+    if not ignore_date:
+        query["departure_date"] = {"$gte": start_date, "$lt": end_date}
+    
+    # Get trips
+    trips = await trips_collection.find(query).to_list(100)
+    
+    logger.info(f"Found {len(trips)} trips matching query (ignore_date={ignore_date})")
     
     matching_trips = []
     
