@@ -487,6 +487,14 @@ const AdminDashboard = () => {
               >
                 Todos os Usuários ({allUsers.length})
               </Button>
+              <Button
+                variant={activeTab === 'flagged-vehicles' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('flagged-vehicles')}
+                className={activeTab === 'flagged-vehicles' ? 'bg-yellow-600 hover:bg-yellow-700' : 'border-yellow-400 text-yellow-700'}
+              >
+                <Flag size={16} className="mr-1" />
+                Veículos Flaggeados ({flaggedVehicles.length})
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
