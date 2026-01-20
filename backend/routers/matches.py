@@ -287,49 +287,76 @@ async def create_match(
     if not can_fit:
         raise HTTPException(status_code=400, detail=reason)
     
-    # Calculate intelligent price
-    distance_km = haversine_distance(
-        shipment["origin"].get("lat", 0), shipment["origin"].get("lng", 0),
-        shipment["destination"].get("lat", 0), shipment["destination"].get("lng", 0)
-    )
+    # ============================================================
+    # USE PERSISTED PRICE FROM SHIPMENT (Single Source of Truth)
+    # ============================================================
+    # Price was calculated at shipment creation and stored.
+    # Match uses this immutable price - NO recalculation.
+    # ============================================================
     
-    # Calculate deviation from trip route
-    deviation_km = 0
-    if trip.get("route_polyline"):
-        pickup_dist = haversine_distance(
+    shipment_price = shipment.get("price")
+    
+    if shipment_price:
+        # Use persisted price (new unified pricing architecture)
+        total_price = shipment_price.get("final_price")
+        carrier_earnings = shipment_price.get("base_price")
+        platform_commission = shipment_price.get("platform_fee")
+        pricing_breakdown = {
+            "distance_km": shipment_price.get("distance_km"),
+            "weight_kg": shipment_price.get("weight_kg"),
+            "category": shipment_price.get("category"),
+            "platform_fee_percentage": shipment_price.get("platform_fee_percentage"),
+            "source": "shipment_persisted"  # Indicates price came from shipment
+        }
+    else:
+        # Legacy: Calculate price for old shipments without persisted price
+        # This branch will be removed once all shipments have persisted prices
+        from services.pricing_service import calculate_intelligent_price as legacy_calculate_price
+        
+        distance_km = haversine_distance(
             shipment["origin"].get("lat", 0), shipment["origin"].get("lng", 0),
-            trip["origin"].get("lat", 0), trip["origin"].get("lng", 0)
+            shipment["destination"].get("lat", 0), shipment["destination"].get("lng", 0)
         )
-        dropoff_dist = haversine_distance(
-            shipment["destination"].get("lat", 0), shipment["destination"].get("lng", 0),
-            trip["destination"].get("lat", 0), trip["destination"].get("lng", 0)
+        
+        deviation_km = 0
+        if trip.get("route_polyline"):
+            pickup_dist = haversine_distance(
+                shipment["origin"].get("lat", 0), shipment["origin"].get("lng", 0),
+                trip["origin"].get("lat", 0), trip["origin"].get("lng", 0)
+            )
+            dropoff_dist = haversine_distance(
+                shipment["destination"].get("lat", 0), shipment["destination"].get("lng", 0),
+                trip["destination"].get("lat", 0), trip["destination"].get("lng", 0)
+            )
+            deviation_km = pickup_dist + dropoff_dist
+        
+        cargo_space = trip.get("cargo_space", {})
+        max_weight = cargo_space.get("max_weight_kg", 50)
+        used_weight = max_weight - trip.get("available_weight_kg", max_weight)
+        capacity_percent = (used_weight / max_weight * 100) if max_weight > 0 else 0
+        
+        price_result = await legacy_calculate_price(
+            distance_km=distance_km,
+            deviation_km=deviation_km,
+            corridor_radius_km=trip.get("corridor_radius_km", 10),
+            weight_kg=weight_kg,
+            length_cm=length_cm,
+            width_cm=width_cm,
+            height_cm=height_cm,
+            category=package.get("category"),
+            trip_used_capacity_percent=capacity_percent,
+            origin_city=shipment["origin"].get("city", ""),
+            destination_city=shipment["destination"].get("city", ""),
+            departure_date=trip.get("departure_date", datetime.now(timezone.utc))
         )
-        deviation_km = pickup_dist + dropoff_dist
-    
-    # Get current trip capacity usage
-    cargo_space = trip.get("cargo_space", {})
-    max_weight = cargo_space.get("max_weight_kg", 50)
-    used_weight = max_weight - trip.get("available_weight_kg", max_weight)
-    capacity_percent = (used_weight / max_weight * 100) if max_weight > 0 else 0
-    
-    price_result = await calculate_intelligent_price(
-        distance_km=distance_km,
-        deviation_km=deviation_km,
-        corridor_radius_km=trip.get("corridor_radius_km", 10),
-        weight_kg=weight_kg,
-        length_cm=length_cm,
-        width_cm=width_cm,
-        height_cm=height_cm,
-        category=package.get("category"),
-        trip_used_capacity_percent=capacity_percent,
-        origin_city=shipment["origin"].get("city", ""),
-        destination_city=shipment["destination"].get("city", ""),
-        departure_date=trip.get("departure_date", datetime.now(timezone.utc))
-    )
-    
-    total_price = price_result["total_price"]
-    carrier_earnings = price_result["carrier_earnings"]
-    platform_commission = price_result["_breakdown"]["platform_commission"]
+        
+        total_price = price_result["total_price"]
+        carrier_earnings = price_result["carrier_earnings"]
+        platform_commission = price_result["_breakdown"]["platform_commission"]
+        pricing_breakdown = {
+            **price_result["_breakdown"],
+            "source": "legacy_calculated"  # Indicates legacy calculation
+        }
     
     match_doc = {
         "trip_id": trip_id,
@@ -339,7 +366,7 @@ async def create_match(
         "estimated_price": total_price,
         "platform_commission": platform_commission,
         "carrier_earnings": carrier_earnings,
-        "pricing_breakdown": price_result["_breakdown"],
+        "pricing_breakdown": pricing_breakdown,
         "status": "pending_payment",
         "pickup_confirmed_at": None,
         "delivery_confirmed_at": None,
