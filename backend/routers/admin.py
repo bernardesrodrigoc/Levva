@@ -1234,3 +1234,203 @@ async def get_escrow_details(user: dict = Depends(get_current_admin_user)):
         "count": len(results)
     }
 
+
+
+# ============ Payout Management (Hybrid System) ============
+
+@router.get("/payouts/pending")
+async def get_pending_payouts(user: dict = Depends(get_current_admin_user)):
+    """
+    Lista todos os payouts pendentes de execução.
+    
+    Retorna payouts com status ELIGIBLE ou READY_FOR_PAYOUT.
+    """
+    from services.payout_service import get_payout_service
+    
+    service = get_payout_service()
+    payouts = await service.get_ready_for_payout()
+    
+    # Enrich with trip info
+    for payout in payouts:
+        match = await matches_collection.find_one({"_id": ObjectId(payout["match_id"])})
+        if match:
+            trip = await trips_collection.find_one({"_id": ObjectId(match["trip_id"])})
+            if trip:
+                payout["trip_origin"] = trip.get("origin", {}).get("city", "N/A")
+                payout["trip_destination"] = trip.get("destination", {}).get("city", "N/A")
+    
+    return {
+        "payouts": payouts,
+        "total": len(payouts),
+        "total_amount": sum(p["net_amount"] for p in payouts)
+    }
+
+
+@router.get("/payouts/stats")
+async def get_payout_stats(user: dict = Depends(get_current_admin_user)):
+    """
+    Retorna estatísticas gerais do sistema de payouts.
+    """
+    from services.payout_service import get_payout_service
+    
+    service = get_payout_service()
+    stats = await service.get_payout_stats()
+    
+    return stats
+
+
+@router.post("/payouts/execute-daily")
+async def execute_daily_payouts(user: dict = Depends(get_current_admin_user)):
+    """
+    Executa todos os payouts elegíveis do dia.
+    
+    Este endpoint é o principal mecanismo de payout do sistema híbrido.
+    Deve ser chamado manualmente pelo admin (diariamente ou conforme necessário).
+    
+    O sistema processa cada payout individualmente, logando todas as ações.
+    """
+    from services.payout_service import get_payout_service
+    
+    service = get_payout_service()
+    admin_id = user.get("id", "unknown")
+    
+    report = await service.execute_daily_payouts(admin_id)
+    
+    return {
+        "message": "Execução de payouts concluída",
+        "execution_date": report.execution_date.isoformat(),
+        "executed_by": admin_id,
+        "summary": {
+            "total_processed": report.total_processed,
+            "successful": report.successful,
+            "failed": report.failed,
+            "blocked": report.blocked
+        },
+        "amounts": {
+            "total_paid": report.total_amount_paid,
+            "platform_fees": report.total_platform_fees
+        },
+        "results": [
+            {
+                "payout_id": r.payout_id,
+                "success": r.success,
+                "status": r.status.value,
+                "gateway_reference": r.gateway_reference,
+                "error": r.error_message
+            }
+            for r in report.results
+        ],
+        "errors": report.errors
+    }
+
+
+@router.post("/payouts/{payout_id}/execute")
+async def execute_single_payout(
+    payout_id: str,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Executa um payout específico.
+    
+    Útil para reprocessar payouts que falharam ou executar um payout urgente.
+    """
+    from services.payout_service import get_payout_service
+    
+    service = get_payout_service()
+    admin_id = user.get("id", "unknown")
+    
+    result = await service.execute_payout(payout_id, admin_id)
+    
+    return {
+        "payout_id": result.payout_id,
+        "success": result.success,
+        "status": result.status.value,
+        "gateway_reference": result.gateway_reference,
+        "error": result.error_message,
+        "processed_at": result.processed_at.isoformat()
+    }
+
+
+@router.get("/payouts/history")
+async def get_payout_history(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    status: Optional[str] = None,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Retorna histórico completo de payouts com filtros.
+    """
+    from database import db
+    
+    payouts_collection = db["payouts"]
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    skip = (page - 1) * limit
+    
+    payouts = await payouts_collection.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await payouts_collection.count_documents(query)
+    
+    results = []
+    for payout in payouts:
+        carrier = await users_collection.find_one({"_id": ObjectId(payout["carrier_id"])})
+        
+        results.append({
+            "id": str(payout["_id"]),
+            "match_id": payout["match_id"],
+            "carrier_id": payout["carrier_id"],
+            "carrier_name": carrier.get("name") if carrier else "N/A",
+            "carrier_pix": payout.get("carrier_pix_key"),
+            "gross_amount": payout["gross_amount"],
+            "platform_fee": payout["platform_fee"],
+            "net_amount": payout["net_amount"],
+            "status": payout["status"],
+            "trigger": payout.get("trigger"),
+            "provider_id": payout.get("provider_id"),
+            "created_at": payout["created_at"].isoformat() if payout.get("created_at") else None,
+            "eligible_at": payout["eligible_at"].isoformat() if payout.get("eligible_at") else None,
+            "processed_at": payout["processed_at"].isoformat() if payout.get("processed_at") else None,
+            "audit_log_count": len(payout.get("audit_log", []))
+        })
+    
+    return {
+        "payouts": results,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+
+@router.get("/payouts/{payout_id}/audit")
+async def get_payout_audit_log(
+    payout_id: str,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Retorna log de auditoria completo de um payout.
+    """
+    from database import db
+    
+    payouts_collection = db["payouts"]
+    
+    payout = await payouts_collection.find_one({"_id": ObjectId(payout_id)})
+    if not payout:
+        raise HTTPException(status_code=404, detail="Payout não encontrado")
+    
+    return {
+        "payout_id": payout_id,
+        "status": payout["status"],
+        "audit_log": [
+            {
+                "timestamp": entry["timestamp"].isoformat() if entry.get("timestamp") else None,
+                "action": entry["action"],
+                "actor": entry["actor"],
+                "details": entry.get("details", {})
+            }
+            for entry in payout.get("audit_log", [])
+        ]
+    }
+
