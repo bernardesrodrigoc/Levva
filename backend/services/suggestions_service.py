@@ -20,6 +20,12 @@ import math
 
 logger = logging.getLogger(__name__)
 
+# Import TripStatus for status comparison
+try:
+    from models import TripStatus
+except ImportError:
+    TripStatus = None
+
 
 # Strategic points in major Brazilian cities (central, accessible locations)
 STRATEGIC_POINTS = {
