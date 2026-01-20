@@ -1287,6 +1287,112 @@ const AdminDashboard = () => {
                 )}
               </>
             )}
+
+            {/* Finance Tab */}
+            {activeTab === 'finance' && (
+              <>
+                {/* Finance Summary Cards */}
+                {financeSummary && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-emerald-600">
+                        R$ {(financeSummary.grand_totals?.total_transactions || 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Volume Total</p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-blue-600">
+                        R$ {(financeSummary.grand_totals?.total_platform_revenue || 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Receita Plataforma</p>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-yellow-600">
+                        R$ {(financeSummary.escrow?.money_held || 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Em Retenção (Escrow)</p>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-green-600">
+                        R$ {(financeSummary.escrow?.pending_payout_to_carriers || 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Pendente Carriers</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Escrow Details */}
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Clock size={20} className="text-yellow-600" />
+                  Em Retenção ({escrowDetails?.escrow_items?.length || 0})
+                </h3>
+                {escrowDetails?.escrow_items?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4 mb-6">Nenhum valor em retenção</p>
+                ) : (
+                  <div className="space-y-2 mb-6">
+                    {escrowDetails?.escrow_items?.map((item) => (
+                      <div key={item.payment_id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <div>
+                          <Badge className="bg-yellow-100 text-yellow-700">{item.status}</Badge>
+                          <span className="ml-2 font-medium">R$ {item.amount?.toFixed(2)}</span>
+                          <span className="ml-2 text-sm text-muted-foreground">→ {item.carrier_name}</span>
+                        </div>
+                        <div className="text-sm text-right">
+                          {item.time_remaining && (
+                            <p className="text-yellow-600">
+                              Auto-confirma em {item.time_remaining.days}d {item.time_remaining.hours}h
+                            </p>
+                          )}
+                          {item.carrier_pix ? (
+                            <p className="text-xs text-green-600">Pix: {item.carrier_pix}</p>
+                          ) : (
+                            <p className="text-xs text-red-600">Sem Pix cadastrado</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Payment History */}
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <CurrencyDollar size={20} className="text-emerald-600" />
+                  Histórico de Transações ({financeHistory?.total || 0})
+                </h3>
+                {financeHistory?.payments?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">Nenhuma transação registrada</p>
+                ) : (
+                  <div className="space-y-2">
+                    {financeHistory?.payments?.slice(0, 15).map((payment) => (
+                      <div key={payment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <Badge className={
+                            payment.status?.includes('payout_completed') ? 'bg-green-100 text-green-700' :
+                            payment.status?.includes('payout_ready') ? 'bg-blue-100 text-blue-700' :
+                            payment.status?.includes('blocked') ? 'bg-red-100 text-red-700' :
+                            payment.status?.includes('delivered') ? 'bg-yellow-100 text-yellow-700' :
+                            payment.status?.includes('escrow') || payment.status?.includes('paid') ? 'bg-purple-100 text-purple-700' :
+                            payment.status?.includes('dispute') ? 'bg-orange-100 text-orange-700' :
+                            'bg-gray-100 text-gray-700'
+                          }>{payment.status}</Badge>
+                          <span className="ml-2 font-medium">R$ {payment.amount?.toFixed(2)}</span>
+                          {payment.platform_fee > 0 && (
+                            <span className="ml-2 text-xs text-blue-600">(taxa: R$ {payment.platform_fee?.toFixed(2)})</span>
+                          )}
+                        </div>
+                        <div className="text-sm text-right">
+                          <p>{payment.sender_name} → {payment.carrier_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {payment.created_at && new Date(payment.created_at).toLocaleDateString('pt-BR')}
+                            {payment.confirmation_type && ` • ${payment.confirmation_type === 'auto_timeout' ? 'Auto' : 'Manual'}`}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
