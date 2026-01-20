@@ -215,7 +215,7 @@ const MatchSuggestionsPage = () => {
                         variant="outline"
                         onClick={() => {
                           const detailUrl = suggestion.type === 'trip_for_shipment' 
-                            ? `/trip/${suggestion.trip_id}`
+                            ? `/viagens/${suggestion.trip_id}`
                             : `/shipment/${suggestion.shipment_id}`;
                           navigate(detailUrl);
                         }}
