@@ -20,37 +20,58 @@ const PriceEstimate = ({
   widthCm,
   heightCm,
   category,
+  transporterPricePerKm, // NEW: Transporter's price
   showBreakdown = false
 }) => {
   const { token } = useAuth();
   const [priceData, setPriceData] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Reactive price calculation - debounced
   useEffect(() => {
-    if (originLat && destLat && weightKg > 0) {
-      calculatePrice();
+    // Validate all required fields
+    const hasLocation = originLat && originLng && destLat && destLng;
+    const hasWeight = weightKg && parseFloat(weightKg) > 0;
+    
+    if (!hasLocation || !hasWeight) {
+      setPriceData(null);
+      return;
     }
-  }, [originLat, originLng, destLat, destLng, weightKg, lengthCm, widthCm, heightCm, category]);
+
+    // Debounce to avoid too many API calls
+    const timeoutId = setTimeout(() => {
+      calculatePrice();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [originLat, originLng, destLat, destLng, weightKg, lengthCm, widthCm, heightCm, category, token, transporterPricePerKm]);
 
   const calculatePrice = async () => {
     setLoading(true);
     try {
+      // Parse values to ensure they're numbers
+      const weight = parseFloat(weightKg) || 1;
+      const length = parseFloat(lengthCm) || 20;
+      const width = parseFloat(widthCm) || 20;
+      const height = parseFloat(heightCm) || 20;
+
       if (token) {
         // Full calculation with authentication
         const response = await axios.post(
           `${API}/intelligence/pricing/calculate`,
           {
-            origin_lat: originLat,
-            origin_lng: originLng,
-            dest_lat: destLat,
-            dest_lng: destLng,
+            origin_lat: parseFloat(originLat),
+            origin_lng: parseFloat(originLng),
+            dest_lat: parseFloat(destLat),
+            dest_lng: parseFloat(destLng),
             origin_city: originCity || '',
             destination_city: destinationCity || '',
-            weight_kg: weightKg,
-            length_cm: lengthCm || 20,
-            width_cm: widthCm || 20,
-            height_cm: heightCm || 20,
-            category: category || 'medium'
+            weight_kg: weight,
+            length_cm: length,
+            width_cm: width,
+            height_cm: height,
+            category: category || 'medium',
+            transporter_price_per_km: transporterPricePerKm || null
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -62,7 +83,7 @@ const PriceEstimate = ({
           origin_lng: originLng,
           dest_lat: destLat,
           dest_lng: destLng,
-          weight_kg: weightKg
+          weight_kg: weight
         });
         
         const response = await axios.get(`${API}/intelligence/pricing/estimate?${params}`);
