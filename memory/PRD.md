@@ -1,381 +1,130 @@
-# Levva - Plataforma de Crowdshipping
+# Levva - Plataforma de Logística de Frete
 
-## Problema Original
-Construir uma plataforma web completa (web-first, responsiva para mobile e desktop) para frete colaborativo (crowdshipping) chamada "Levva". A plataforma conecta pessoas que já estão viajando (Transportadores) com pessoas que precisam enviar pequenos itens legais e de baixo risco (Remetentes).
+## Original Problem Statement
+Plataforma de logística para conectar remetentes (senders) com transportadores (carriers) para entrega de pacotes. O sistema permite:
+- Remetentes: criar envios, encontrar viagens compatíveis, pagar por entregas
+- Transportadores: criar viagens, encontrar pacotes para transportar, receber pagamentos
+- Admin: gerenciar usuários, verificações, disputas e payouts
 
-## Requisitos do Produto
-- **Idioma:** Português (Brasil)
-- **Funções de Usuário:** Remetente, Transportador, Admin
-- **Registro e Confiança:**
-  - Verificação de email/telefone, foto de perfil
-  - Verificação de identidade obrigatória (documento + selfie) para desbloquear funcionalidades
-  - Transportadores precisam fazer upload da CNH
-  - Níveis progressivos de confiança
+## Current Phase: PRODUCT VALIDATION ✅
 
-## Stack Tecnológico
-- **Backend:** FastAPI + MongoDB (motor async)
-- **Frontend:** React + Tailwind CSS + Shadcn UI
-- **Autenticação:** JWT
-- **Mapas/Roteamento:** OpenStreetMap + Leaflet + OSRM
-- **Pagamentos:** Mercado Pago
-- **Storage:** Cloudflare R2
-- **Real-time:** WebSockets (GPS Tracking)
+## What's Been Implemented (January 2026)
 
-## O Que Foi Implementado
+### P0 Issues - ALL FIXED ✅
 
-### ⭐ Sistema de Inteligência (19/01/2026) - NOVO
+#### Issue 1: Reactive Pricing ✅
+- **Root Cause**: `useCallback` + `useEffect` separados não detectavam mudanças corretamente
+- **Fix**: Consolidado em único `useEffect` com cleanup e `AbortController`
+- **Files Changed**: 
+  - `/app/frontend/src/components/IntelligentPricing.js`
+  - `/app/backend/routers/intelligence.py`
+- **Test Result**: 5kg=R$86.45, 20kg=R$143.59 (SP-RJ) - preço atualiza LIVE
 
-#### 1. Precificação Dinâmica Inteligente
-**Arquivo:** `/app/backend/services/pricing_service.py`
-- Modelo de preço inspirado em ride-hailing (Uber, 99)
-- Componentes do preço:
-  - Base por distância (progressivo por faixas)
-  - Multiplicador por categoria de carga (documento, pequeno, médio, grande, extra grande)
-  - Volume + peso combinados (peso dimensional)
-  - Desvio da rota do transportador
-  - Demanda vs oferta na rota/data
-  - Capacidade restante da viagem (pricing progressivo)
-- Comissão da plataforma: 15-25% (por faixas de valor)
-- Preço único exibido ao usuário
+#### Issue 2: Match Cancellation ✅
+- Backend endpoint `/api/trips/{trip_id}/cancel` funcionando
+- Frontend com diálogos de cancelamento e motivo
+- Status atualizado corretamente
 
-**Endpoints:**
-- `POST /api/intelligence/pricing/calculate` - Cálculo completo
-- `GET /api/intelligence/pricing/estimate` - Estimativa rápida (público)
-- `GET /api/intelligence/pricing/categories` - Categorias de carga
+#### Issue 3: Payment Flow (Escrow) ✅
+- **Backend Endpoints**:
+  - `POST /api/payments/{match_id}/mark-delivered` - Transportador marca entrega
+  - `POST /api/payments/{match_id}/confirm-delivery` - Sender confirma recebimento
+  - `POST /api/payments/{match_id}/open-dispute` - Sender abre disputa
+  - `GET /api/payments/{match_id}/delivery-status` - Status com countdown
+- **Frontend** (`MatchDetailPage.js`):
+  - Botão "Marcar como Entregue" para transportador
+  - Botões "Confirmar Recebimento" e "Abrir Disputa" para sender
+  - Countdown de auto-confirmação (7 dias)
+- **Bug Fix**: Timezone-aware datetime comparison in delivery-status
 
-#### 2. Sistema de Capacidade e Múltiplos Envios
-**Arquivo:** `/app/backend/services/capacity_service.py`
-- Múltiplos envios por viagem
-- Rastreamento de peso e volume usado/disponível
-- Prevenção automática de overbooking
-- % de capacidade exibido ao transportador
+### Core Features Implemented
+- User authentication (JWT)
+- Trip creation with geospatial data
+- Shipment creation with intelligent pricing
+- Matching engine (geospatial + route corridor)
+- Vehicle management with intelligent suggestions
+- Real-time chat between users
+- GPS tracking for deliveries
+- Admin dashboard (users, verifications, disputes, payouts)
+- Payment escrow flow (MercadoPago - mocked)
 
-**Endpoints:**
-- `GET /api/intelligence/capacity/trip/{id}` - Status de capacidade
-- `GET /api/intelligence/capacity/check-fit` - Verificar se envio cabe
-- `GET /api/intelligence/capacity/available-trips` - Viagens com capacidade
+## Architecture
 
-#### 3. Sugestões Inteligentes - GEOSPATIAL-FIRST ✅ (20/01/2026)
-**Arquivo:** `/app/backend/services/suggestions_service.py`
-
-**PRINCÍPIO DE MATCHING:** Abordagem Geoespacial-Primeiro
-- **Critério Primário:** Coordenadas + raio do corredor
-- **Critério Secundário:** Desvio da rota via polyline
-- **Fallback apenas:** Nome da cidade (quando coordenadas indisponíveis)
-
-**Funcionalidades:**
-- Sugestões de datas com maior probabilidade de match (geoespacial)
-- Pontos estratégicos de coleta/entrega baseados em coordenadas
-- Agregação de envios próximos por proximidade geográfica
-- Horários otimizados
-- Suporte a rotas intra-cidade (bairro → bairro)
-
-**Lógica de Matching:**
-- `check_geospatial_match()` - Verifica se envio está no corredor da viagem
-- `haversine_distance()` - Cálculo de distância entre coordenadas
-- `point_to_polyline_distance()` - Distância mínima de ponto para rota
-
-**Endpoints (NOVOS - JSON body com coordenadas):**
-- `POST /api/intelligence/suggestions/matching-trips` - Viagens compatíveis por geolocalização
-- `POST /api/intelligence/suggestions/dates` - Sugestões de data (geoespacial)
-- `POST /api/intelligence/suggestions/locations` - Sugestões de local (geoespacial)
-- `POST /api/intelligence/suggestions/time-slots` - Horários (geoespacial)
-- `POST /api/intelligence/suggestions/comprehensive` - Tudo em uma chamada
-
-**Endpoints Legacy (backward compatible):**
-- `GET /api/intelligence/suggestions/dates` - Converte cidade para coordenadas
-- `GET /api/intelligence/suggestions/time-slots` - Converte cidade para coordenadas
-
-**Componentes Frontend:**
-- `SmartSuggestions.js` - Painel de sugestões inteligentes (atualizado para JSON body)
-- `MatchingTrips.js` - **NOVO** - Exibe viagens compatíveis com dados geoespaciais
-
-#### 4. Componentes de Pricing
-- `IntelligentPricing.js` - Estimativa de preço, categorias, capacidade
-
-#### 5. Inteligência de Veículos ✅ NOVO (20/01/2026)
-**Arquivo:** `/app/backend/services/vehicle_intelligence_service.py`
-
-**OBJETIVO:** Sugestões de capacidade que evoluem com dados da plataforma.
-
-**Fontes de Dados (por prioridade):**
-1. **Estatísticas da plataforma** (primária)
-   - Agrupa veículos por: `type`, `brand`, `model`, `year_range (±2 anos)`
-   - Usa **MEDIANA** (não média) para evitar outliers
-   - Amostra mínima: 5 veículos
-   - Confiança: "high" (≥20 amostras), "medium" (5-19), "low" (fallback)
-
-2. **Banco de modelos conhecidos** (secundária)
-   - ~40 modelos brasileiros pré-cadastrados
-   - Motos: CG, Biz, Factor, Fazer
-   - Carros: Gol, Onix, Civic, Corolla, T-Cross, Strada, etc.
-   - Vans: Fiorino, Kangoo, Sprinter, Ducato
-
-3. **Defaults por tipo de veículo** (fallback)
-   - Moto: 25kg / 80L
-   - Carro: 250kg / 340L
-   - Van: 800kg / 2000L
-   - Caminhão: 3000kg / 15000L
-   - Passageiro ônibus: 23kg / 120L
-   - Carona: 30kg / 100L
-
-**Detecção de Desvios:**
-- Threshold: 50% de desvio da sugestão
-- Flag interno (não bloqueia o usuário)
-- Pode ser usado para trust scoring ou revisão manual
-
-**Endpoints:**
-- `POST /api/vehicles/intelligence/suggest-capacity` - Sugestão de capacidade
-- `GET /api/vehicles/intelligence/defaults` - Defaults por tipo de veículo
-- `GET /api/vehicles/intelligence/popular/{type}` - Marcas/modelos populares
-- `GET /api/vehicles/intelligence/statistics/{type}` - Estatísticas da plataforma
-- `POST /api/vehicles/intelligence/check-deviation` - Verificar desvio de capacidade
-
-**Modelo de Dados Atualizado:**
-- `VehicleBase`: Adicionados campos `brand`, `year`
-- `VehicleDB`: Adicionados `brand_normalized`, `model_normalized`, `capacity_deviation_flagged`
-
-#### 6. Integração UI (Fase 2)
-- Sugestões integradas em `CreateShipmentPage.js`
-- Sugestões integradas em `CreateTripPage.js`
-- Capacidade e ganhos exibidos em `MatchSuggestionsPage.js`
-- Callbacks para aplicar sugestões de data/local automaticamente
-
-#### 5. Notificações Automatizadas (Fase 3)
-**Arquivo:** `/app/backend/notification_service.py`
-- Novos tipos de notificação:
-  - `SUGGESTED_DATE_AVAILABLE` - Datas com mais transportadores
-  - `SUGGESTED_LOCATION` - Pontos estratégicos
-  - `CAPACITY_LOW_WARNING` - Aviso de capacidade baixa
-  - `BETTER_PRICE_AVAILABLE` - Preço melhor disponível
-- Email automático para eventos críticos (pagamento, entrega, disputas)
-- Template HTML responsivo para emails
-- Funções de conveniência: `notify_capacity_warning`, `notify_new_match_available`
-
-### Funcionalidades Core Anteriores:
-1. **Sistema de Autenticação**
-   - Registro de usuário com roles (sender, carrier, both, admin)
-   - Login com JWT
-   - Rotas protegidas
-
-2. **Gerenciamento de Viagens e Envios**
-   - Criar/listar viagens (transportadores)
-   - Criar/listar envios (remetentes)
-   - Filtros por origem/destino
-   - **Seleção de coordenadas via mapa interativo (LocationPicker)**
-   - **Geração de polyline via OSRM**
-
-3. **Sistema de Matching Inteligente** ✅ (12/01/2026)
-   - Página de sugestões inteligentes (/sugestoes)
-   - Algoritmo de matching por corredor de rota
-   - **Fallback por proximidade de coordenadas quando não há polyline**
-   - Cálculo automático de score de match
-   - Ranking por relevância
-
-4. **Precificação Dinâmica** ✅ (12/01/2026)
-   - Endpoint POST /api/trips/calculate-price
-   - Preço sugerido baseado em distância
-   - Faixas de preço por distância (curta, média, longa)
-   - Exemplos de preço para diferentes pesos
-   - Comissão da plataforma: 15%
-
-5. **Rotas Recorrentes** ✅ (12/01/2026)
-   - Campo recurrence no modelo Trip
-   - UI para seleção de dias da semana
-   - Data final opcional
-   - Horário fixo
-
-6. **GPS Tracking em Tempo Real** ✅ NOVO (12/01/2026)
-   - WebSocket para comunicação bidirecional
-   - Transportador envia localização periodicamente (10-30 segundos)
-   - Remetente acompanha entrega em tempo real
-   - Histórico de rota salvo no MongoDB
-   - Mapa com ícone animado do transportador
-   - Controles de iniciar/parar/pausar rastreamento
-   - Endpoints REST para status e histórico
-
-7. **Sistema de Notificações Híbrido** ✅ NOVO (12/01/2026)
-   - Notificações in-app com badge no sino
-   - Dropdown com lista de notificações
-   - Marcar como lida (individual ou todas)
-   - Excluir notificações
-   - Email para eventos críticos (quando Resend configurado)
-   - 15 tipos de notificação diferentes
-   - Templates em português
-
-8. **Detalhes da Combinação**
-   - Página completa com rota, valores, timeline
-   - Confirmação de coleta/entrega com foto
-   - Mapa com visualização da rota (Leaflet)
-   - **LiveTrackingMap para entregas em trânsito**
-
-9. **Sistema de Chat**
-   - Chat em tempo real entre transportador e remetente
-   - Polling a cada 5 segundos
-   - Mensagens com timestamp
-
-10. **Verificação de Identidade**
-    - Formulário multi-step para verificação
-    - Upload de foto de perfil, documento (frente/verso), selfie, CNH
-    - Upload real para Cloudflare R2 usando presigned URLs
-
-11. **Painel Administrativo**
-    - Dashboard com estatísticas
-    - Lista de verificações pendentes
-    - Aprovar/Rejeitar verificações
-    - Sistema de disputas com resolução
-
-12. **Sistema de Avaliações**
-    - Avaliar transportador/remetente após entrega
-    - Média de avaliação no perfil
-
-13. **Níveis Progressivos de Confiança**
-    - 5 níveis: Iniciante → Verificado → Confiável → Experiente → Elite
-    - Limites de valor/peso por nível
-    - Card de progresso no dashboard
-    - Upgrade automático baseado em entregas e avaliação
-
-14. **Pagamentos Mercado Pago**
-    - Integração completa com checkout redirect
-    - Webhook para confirmação de pagamento
-    - Sistema de escrow
-
-## Novos Componentes Criados (12/01/2026)
-
-### Backend
-- `websocket_manager.py` - Gerenciador de conexões WebSocket
-- `notification_service.py` - Serviço de notificações
-- Endpoints WebSocket: `/ws/tracking/{match_id}/carrier` e `/ws/tracking/{match_id}/watch`
-- Endpoints REST: `/api/notifications/*` e `/api/tracking/*`
-
-### Frontend
-- `NotificationBell.js` - Componente de sino com dropdown
-- `LiveTrackingMap.js` - Mapa com rastreamento em tempo real
-- `useGPSTracking.js` - Hook para WebSocket de GPS
-
-## Credenciais de Teste
-- **Admin:** admin@levva.com / adminpassword
-- **Usuário teste (carrier):** teste@levva.com / password123
-- **Usuário teste (sender):** remetente_sp_1768238849@levva.com / teste123
-
-## Testes Automatizados
-- `/app/tests/test_geospatial_suggestions.py` - Testes do sistema geoespacial (14/16 passando)
-- `/app/test_reports/iteration_6.json` - Relatório de testes mais recente
-
-## Arquitetura de Código
-
-### Backend Refatorado (18/01/2026)
-O backend foi reestruturado de um único `server.py` (1900+ linhas) para arquitetura modular:
 ```
-/app/backend/
-├── server.py              # Entry point (216 linhas)
-├── core/
-│   ├── config.py          # Settings via pydantic-settings
-│   └── exceptions.py      # Exception handlers
-├── routers/
-│   ├── __init__.py        # create_api_router()
-│   ├── auth.py            # /auth/*
-│   ├── users.py           # /users/*
-│   ├── trips.py           # /trips/*
-│   ├── shipments.py       # /shipments/*
-│   ├── matches.py         # /matches/*
-│   ├── payments.py        # /payments/*
-│   ├── uploads.py         # /uploads/* (proxy para R2) ✅ FIX 19/01
-│   ├── admin.py           # /admin/*
-│   ├── notifications.py   # /notifications/*
-│   └── tracking.py        # /tracking/*
-├── schemas/               # Pydantic models
-├── services/              # Business logic
-│   ├── trust_service.py
-│   ├── route_service.py
-│   └── notification_service.py
-├── models.py              # Modelos compartilhados
-├── database.py            # MongoDB connection
-├── auth.py                # JWT utilities
-└── websocket_manager.py   # GPS tracking WebSockets
+/app/
+├── backend/
+│   ├── routers/
+│   │   ├── admin.py       - Admin endpoints
+│   │   ├── auth.py        - Authentication
+│   │   ├── intelligence.py - Pricing & suggestions
+│   │   ├── matches.py     - Match management
+│   │   ├── payments.py    - Payment & escrow flow
+│   │   ├── shipments.py   - Shipment CRUD
+│   │   ├── trips.py       - Trip CRUD & cancellation
+│   │   └── vehicles.py    - Vehicle management
+│   ├── services/
+│   │   ├── auto_confirmation_service.py
+│   │   ├── pricing_service.py
+│   │   ├── suggestions_service.py
+│   │   └── vehicle_intelligence_service.py
+│   └── server.py
+└── frontend/
+    └── src/
+        ├── components/
+        │   ├── IntelligentPricing.js  # Fixed reactive pricing
+        │   ├── MatchingTrips.js
+        │   └── ChatBox.js
+        ├── pages/
+        │   ├── AdminDashboard.js
+        │   ├── CreateShipmentPage.js
+        │   ├── MatchDetailPage.js     # Updated with payment flow
+        │   ├── ProfilePage.js
+        │   ├── TripDetailsPage.js
+        │   └── VehiclesPage.js
+        └── context/AuthContext.js
 ```
 
-### Frontend Mobile-First
-Componentes otimizados para mobile:
-- `MobileDatePicker.js` - Seletor de data amigável
-- `CEPInput.js` - Auto-preenchimento via ViaCEP
-- `ImageUploadWithCamera.js` - Camera + Galeria (corrigido 19/01)
+## Database Schema (MongoDB)
+- **users**: Authentication, profiles, pix_key for payouts
+- **trips**: Transporter journeys with route, capacity, dates
+- **shipments**: Sender packages with dimensions, weight, route
+- **matches**: Trip-Shipment connections with status
+- **payments**: Payment records with escrow status
+- **vehicles**: Transporter vehicle registry
+- **messages**: Chat messages between users
 
-## Arquivos Principais
-```
-/app/backend/
-├── server.py              # Todas as rotas da API
-├── models.py              # Modelos Pydantic
-├── database.py            # Conexão MongoDB
-├── auth.py                # JWT e senhas
-├── route_service.py       # OSRM routing, haversine, corridor matching
-├── trust_service.py       # Níveis de confiança
-├── websocket_manager.py   # WebSocket para GPS tracking ⭐ NOVO
-└── notification_service.py # Notificações in-app + email ⭐ NOVO
+## Key API Endpoints
+- `POST /api/intelligence/pricing/calculate` - Calculate shipment price
+- `POST /api/payments/{match_id}/mark-delivered` - Transporter marks delivery
+- `POST /api/payments/{match_id}/confirm-delivery` - Sender confirms receipt
+- `POST /api/trips/{trip_id}/cancel` - Cancel trip with reason
+- `GET /api/admin/payouts/ready` - Admin: view ready payouts
 
-/app/frontend/src/
-├── pages/
-│   ├── DashboardPage.js       # Com NotificationBell
-│   ├── MatchDetailPage.js     # Com LiveTrackingSection
-│   ├── MatchSuggestionsPage.js
-│   ├── CreateTripPage.js
-│   ├── CreateShipmentPage.js
-│   ├── AdminDashboard.js
-│   └── VerificationPage.js
-├── components/
-│   ├── NotificationBell.js    # ⭐ NOVO
-│   ├── LiveTrackingMap.js     # ⭐ NOVO
-│   ├── LocationPicker.js
-│   ├── RouteMap.js
-│   ├── TrustLevelCard.js
-│   └── ChatBox.js
-├── hooks/
-│   └── useGPSTracking.js      # ⭐ NOVO
-└── context/
-    └── AuthContext.js
-```
+## Test Credentials
+- **Admin**: admin@levva.com / adminpassword
+- **Test Carrier**: test_carrier_payment@test.com / testpassword123
+- **Test Sender**: test_sender_payment@test.com / testpassword123
 
-## Status dos Testes
-- **Iteration 1:** Backend 14/14, Frontend 100%
-- **Iteration 2:** Backend 27/27, Frontend 100% (uploads R2 + pagamentos MP)
-- **Iteration 3:** Backend 13/13, Frontend 100% (sugestões + precificação + recorrência)
-- **Iteration 4:** Backend 17/17, Frontend 100% (notificações + GPS tracking)
-- **Iteration 5:** Backend 8/8, Frontend 100% (Upload de imagens via proxy - BUG FIX) ✅ (19/01/2026)
+## Mocked APIs
+- **MercadoPago**: Payment initiation - checkout_url not generated
+- **Resend**: Email notifications - logged but not sent
 
-## Correções Recentes
+## Prioritized Backlog
 
-### Bug Fix: Upload de Imagens (19/01/2026) ✅
-- **Problema:** Upload de imagens falhava com "Erro ao enviar foto. Tente novamente" devido a CORS do R2
-- **Causa:** Frontend tentava upload direto para R2 via presigned URL, bloqueado por CORS
-- **Solução:** Frontend atualizado para usar endpoint proxy `/api/uploads/direct`
-- **Arquivos modificados:**
-  - `/app/frontend/src/components/ImageUploadWithCamera.js` - função uploadToR2 agora usa multipart/form-data para backend
-- **Verificado:** 8/8 testes passaram, incluindo validação de tipo, tamanho e estrutura de resposta
+### P1 - Next Tasks
+- [ ] Verify Intelligent Suggestions in UI
+- [ ] Verify "View Trip Details" navigation
+- [ ] Verify pricing consistency (transporter vs sender)
+- [ ] Fix chat timestamps
 
-## Backlog
+### P2 - Future
+- [ ] Full Email Notification Integration (Resend)
+- [ ] Backend filtering for browse pages
+- [ ] Admin dashboard for flagged vehicles
+- [ ] Mobile-responsive improvements
 
-### P1 (Alta Prioridade) - Próximas tarefas
-- [x] GPS Tracking em tempo real (WebSockets) ✅
-- [x] Notificações in-app ✅
-- [x] **Upload de imagens funcionando** ✅
-- [ ] **Mover filtros de dados para backend** - Usuário não deve ver suas próprias viagens na página de busca
-- [ ] **Email via Resend** - Requer API key do usuário
-
-### P2 (Média Prioridade)
-- [ ] Preview visual da rota antes de publicar viagem
-- [ ] Estimativa de tempo de chegada (ETA)
-- [ ] Gamificação/badges para usuários
-
-### P3 (Baixa Prioridade)
+### P3 - Enhancements
 - [ ] Push notifications
-- [ ] App mobile nativo
-- [ ] Integração com mais meios de pagamento
-
-## Integrações de Terceiros
-| Serviço | Status | Observações |
-|---------|--------|-------------|
-| Cloudflare R2 | ✅ Funcionando | Storage de documentos |
-| Mercado Pago | ✅ Funcionando | Pagamentos com checkout |
-| OSRM | ✅ Funcionando | Roteamento e polylines |
-| OpenStreetMap | ✅ Funcionando | Tiles de mapa |
-| Resend | ⚠️ MOCKED | Requer API key - atualmente apenas logs |
+- [ ] Advanced search/filters
+- [ ] Analytics dashboard
+- [ ] Multi-language support
