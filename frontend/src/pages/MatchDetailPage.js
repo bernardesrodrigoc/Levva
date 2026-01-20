@@ -262,6 +262,82 @@ const MatchDetailPage = () => {
     }
   };
 
+  // === NEW: Delivery Flow Functions ===
+  
+  const handleMarkDelivered = async () => {
+    setActionLoading(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${API}/payments/${matchId}/mark-delivered`,
+        {},
+        { headers }
+      );
+      
+      toast.success(response.data.message);
+      fetchDeliveryStatus();
+      fetchMatchDetails();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao marcar entrega');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmDeliveryBySender = async () => {
+    setActionLoading(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${API}/payments/${matchId}/confirm-delivery`,
+        { notes: confirmationNotes },
+        { headers }
+      );
+      
+      toast.success(response.data.message);
+      setShowConfirmDeliveryDialog(false);
+      setConfirmationNotes('');
+      fetchDeliveryStatus();
+      fetchMatchDetails();
+      
+      if (response.data.payout_blocked) {
+        toast.info('O transportador precisa cadastrar uma chave Pix para receber o pagamento.');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao confirmar entrega');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleOpenDispute = async () => {
+    if (!disputeReason.trim()) {
+      toast.error('Por favor, informe o motivo da disputa');
+      return;
+    }
+    
+    setActionLoading(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        `${API}/payments/${matchId}/open-dispute`,
+        { reason: disputeReason, details: disputeDetails },
+        { headers }
+      );
+      
+      toast.success(response.data.message);
+      setShowDisputeDialog(false);
+      setDisputeReason('');
+      setDisputeDetails('');
+      fetchDeliveryStatus();
+      fetchMatchDetails();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao abrir disputa');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handlePhotoChange = (file) => {
     if (file) {
       setPhotoFile(file);
