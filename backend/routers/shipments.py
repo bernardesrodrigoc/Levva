@@ -1,10 +1,11 @@
 """Shipment management routes."""
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from datetime import datetime, timezone
 from typing import List, Optional
 from bson import ObjectId
 
-from database import users_collection, shipments_collection
+from database import users_collection, shipments_collection, matches_collection
 from models import (
     ShipmentCreate, ShipmentResponse, ShipmentStatus,
     UserRole, VerificationStatus, TrustLevel
