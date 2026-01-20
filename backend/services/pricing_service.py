@@ -301,8 +301,13 @@ async def calculate_intelligent_price(
     
     category_config = CARGO_CATEGORY_CONFIG[cargo_category]
     
-    # 3. Base distance price
-    base_distance_price = calculate_distance_price(distance_km)
+    # 3. Base distance price - USE TRANSPORTER RATE IF PROVIDED
+    if transporter_price_per_km and transporter_price_per_km > 0:
+        # Transporter-defined pricing: price_per_km * distance
+        base_distance_price = distance_km * transporter_price_per_km
+    else:
+        # Platform default pricing (progressive tiers)
+        base_distance_price = calculate_distance_price(distance_km)
     
     # 4. Apply multipliers
     category_multiplier = category_config["multiplier"]
@@ -316,31 +321,40 @@ async def calculate_intelligent_price(
             origin_city, destination_city, departure_date
         )
     
-    # 6. Weight/volume factor (heavier = more expensive)
-    # Use dimensional weight if larger than actual weight
-    dimensional_weight = volume_liters / 5  # 5 liters per kg factor
-    chargeable_weight = max(weight_kg, dimensional_weight)
-    weight_factor = 1.0 + (chargeable_weight * 0.02)  # +2% per kg
+    # 6. Weight factor (heavier = more expensive)
+    # +2% per kg above 1kg
+    weight_factor = 1.0 + max(0, (weight_kg - 1)) * 0.02
     
-    # 7. Calculate subtotal
-    subtotal = base_distance_price * category_multiplier * deviation_multiplier * \
-               capacity_multiplier * demand_multiplier * weight_factor
+    # 7. Volume factor - use dimensional weight if larger
+    dimensional_weight = volume_liters / 5  # 5 liters per kg
+    if dimensional_weight > weight_kg:
+        # Charge extra for bulky items
+        volume_factor = 1.0 + (dimensional_weight - weight_kg) * 0.01
+    else:
+        volume_factor = 1.0
     
-    # 8. Apply minimum price
+    # 8. Calculate subtotal (carrier price before commission)
+    carrier_subtotal = base_distance_price * category_multiplier * deviation_multiplier * \
+               capacity_multiplier * demand_multiplier * weight_factor * volume_factor
+    
+    # 9. Apply minimum price
     min_price = 8.0  # Minimum R$8
-    subtotal = max(subtotal, min_price)
+    carrier_subtotal = max(carrier_subtotal, min_price)
     
-    # 9. Round to clean value
-    subtotal = round(subtotal, 2)
+    # 10. Round to clean value
+    carrier_subtotal = round(carrier_subtotal, 2)
     
-    # 10. Calculate commission
-    commission_rate = get_commission_rate(subtotal)
-    platform_commission = round(subtotal * commission_rate, 2)
-    carrier_earnings = round(subtotal - platform_commission, 2)
+    # 11. Calculate platform commission (added ON TOP of carrier price)
+    commission_rate = get_commission_rate(carrier_subtotal)
+    platform_commission = round(carrier_subtotal * commission_rate, 2)
+    
+    # Total sender pays = carrier earnings + platform fee
+    total_price = round(carrier_subtotal + platform_commission, 2)
+    carrier_earnings = carrier_subtotal
     
     return {
-        # User-facing (single total)
-        "total_price": subtotal,
+        # User-facing
+        "total_price": total_price,
         "currency": "BRL",
         
         # For carrier
@@ -350,6 +364,8 @@ async def calculate_intelligent_price(
         "_breakdown": {
             "base_distance_price": round(base_distance_price, 2),
             "distance_km": round(distance_km, 1),
+            "transporter_rate_used": transporter_price_per_km is not None and transporter_price_per_km > 0,
+            "transporter_price_per_km": transporter_price_per_km,
             "category": cargo_category.value,
             "category_name": category_config["name"],
             "category_multiplier": category_multiplier,
@@ -357,9 +373,10 @@ async def calculate_intelligent_price(
             "deviation_multiplier": round(deviation_multiplier, 2),
             "capacity_multiplier": round(capacity_multiplier, 2),
             "demand_multiplier": round(demand_multiplier, 2),
-            "chargeable_weight_kg": round(chargeable_weight, 2),
+            "weight_kg": round(weight_kg, 2),
             "weight_factor": round(weight_factor, 2),
             "volume_liters": round(volume_liters, 1),
+            "volume_factor": round(volume_factor, 2),
             "commission_rate": commission_rate,
             "platform_commission": platform_commission
         }
