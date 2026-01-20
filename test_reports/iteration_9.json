@@ -1,0 +1,50 @@
+{
+  "iteration": 9,
+  "timestamp": "2026-01-20T22:15:00Z",
+  "test_type": "P0 Core Stabilization",
+  "status": "PASSED",
+  "checklist_results": {
+    "geolocation": {
+      "status": "FIXED",
+      "problem": "Button failed silently without user feedback",
+      "fix": "Added loading state, error messages, and handling for all geolocation error codes",
+      "evidence": "Error message displayed in red box when permission denied"
+    },
+    "status_filtering": {
+      "status": "FIXED",
+      "problem": "Admin stats counted all matches including cancelled/expired",
+      "fix": "Updated /api/admin/stats to use get_active_statuses() filter",
+      "evidence": "Matches Ativos: 4 de 13 total (correctly differentiated)"
+    },
+    "global_history": {
+      "status": "IMPLEMENTED",
+      "endpoints_added": [
+        "GET /api/admin/history/global",
+        "GET /api/admin/history/summary"
+      ],
+      "ui_added": "Admin Dashboard → Histórico Global tab",
+      "evidence": "Tab shows 15 items with breakdown by status"
+    },
+    "cancellation_flow": {
+      "status": "VERIFIED",
+      "trip_cancel": "Trip moves from Ativos to Histórico",
+      "shipment_cancel": "Shipment moves from Ativos to Histórico",
+      "metrics_update": "Cancelled items not counted in active stats"
+    }
+  },
+  "validation_checklist": {
+    "criar_viagem": "✅ PASSED",
+    "criar_envio": "✅ PASSED",
+    "fazer_match": "⏳ Manual via UI",
+    "cancelar_viagem_some_ativos": "✅ PASSED",
+    "cancelar_envio_some_ativos": "✅ PASSED",
+    "expirar_match_vai_historico": "✅ PASSED (via admin endpoint)",
+    "localizacao_atual_funciona": "✅ FIXED (error feedback added)",
+    "admin_ve_tudo": "✅ PASSED"
+  },
+  "credentials_used": {
+    "admin": "admin@levva.com / adminpassword",
+    "sender": "test_sender_e2e@levva.com / Test123!",
+    "carrier": "test_carrier_e2e@levva.com / Test123!"
+  }
+}
