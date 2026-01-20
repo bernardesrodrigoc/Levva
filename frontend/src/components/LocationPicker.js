@@ -188,10 +188,21 @@ const LocationPicker = ({
     setSearchQuery(location.address);
   };
 
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState(null);
+
   const handleUseCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocalização não suportada neste navegador');
+      return;
+    }
+    
+    setGeoLoading(true);
+    setGeoError(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
           const { latitude, longitude } = position.coords;
           const geoData = await reverseGeocode(latitude, longitude);
           const location = {
@@ -204,12 +215,38 @@ const LocationPicker = ({
           onChange(location);
           setSearchQuery(location.address);
           setMapCenter([latitude, longitude]);
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
+          setGeoError(null);
+        } catch (err) {
+          setGeoError('Erro ao buscar endereço. Tente novamente.');
+        } finally {
+          setGeoLoading(false);
         }
-      );
-    }
+      },
+      (error) => {
+        setGeoLoading(false);
+        console.error('Geolocation error:', error);
+        
+        // User-friendly error messages
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            setGeoError('Permissão de localização negada. Clique no ícone de cadeado na barra de endereço para permitir.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setGeoError('Localização indisponível. Verifique se o GPS está ativado.');
+            break;
+          case error.TIMEOUT:
+            setGeoError('Tempo esgotado ao buscar localização. Tente novamente.');
+            break;
+          default:
+            setGeoError('Erro ao obter localização. Use a busca por endereço.');
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    );
   };
 
   // Close results when clicking outside
