@@ -122,13 +122,6 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-      
-    } catch (error) {
-      console.error('Error fetching admin data:', error);
-      toast.error('Erro ao carregar dados: ' + (error.response?.data?.detail || error.message));
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Payout management functions
