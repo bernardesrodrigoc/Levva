@@ -172,3 +172,137 @@ async def delete_trip(trip_id: str, user_id: str = Depends(get_current_user_id))
     
     await trips_collection.delete_one({"_id": ObjectId(trip_id)})
     return {"message": "Viagem excluída com sucesso"}
+
+
+# ============ Trip Management Endpoints ============
+
+from pydantic import BaseModel
+
+class TripCancellationRequest(BaseModel):
+    reason: str
+    
+
+@router.get("/{trip_id}/management")
+async def get_trip_management_info(trip_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Get trip management info including status, matches, and available actions.
+    """
+    from database import matches_collection
+    
+    trip = await trips_collection.find_one({"_id": ObjectId(trip_id)})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Viagem não encontrada")
+    
+    if trip["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    # Get associated matches
+    matches = await matches_collection.find({"trip_id": trip_id}).to_list(50)
+    
+    # Determine available actions based on status
+    status = trip.get("status", TripStatus.PUBLISHED)
+    available_actions = []
+    
+    if status == TripStatus.PUBLISHED:
+        if len(matches) == 0:
+            available_actions = ["cancel", "edit"]
+        else:
+            available_actions = ["view_matches"]
+    elif status == TripStatus.MATCHED:
+        available_actions = ["start_trip", "cancel_with_penalty"]
+    elif status == TripStatus.IN_PROGRESS:
+        available_actions = ["complete", "report_issue"]
+    elif status in [TripStatus.COMPLETED, TripStatus.CANCELLED, TripStatus.CANCELLED_BY_CARRIER]:
+        available_actions = []
+    
+    return {
+        "trip_id": trip_id,
+        "status": status,
+        "matches_count": len(matches),
+        "has_paid_matches": any(m.get("payment_status") in ["paid_escrow", "escrowed", "paid"] for m in matches),
+        "available_actions": available_actions,
+        "cancellation_allowed": status in [TripStatus.PUBLISHED, TripStatus.MATCHED],
+        "cancellation_has_penalty": status == TripStatus.MATCHED or any(m.get("payment_status") in ["paid_escrow", "escrowed", "paid"] for m in matches)
+    }
+
+
+@router.post("/{trip_id}/cancel")
+async def cancel_trip(
+    trip_id: str, 
+    cancellation: TripCancellationRequest,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Cancel a trip. Rules:
+    - If no matches: soft delete (status change)
+    - If matched/paid: status change + cancellation record
+    - Never hard delete if there's any user interaction
+    """
+    from database import matches_collection
+    
+    trip = await trips_collection.find_one({"_id": ObjectId(trip_id)})
+    if not trip:
+        raise HTTPException(status_code=404, detail="Viagem não encontrada")
+    
+    if trip["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    status = trip.get("status", TripStatus.PUBLISHED)
+    
+    # Check if cancellation is allowed
+    if status in [TripStatus.COMPLETED, TripStatus.CANCELLED, TripStatus.CANCELLED_BY_CARRIER, TripStatus.CANCELLED_BY_SENDER]:
+        raise HTTPException(status_code=400, detail="Esta viagem não pode ser cancelada")
+    
+    if status == TripStatus.IN_PROGRESS:
+        raise HTTPException(status_code=400, detail="Viagem em andamento não pode ser cancelada. Use 'Reportar Problema'.")
+    
+    # Get matches to determine if there's user interaction
+    matches = await matches_collection.find({"trip_id": trip_id}).to_list(50)
+    has_interaction = len(matches) > 0
+    has_payment = any(m.get("payment_status") in ["paid_escrow", "escrowed", "paid"] for m in matches)
+    
+    # Prepare cancellation record
+    cancellation_record = {
+        "cancelled_by": user_id,
+        "cancelled_at": datetime.now(timezone.utc),
+        "reason": cancellation.reason,
+        "had_matches": has_interaction,
+        "had_payment": has_payment,
+        "previous_status": status
+    }
+    
+    # Update trip status
+    new_status = TripStatus.CANCELLED_BY_CARRIER
+    
+    await trips_collection.update_one(
+        {"_id": ObjectId(trip_id)},
+        {
+            "$set": {
+                "status": new_status,
+                "cancellation": cancellation_record,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    # If there were matches, update them too
+    if has_interaction:
+        await matches_collection.update_many(
+            {"trip_id": trip_id},
+            {
+                "$set": {
+                    "status": "cancelled_by_carrier",
+                    "cancellation_reason": cancellation.reason,
+                    "cancelled_at": datetime.now(timezone.utc)
+                }
+            }
+        )
+    
+    # TODO: If has_payment, trigger refund process
+    
+    return {
+        "message": "Viagem cancelada com sucesso",
+        "new_status": new_status,
+        "had_matches": has_interaction,
+        "refund_pending": has_payment
+    }
