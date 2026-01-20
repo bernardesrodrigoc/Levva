@@ -123,7 +123,6 @@ const AdminDashboard = () => {
       setDisputes(disputesRes.data);
       setFlaggedVehicles(flaggedRes.data.vehicles || []);
       setVehicleStats(vehicleStatsRes.data);
-      setPayoutStats(payoutStatsRes.data);
       setReadyPayouts(readyPayoutsRes.data.payouts || []);
       setBlockedPayouts(blockedPayoutsRes.data.blocked_payouts || []);
       setHistorySummary(historySummaryRes.data);
@@ -131,6 +130,14 @@ const AdminDashboard = () => {
       setFinanceSummary(financeSummaryRes.data);
       setFinanceHistory(financeHistoryRes.data);
       setEscrowDetails(escrowDetailsRes.data);
+      
+      // Fetch new payout data
+      const [pendingPayoutsRes, payoutStatsRes] = await Promise.all([
+        axios.get(`${API}/admin/payouts/pending`, { headers }).catch(() => ({ data: { payouts: [], total: 0, total_amount: 0 } })),
+        axios.get(`${API}/admin/payouts/stats`, { headers }).catch(() => ({ data: null }))
+      ]);
+      setPendingPayouts(pendingPayoutsRes.data);
+      setPayoutStats(payoutStatsRes.data);
       
     } catch (error) {
       console.error('Error fetching admin data:', error);
@@ -140,7 +147,31 @@ const AdminDashboard = () => {
     }
   };
 
-  // Payout management functions
+  // Execute daily payouts
+  const handleExecuteDailyPayouts = async () => {
+    if (!window.confirm(`Executar ${pendingPayouts.total} payouts totalizando R$ ${pendingPayouts.total_amount?.toFixed(2)}?`)) {
+      return;
+    }
+    
+    setExecutingPayouts(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(`${API}/admin/payouts/execute-daily`, {}, { headers });
+      
+      const summary = response.data.summary;
+      toast.success(`Payouts executados! ${summary.successful}/${summary.total_processed} com sucesso`);
+      
+      // Refresh data
+      fetchData();
+    } catch (error) {
+      console.error('Error executing payouts:', error);
+      toast.error('Erro ao executar payouts: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setExecutingPayouts(false);
+    }
+  };
+
+  // Payout management functions (legacy)
   const handleMarkPayoutComplete = async (paymentId) => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
