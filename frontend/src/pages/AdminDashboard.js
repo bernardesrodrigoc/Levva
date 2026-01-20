@@ -77,12 +77,14 @@ const AdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes] = await Promise.all([
+      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes, flaggedRes, vehicleStatsRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/verifications/pending`, { headers }),
         axios.get(`${API}/admin/verifications/approved`, { headers }),
         axios.get(`${API}/admin/users`, { headers }),
-        axios.get(`${API}/admin/disputes`, { headers }).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/disputes`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/vehicles/flagged`, { headers }).catch(() => ({ data: { vehicles: [] } })),
+        axios.get(`${API}/admin/vehicles/statistics`, { headers }).catch(() => ({ data: null }))
       ]);
       
       setStats(statsRes.data);
@@ -90,12 +92,37 @@ const AdminDashboard = () => {
       setApprovedVerifications(approvedRes.data);
       setAllUsers(usersRes.data);
       setDisputes(disputesRes.data);
+      setFlaggedVehicles(flaggedRes.data.vehicles || []);
+      setVehicleStats(vehicleStatsRes.data);
       
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erro ao carregar dados: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Vehicle management functions
+  const handleClearVehicleFlag = async (vehicleId) => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.post(`${API}/admin/vehicles/${vehicleId}/clear-flag`, {}, { headers });
+      toast.success('Flag removido com sucesso');
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao remover flag: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleVerifyVehicle = async (vehicleId) => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.post(`${API}/admin/vehicles/${vehicleId}/verify`, {}, { headers });
+      toast.success('Veículo verificado com sucesso');
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao verificar veículo: ' + (error.response?.data?.detail || error.message));
     }
   };
 
