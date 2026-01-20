@@ -105,8 +105,31 @@ Ver `/app/memory/STATE_DIAGRAM.md` para diagrama completo.
 
 ## Test Credentials
 - **Admin**: admin@levva.com / adminpassword
-- **Sender**: test_sender_payment@test.com / testpassword123
-- **Carrier**: test_carrier_payment@test.com / testpassword123
+- **Sender E2E**: test_sender_e2e@levva.com / Test123!
+- **Carrier E2E**: test_carrier_e2e@levva.com / Test123!
+- **Sender Payment**: test_sender_payment@test.com / testpassword123
+- **Carrier Payment**: test_carrier_payment@test.com / testpassword123
+
+---
+
+## Pending Tasks (Backlog)
+
+### P1 - Email Notifications
+- Configure Resend to send real emails for critical events
+- Currently MOCKED to console logs
+
+### P2 - Chat Timestamps
+- Verify timezone display in chat messages
+
+### P3 - Admin Flagged Vehicles
+- Test the review flow for flagged vehicles
+
+### P4 - Scheduled Jobs
+- Move expiration and auto-confirmation from admin endpoints to cron jobs
+
+### P5 - Enhanced Reputation
+- Display user reputation score in UI
+- More complex scoring logic
 
 ---
 
