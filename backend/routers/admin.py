@@ -1032,3 +1032,205 @@ async def get_history_summary(user: dict = Depends(get_current_admin_user)):
             "by_status": match_counts
         }
     }
+
+
+# ============ Financial History Admin ============
+
+@router.get("/finance/history")
+async def get_financial_history(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    status: Optional[str] = None,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Get complete financial history for admin.
+    Shows all payments with their full lifecycle.
+    """
+    skip = (page - 1) * limit
+    
+    query = {}
+    if status:
+        query["status"] = status
+    
+    payments = await payments_collection.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    results = []
+    for payment in payments:
+        # Get match info
+        match = await matches_collection.find_one({"_id": ObjectId(payment["match_id"])}) if payment.get("match_id") else None
+        
+        # Get user info
+        sender = None
+        carrier = None
+        if match:
+            sender = await users_collection.find_one({"_id": ObjectId(match["sender_id"])})
+            carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
+        
+        results.append({
+            "id": str(payment["_id"]),
+            "match_id": payment.get("match_id"),
+            "status": str(payment.get("status")),
+            "amount": payment.get("amount", 0),
+            "platform_fee": payment.get("platform_fee", 0),
+            "carrier_amount": payment.get("carrier_amount", 0),
+            "sender_name": sender.get("name") if sender else "N/A",
+            "sender_email": sender.get("email") if sender else "N/A",
+            "carrier_name": carrier.get("name") if carrier else "N/A",
+            "carrier_email": carrier.get("email") if carrier else "N/A",
+            "carrier_pix": carrier.get("pix_key") if carrier else None,
+            "created_at": payment.get("created_at").isoformat() if payment.get("created_at") else None,
+            "paid_at": payment.get("paid_at").isoformat() if payment.get("paid_at") else None,
+            "delivered_at": payment.get("delivered_at").isoformat() if payment.get("delivered_at") else None,
+            "confirmed_at": payment.get("confirmed_at").isoformat() if payment.get("confirmed_at") else None,
+            "confirmation_type": payment.get("confirmation_type"),
+            "payout_completed_at": payment.get("payout_completed_at").isoformat() if payment.get("payout_completed_at") else None,
+            "auto_confirm_deadline": payment.get("auto_confirm_deadline").isoformat() if payment.get("auto_confirm_deadline") else None,
+            "dispute_reason": payment.get("dispute_reason")
+        })
+    
+    total = await payments_collection.count_documents(query)
+    
+    return {
+        "payments": results,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit
+    }
+
+
+@router.get("/finance/summary")
+async def get_financial_summary(user: dict = Depends(get_current_admin_user)):
+    """
+    Get financial summary for admin dashboard.
+    """
+    from models import PaymentStatus
+    
+    # Count by status
+    status_counts = {}
+    for status in PaymentStatus:
+        count = await payments_collection.count_documents({"status": status.value})
+        if count > 0:
+            status_counts[status.value] = count
+    
+    # Calculate totals
+    pipeline = [
+        {"$group": {
+            "_id": "$status",
+            "total_amount": {"$sum": "$amount"},
+            "total_platform_fee": {"$sum": "$platform_fee"},
+            "total_carrier_amount": {"$sum": "$carrier_amount"},
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    aggregation = await payments_collection.aggregate(pipeline).to_list(100)
+    
+    totals_by_status = {}
+    grand_total = 0
+    grand_platform_fee = 0
+    grand_carrier_amount = 0
+    
+    for item in aggregation:
+        status = item["_id"]
+        totals_by_status[str(status)] = {
+            "count": item["count"],
+            "total_amount": item["total_amount"] or 0,
+            "platform_fee": item["total_platform_fee"] or 0,
+            "carrier_amount": item["total_carrier_amount"] or 0
+        }
+        grand_total += item["total_amount"] or 0
+        grand_platform_fee += item["total_platform_fee"] or 0
+        grand_carrier_amount += item["total_carrier_amount"] or 0
+    
+    # Pending payouts (money held)
+    pending_statuses = [
+        PaymentStatus.PAID_ESCROW.value,
+        PaymentStatus.DELIVERED_BY_TRANSPORTER.value,
+        PaymentStatus.PAYOUT_READY.value,
+        PaymentStatus.PAYOUT_BLOCKED_NO_PAYOUT_METHOD.value
+    ]
+    
+    pending_pipeline = [
+        {"$match": {"status": {"$in": pending_statuses}}},
+        {"$group": {
+            "_id": None,
+            "total_held": {"$sum": "$amount"},
+            "total_pending_payout": {"$sum": "$carrier_amount"}
+        }}
+    ]
+    
+    pending_result = await payments_collection.aggregate(pending_pipeline).to_list(1)
+    pending_data = pending_result[0] if pending_result else {"total_held": 0, "total_pending_payout": 0}
+    
+    return {
+        "by_status": totals_by_status,
+        "status_counts": status_counts,
+        "grand_totals": {
+            "total_transactions": grand_total,
+            "total_platform_revenue": grand_platform_fee,
+            "total_carrier_earnings": grand_carrier_amount
+        },
+        "escrow": {
+            "money_held": pending_data.get("total_held", 0),
+            "pending_payout_to_carriers": pending_data.get("total_pending_payout", 0)
+        }
+    }
+
+
+@router.get("/finance/escrow")
+async def get_escrow_details(user: dict = Depends(get_current_admin_user)):
+    """
+    Get detailed escrow status - money being held.
+    """
+    from models import PaymentStatus
+    
+    escrow_statuses = [
+        PaymentStatus.PAID_ESCROW.value,
+        PaymentStatus.DELIVERED_BY_TRANSPORTER.value
+    ]
+    
+    payments = await payments_collection.find({"status": {"$in": escrow_statuses}}).to_list(100)
+    
+    results = []
+    for payment in payments:
+        match = await matches_collection.find_one({"_id": ObjectId(payment["match_id"])}) if payment.get("match_id") else None
+        carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])}) if match else None
+        
+        time_remaining = None
+        if payment.get("auto_confirm_deadline"):
+            deadline = payment["auto_confirm_deadline"]
+            if deadline.tzinfo is None:
+                deadline = deadline.replace(tzinfo=timezone.utc)
+            remaining = deadline - datetime.now(timezone.utc)
+            if remaining.total_seconds() > 0:
+                time_remaining = {
+                    "days": remaining.days,
+                    "hours": remaining.seconds // 3600
+                }
+        
+        results.append({
+            "payment_id": str(payment["_id"]),
+            "match_id": payment.get("match_id"),
+            "status": str(payment.get("status")),
+            "amount": payment.get("amount", 0),
+            "carrier_amount": payment.get("carrier_amount", 0),
+            "carrier_name": carrier.get("name") if carrier else "N/A",
+            "carrier_pix": carrier.get("pix_key") if carrier else None,
+            "delivered_at": payment.get("delivered_at").isoformat() if payment.get("delivered_at") else None,
+            "auto_confirm_deadline": payment.get("auto_confirm_deadline").isoformat() if payment.get("auto_confirm_deadline") else None,
+            "time_remaining": time_remaining,
+            "will_auto_confirm": time_remaining is not None and time_remaining["days"] <= 0
+        })
+    
+    total_held = sum(p["amount"] for p in results)
+    total_pending_carrier = sum(p["carrier_amount"] for p in results)
+    
+    return {
+        "escrow_items": results,
+        "total_held": total_held,
+        "total_pending_carrier": total_pending_carrier,
+        "count": len(results)
+    }
+
