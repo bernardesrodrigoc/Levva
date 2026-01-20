@@ -198,9 +198,19 @@ const MatchDetailPage = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [rating, setRating] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
+  
+  // New state for delivery flow
+  const [deliveryStatus, setDeliveryStatus] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showConfirmDeliveryDialog, setShowConfirmDeliveryDialog] = useState(false);
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+  const [confirmationNotes, setConfirmationNotes] = useState('');
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeDetails, setDisputeDetails] = useState('');
 
   useEffect(() => {
     fetchMatchDetails();
+    fetchDeliveryStatus();
   }, [matchId]);
 
   const fetchMatchDetails = async () => {
@@ -213,6 +223,16 @@ const MatchDetailPage = () => {
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDeliveryStatus = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.get(`${API}/payments/${matchId}/delivery-status`, { headers });
+      setDeliveryStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching delivery status:', error);
     }
   };
 
