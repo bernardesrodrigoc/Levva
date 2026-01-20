@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
@@ -8,6 +8,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../com
 
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
+/**
+ * PriceEstimate - Reactive pricing component
+ * 
+ * PRICING FORMULA:
+ * - Base = distance * (transporter_rate OR platform_default)
+ * - Multipliers: weight (+2%/kg), volume, category
+ * - Platform Fee = 10-18% added on top
+ * 
+ * REACTIVITY: Recalculates on ANY change to:
+ * - originLat, originLng, destLat, destLng (distance)
+ * - weightKg, lengthCm, widthCm, heightCm (package)
+ * - category (package type)
+ */
 const PriceEstimate = ({
   originLat,
   originLng,
@@ -20,50 +33,50 @@ const PriceEstimate = ({
   widthCm,
   heightCm,
   category,
-  transporterPricePerKm, // NEW: Transporter's price
+  transporterPricePerKm,
   showBreakdown = false
 }) => {
   const { token } = useAuth();
   const [priceData, setPriceData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Reactive price calculation - debounced
-  useEffect(() => {
-    // Validate all required fields
-    const hasLocation = originLat && originLng && destLat && destLng;
-    const hasWeight = weightKg && parseFloat(weightKg) > 0;
-    
-    if (!hasLocation || !hasWeight) {
+  // Memoized calculation function
+  const calculatePrice = useCallback(async () => {
+    // Parse all values to numbers
+    const oLat = parseFloat(originLat);
+    const oLng = parseFloat(originLng);
+    const dLat = parseFloat(destLat);
+    const dLng = parseFloat(destLng);
+    const weight = parseFloat(weightKg) || 1;
+    const length = parseFloat(lengthCm) || 20;
+    const width = parseFloat(widthCm) || 20;
+    const height = parseFloat(heightCm) || 20;
+
+    // Validate required fields
+    if (!oLat || !oLng || !dLat || !dLng || isNaN(oLat) || isNaN(dLat)) {
       setPriceData(null);
       return;
     }
 
-    // Debounce to avoid too many API calls
-    const timeoutId = setTimeout(() => {
-      calculatePrice();
-    }, 300);
+    if (weight <= 0) {
+      setPriceData(null);
+      return;
+    }
 
-    return () => clearTimeout(timeoutId);
-  }, [originLat, originLng, destLat, destLng, weightKg, lengthCm, widthCm, heightCm, category, token, transporterPricePerKm]);
-
-  const calculatePrice = async () => {
     setLoading(true);
-    try {
-      // Parse values to ensure they're numbers
-      const weight = parseFloat(weightKg) || 1;
-      const length = parseFloat(lengthCm) || 20;
-      const width = parseFloat(widthCm) || 20;
-      const height = parseFloat(heightCm) || 20;
+    setError(null);
 
+    try {
       if (token) {
         // Full calculation with authentication
         const response = await axios.post(
           `${API}/intelligence/pricing/calculate`,
           {
-            origin_lat: parseFloat(originLat),
-            origin_lng: parseFloat(originLng),
-            dest_lat: parseFloat(destLat),
-            dest_lng: parseFloat(destLng),
+            origin_lat: oLat,
+            origin_lng: oLng,
+            dest_lat: dLat,
+            dest_lng: dLng,
             origin_city: originCity || '',
             destination_city: destinationCity || '',
             weight_kg: weight,
@@ -79,11 +92,11 @@ const PriceEstimate = ({
       } else {
         // Quick estimate without authentication
         const params = new URLSearchParams({
-          origin_lat: originLat,
-          origin_lng: originLng,
-          dest_lat: destLat,
-          dest_lng: destLng,
-          weight_kg: weight
+          origin_lat: oLat.toString(),
+          origin_lng: oLng.toString(),
+          dest_lat: dLat.toString(),
+          dest_lng: dLng.toString(),
+          weight_kg: weight.toString()
         });
         
         const response = await axios.get(`${API}/intelligence/pricing/estimate?${params}`);
@@ -92,16 +105,38 @@ const PriceEstimate = ({
           isEstimate: true
         });
       }
-    } catch (error) {
-      console.error('Error calculating price:', error);
+    } catch (err) {
+      console.error('Error calculating price:', err);
+      setError('Erro ao calcular preço');
+      setPriceData(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [originLat, originLng, destLat, destLng, originCity, destinationCity, weightKg, lengthCm, widthCm, heightCm, category, transporterPricePerKm, token]);
 
+  // Reactive effect - debounced to avoid too many API calls
+  useEffect(() => {
+    // Clear previous price when inputs change
+    const hasValidLocation = originLat && originLng && destLat && destLng;
+    const hasValidWeight = weightKg && parseFloat(weightKg) > 0;
+
+    if (!hasValidLocation || !hasValidWeight) {
+      setPriceData(null);
+      return;
+    }
+
+    // Debounce API call by 400ms
+    const timeoutId = setTimeout(() => {
+      calculatePrice();
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [calculatePrice, originLat, originLng, destLat, destLng, weightKg, lengthCm, widthCm, heightCm, category]);
+
+  // Loading state
   if (loading) {
     return (
-      <Card className="border-jungle/20">
+      <Card className="border-jungle/20" data-testid="price-loading">
         <CardContent className="p-4 text-center">
           <DollarSign className="w-5 h-5 mx-auto animate-pulse text-jungle" />
           <p className="text-sm text-muted-foreground mt-1">Calculando preço...</p>
@@ -110,23 +145,36 @@ const PriceEstimate = ({
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <Card className="border-red-200 bg-red-50" data-testid="price-error">
+        <CardContent className="p-4 text-center text-red-600 text-sm">
+          {error}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No data yet
   if (!priceData) return null;
 
+  // Estimate view (no auth)
   if (priceData.isEstimate) {
     return (
-      <Card className="border-jungle/20 bg-gradient-to-r from-jungle/5 to-transparent">
+      <Card className="border-jungle/20 bg-gradient-to-r from-jungle/5 to-transparent" data-testid="price-estimate">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-jungle" />
-              <span className="text-sm text-muted-foreground">Preço estimado:</span>
+              <span className="text-sm text-muted-foreground">Estimativa de Preço</span>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-jungle">
-                R$ {priceData.estimated_min?.toFixed(2)} - R$ {priceData.estimated_max?.toFixed(2)}
+                R$ {priceData.min_price?.toFixed(2)} - R$ {priceData.max_price?.toFixed(2)}
               </p>
               <p className="text-xs text-muted-foreground">
-                {priceData.distance_km}km de distância
+                {priceData.distance_km?.toFixed(0)}km
               </p>
             </div>
           </div>
@@ -135,208 +183,108 @@ const PriceEstimate = ({
     );
   }
 
+  // Full price view
   return (
-    <Card className="border-jungle/20 bg-gradient-to-r from-jungle/5 to-transparent">
+    <Card className="border-jungle/20 bg-gradient-to-r from-jungle/5 to-lime/5" data-testid="price-calculated">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-jungle" />
-            <span className="font-medium">Preço do Envio</span>
+            <span className="font-medium">Preço Calculado</span>
           </div>
-          <Badge className="bg-jungle text-white text-lg px-3 py-1">
-            R$ {priceData.total_price?.toFixed(2)}
+          <Badge variant="outline" className="text-jungle border-jungle/30">
+            {priceData.distance_km?.toFixed(0)}km
           </Badge>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 text-center text-sm">
-          <div className="bg-muted/20 rounded-lg p-2">
-            <Ruler className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-            <p className="font-medium">{priceData.distance_km}km</p>
-            <p className="text-xs text-muted-foreground">Distância</p>
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-3xl font-bold text-jungle" data-testid="total-price">
+              R$ {priceData.total_price?.toFixed(2)}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Transportador recebe: R$ {priceData.carrier_earnings?.toFixed(2)}
+            </p>
           </div>
-          <div className="bg-muted/20 rounded-lg p-2">
-            <Package className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-            <p className="font-medium">{priceData.category_name}</p>
-            <p className="text-xs text-muted-foreground">Categoria</p>
-          </div>
-          <div className="bg-muted/20 rounded-lg p-2">
-            <Scale className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-            <p className="font-medium">{weightKg}kg</p>
-            <p className="text-xs text-muted-foreground">Peso</p>
-          </div>
+
+          {showBreakdown && priceData._breakdown && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <div className="text-xs space-y-1">
+                    <p>Base: R$ {priceData._breakdown.base_distance_price?.toFixed(2)}</p>
+                    <p>Categoria: {priceData._breakdown.category_name} (x{priceData._breakdown.category_multiplier})</p>
+                    <p>Peso: {priceData._breakdown.weight_kg}kg (x{priceData._breakdown.weight_factor?.toFixed(2)})</p>
+                    <p>Taxa plataforma: {(priceData._breakdown.commission_rate * 100).toFixed(0)}%</p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
 
-        {showBreakdown && (
-          <div className="mt-3 pt-3 border-t border-muted/30">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Você receberá:</span>
-              <span className="font-medium text-green-600">R$ {priceData.carrier_earnings?.toFixed(2)}</span>
-            </div>
+        {/* Package info summary */}
+        <div className="flex gap-4 mt-3 pt-3 border-t text-xs text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <Scale className="w-3 h-3" />
+            <span>{parseFloat(weightKg) || 1}kg</span>
           </div>
-        )}
+          <div className="flex items-center gap-1">
+            <Ruler className="w-3 h-3" />
+            <span>{parseFloat(lengthCm) || 20}x{parseFloat(widthCm) || 20}x{parseFloat(heightCm) || 20}cm</span>
+          </div>
+          {category && (
+            <div className="flex items-center gap-1">
+              <Package className="w-3 h-3" />
+              <span className="capitalize">{category}</span>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 };
 
-
-// Cargo category selector component
-const CargoCategories = ({ selected, onSelect }) => {
-  const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get(`${API}/intelligence/pricing/categories`);
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
-
-  const getCategoryIcon = (value) => {
-    const icons = {
-      document: '📄',
-      small: '📦',
-      medium: '📬',
-      large: '🏷️',
-      extra_large: '🚚'
-    };
-    return icons[value] || '📦';
-  };
+/**
+ * CargoCategories - Category selector with price hints
+ */
+const CargoCategories = ({ value, onChange }) => {
+  const categories = [
+    { value: 'document', label: 'Documento', description: 'Envelopes, papéis', multiplier: 0.8 },
+    { value: 'small', label: 'Pequeno', description: 'Até 5kg, 30x30x30cm', multiplier: 0.9 },
+    { value: 'medium', label: 'Médio', description: '5-15kg, 50x50x50cm', multiplier: 1.0 },
+    { value: 'large', label: 'Grande', description: '15-30kg, 80x80x80cm', multiplier: 1.3 },
+    { value: 'extra_large', label: 'Extra Grande', description: '30-50kg, 100x100x100cm', multiplier: 1.5 }
+  ];
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
       {categories.map((cat) => (
-        <div
+        <button
           key={cat.value}
-          onClick={() => onSelect(cat.value)}
-          className={`
-            p-3 rounded-lg border cursor-pointer transition-all text-center
-            ${selected === cat.value 
-              ? 'border-jungle bg-jungle/10' 
-              : 'border-muted hover:border-jungle/50'
-            }
-          `}
+          type="button"
+          onClick={() => onChange(cat.value)}
+          className={`p-3 rounded-lg border text-left transition-all ${
+            value === cat.value
+              ? 'border-jungle bg-jungle/10 ring-1 ring-jungle'
+              : 'border-gray-200 hover:border-jungle/50'
+          }`}
+          data-testid={`category-${cat.value}`}
         >
-          <span className="text-2xl">{getCategoryIcon(cat.value)}</span>
-          <p className="font-medium text-sm mt-1">{cat.name}</p>
-          <p className="text-xs text-muted-foreground">até {cat.max_weight_kg}kg</p>
-        </div>
+          <p className="font-medium text-sm">{cat.label}</p>
+          <p className="text-xs text-muted-foreground">{cat.description}</p>
+          {cat.multiplier !== 1.0 && (
+            <Badge variant="outline" className="mt-1 text-xs">
+              {cat.multiplier < 1 ? `-${((1 - cat.multiplier) * 100).toFixed(0)}%` : `+${((cat.multiplier - 1) * 100).toFixed(0)}%`}
+            </Badge>
+          )}
+        </button>
       ))}
     </div>
   );
 };
 
-
-// Trip capacity display component
-const TripCapacity = ({ tripId }) => {
-  const { token } = useAuth();
-  const [capacity, setCapacity] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (tripId && token) {
-      fetchCapacity();
-    }
-  }, [tripId, token]);
-
-  const fetchCapacity = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(
-        `${API}/intelligence/capacity/trip/${tripId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setCapacity(response.data);
-    } catch (error) {
-      console.error('Error fetching capacity:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading || !capacity) return null;
-
-  const getUtilizationColor = (percent) => {
-    if (percent >= 80) return 'text-red-500';
-    if (percent >= 50) return 'text-yellow-500';
-    return 'text-green-500';
-  };
-
-  return (
-    <Card className="border-muted">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="font-medium">Capacidade da Viagem</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge className={capacity.is_full ? 'bg-red-500' : 'bg-jungle'}>
-                  {capacity.combined_utilization_percent.toFixed(0)}% usado
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Peso: {capacity.weight_percent.toFixed(1)}%</p>
-                <p>Volume: {capacity.volume_percent.toFixed(1)}%</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {/* Progress bars */}
-        <div className="space-y-2">
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span>Peso</span>
-              <span>{capacity.used_weight_kg}/{capacity.max_weight_kg}kg</span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className={`h-full ${getUtilizationColor(capacity.weight_percent)} bg-current transition-all`}
-                style={{ width: `${Math.min(capacity.weight_percent, 100)}%` }}
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span>Volume</span>
-              <span>{capacity.used_volume_liters.toFixed(0)}/{capacity.max_volume_liters.toFixed(0)}L</span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className={`h-full ${getUtilizationColor(capacity.volume_percent)} bg-current transition-all`}
-                style={{ width: `${Math.min(capacity.volume_percent, 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Matched shipments */}
-        {capacity.matched_shipments_count > 0 && (
-          <div className="mt-3 pt-3 border-t">
-            <p className="text-xs text-muted-foreground mb-2">
-              {capacity.matched_shipments_count} envio(s) nesta viagem
-            </p>
-            <div className="space-y-1">
-              {capacity.matched_shipments.map((shipment, idx) => (
-                <div key={idx} className="flex justify-between text-xs bg-muted/20 rounded p-1.5">
-                  <span>{shipment.description}</span>
-                  <span>{shipment.weight_kg}kg / {shipment.volume_liters}L</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-
-export { PriceEstimate, CargoCategories, TripCapacity };
-export default PriceEstimate;
+export { PriceEstimate, CargoCategories };
