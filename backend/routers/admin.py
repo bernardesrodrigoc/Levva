@@ -863,3 +863,153 @@ async def trigger_expirations(user: dict = Depends(get_current_admin_user)):
         "message": "Verificação de expiração executada",
         **result
     }
+
+
+
+# ============ Global History Admin ============
+
+@router.get("/history/global")
+async def get_global_history(
+    entity_type: Optional[str] = None,  # trip, shipment, match
+    status: Optional[str] = None,
+    user_id: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Get global history of all completed, cancelled, and expired items.
+    
+    This provides admin access to the full audit trail of all entities.
+    """
+    from services.expiration_service import get_history_statuses
+    
+    results = {
+        "trips": [],
+        "shipments": [],
+        "matches": [],
+        "total": 0
+    }
+    
+    skip = (page - 1) * limit
+    
+    # Build query filters
+    trip_query = {}
+    shipment_query = {}
+    match_query = {}
+    
+    # Filter by status if provided
+    if status:
+        trip_query["status"] = status
+        shipment_query["status"] = status
+        match_query["status"] = status
+    else:
+        # Only history statuses
+        trip_query["status"] = {"$in": get_history_statuses("trip")}
+        shipment_query["status"] = {"$in": get_history_statuses("shipment")}
+        match_query["status"] = {"$in": get_history_statuses("match")}
+    
+    # Filter by user
+    if user_id:
+        trip_query["carrier_id"] = user_id
+        shipment_query["sender_id"] = user_id
+        match_query["$or"] = [{"sender_id": user_id}, {"carrier_id": user_id}]
+    
+    # Fetch data based on entity_type filter
+    if entity_type is None or entity_type == "trip":
+        trips = await trips_collection.find(trip_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        for trip in trips:
+            trip["id"] = str(trip.pop("_id"))
+            trip["entity_type"] = "trip"
+            # Get carrier info
+            if trip.get("carrier_id"):
+                carrier = await users_collection.find_one({"_id": ObjectId(trip["carrier_id"])})
+                trip["user_name"] = carrier.get("name") if carrier else "Desconhecido"
+                trip["user_email"] = carrier.get("email") if carrier else ""
+        results["trips"] = trips
+    
+    if entity_type is None or entity_type == "shipment":
+        shipments = await shipments_collection.find(shipment_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        for shipment in shipments:
+            shipment["id"] = str(shipment.pop("_id"))
+            shipment["entity_type"] = "shipment"
+            # Get sender info
+            if shipment.get("sender_id"):
+                sender = await users_collection.find_one({"_id": ObjectId(shipment["sender_id"])})
+                shipment["user_name"] = sender.get("name") if sender else "Desconhecido"
+                shipment["user_email"] = sender.get("email") if sender else ""
+        results["shipments"] = shipments
+    
+    if entity_type is None or entity_type == "match":
+        # For matches with $or query, we need to handle it differently
+        if user_id:
+            match_query = {
+                "status": {"$in": get_history_statuses("match")},
+                "$or": [{"sender_id": user_id}, {"carrier_id": user_id}]
+            }
+        
+        matches = await matches_collection.find(match_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+        for match in matches:
+            match["id"] = str(match.pop("_id"))
+            match["entity_type"] = "match"
+            # Get user info
+            if match.get("sender_id"):
+                sender = await users_collection.find_one({"_id": ObjectId(match["sender_id"])})
+                match["sender_name"] = sender.get("name") if sender else "Desconhecido"
+            if match.get("carrier_id"):
+                carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
+                match["carrier_name"] = carrier.get("name") if carrier else "Desconhecido"
+        results["matches"] = matches
+    
+    # Calculate totals
+    results["total"] = len(results["trips"]) + len(results["shipments"]) + len(results["matches"])
+    results["page"] = page
+    results["limit"] = limit
+    
+    return results
+
+
+@router.get("/history/summary")
+async def get_history_summary(user: dict = Depends(get_current_admin_user)):
+    """
+    Get summary counts for history section.
+    """
+    from services.expiration_service import get_history_statuses
+    
+    trip_statuses = get_history_statuses("trip")
+    shipment_statuses = get_history_statuses("shipment")
+    match_statuses = get_history_statuses("match")
+    
+    # Count by status for each entity type
+    trip_counts = {}
+    for status in trip_statuses:
+        count = await trips_collection.count_documents({"status": status})
+        if count > 0:
+            trip_counts[status] = count
+    
+    shipment_counts = {}
+    for status in shipment_statuses:
+        count = await shipments_collection.count_documents({"status": status})
+        if count > 0:
+            shipment_counts[status] = count
+    
+    match_counts = {}
+    for status in match_statuses:
+        count = await matches_collection.count_documents({"status": status})
+        if count > 0:
+            match_counts[status] = count
+    
+    return {
+        "trips": {
+            "total": sum(trip_counts.values()),
+            "by_status": trip_counts
+        },
+        "shipments": {
+            "total": sum(shipment_counts.values()),
+            "by_status": shipment_counts
+        },
+        "matches": {
+            "total": sum(match_counts.values()),
+            "by_status": match_counts
+        }
+    }
