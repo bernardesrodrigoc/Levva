@@ -33,14 +33,8 @@ const MatchingTrips = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (originLat && originLng && destLat && destLng) {
-      fetchMatchingTrips();
-    }
-  }, [originLat, originLng, destLat, destLng, weightKg]);
-
   const fetchMatchingTrips = async () => {
-    if (!token) return;
+    if (!token || !originLat || !originLng || !destLat || !destLng) return;
     
     setLoading(true);
     setError(null);
@@ -67,6 +61,11 @@ const MatchingTrips = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchMatchingTrips();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originLat, originLng, destLat, destLng, weightKg, token]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Data não definida';
