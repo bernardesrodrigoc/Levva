@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
@@ -40,98 +40,109 @@ const PriceEstimate = ({
   const [priceData, setPriceData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const abortControllerRef = useRef(null);
 
-  // Memoized calculation function
-  const calculatePrice = useCallback(async () => {
-    // Parse all values to numbers
+  // REACTIVE EFFECT - Recalculates price whenever ANY input changes
+  // Uses a stringified dependency key to ensure proper change detection
+  useEffect(() => {
+    // Parse all values to ensure consistent comparison
     const oLat = parseFloat(originLat);
     const oLng = parseFloat(originLng);
     const dLat = parseFloat(destLat);
     const dLng = parseFloat(destLng);
-    const weight = parseFloat(weightKg) || 1;
+    const weight = parseFloat(weightKg) || 0;
     const length = parseFloat(lengthCm) || 20;
     const width = parseFloat(widthCm) || 20;
     const height = parseFloat(heightCm) || 20;
 
     // Validate required fields
-    if (!oLat || !oLng || !dLat || !dLng || isNaN(oLat) || isNaN(dLat)) {
-      setPriceData(null);
-      return;
-    }
-
-    if (weight <= 0) {
-      setPriceData(null);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      if (token) {
-        // Full calculation with authentication
-        const response = await axios.post(
-          `${API}/intelligence/pricing/calculate`,
-          {
-            origin_lat: oLat,
-            origin_lng: oLng,
-            dest_lat: dLat,
-            dest_lng: dLng,
-            origin_city: originCity || '',
-            destination_city: destinationCity || '',
-            weight_kg: weight,
-            length_cm: length,
-            width_cm: width,
-            height_cm: height,
-            category: category || 'medium',
-            transporter_price_per_km: transporterPricePerKm || null
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setPriceData(response.data);
-      } else {
-        // Quick estimate without authentication
-        const params = new URLSearchParams({
-          origin_lat: oLat.toString(),
-          origin_lng: oLng.toString(),
-          dest_lat: dLat.toString(),
-          dest_lng: dLng.toString(),
-          weight_kg: weight.toString()
-        });
-        
-        const response = await axios.get(`${API}/intelligence/pricing/estimate?${params}`);
-        setPriceData({
-          ...response.data,
-          isEstimate: true
-        });
-      }
-    } catch (err) {
-      console.error('Error calculating price:', err);
-      setError('Erro ao calcular preço');
-      setPriceData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [originLat, originLng, destLat, destLng, originCity, destinationCity, weightKg, lengthCm, widthCm, heightCm, category, transporterPricePerKm, token]);
-
-  // Reactive effect - debounced to avoid too many API calls
-  useEffect(() => {
-    // Clear previous price when inputs change
-    const hasValidLocation = originLat && originLng && destLat && destLng;
-    const hasValidWeight = weightKg && parseFloat(weightKg) > 0;
+    const hasValidLocation = !isNaN(oLat) && !isNaN(oLng) && !isNaN(dLat) && !isNaN(dLng) 
+                            && oLat !== 0 && dLat !== 0;
+    const hasValidWeight = weight > 0;
 
     if (!hasValidLocation || !hasValidWeight) {
       setPriceData(null);
       return;
     }
 
-    // Debounce API call by 400ms
-    const timeoutId = setTimeout(() => {
-      calculatePrice();
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
+    // Debounced price calculation
+    const timeoutId = setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        if (token) {
+          // Full calculation with authentication
+          const response = await axios.post(
+            `${API}/intelligence/pricing/calculate`,
+            {
+              origin_lat: oLat,
+              origin_lng: oLng,
+              dest_lat: dLat,
+              dest_lng: dLng,
+              origin_city: originCity || '',
+              destination_city: destinationCity || '',
+              weight_kg: weight,
+              length_cm: length,
+              width_cm: width,
+              height_cm: height,
+              category: category || 'medium',
+              transporter_price_per_km: transporterPricePerKm || null
+            },
+            { 
+              headers: { Authorization: `Bearer ${token}` },
+              signal 
+            }
+          );
+          setPriceData(response.data);
+        } else {
+          // Quick estimate without authentication
+          const params = new URLSearchParams({
+            origin_lat: oLat.toString(),
+            origin_lng: oLng.toString(),
+            dest_lat: dLat.toString(),
+            dest_lng: dLng.toString(),
+            weight_kg: weight.toString()
+          });
+          
+          const response = await axios.get(`${API}/intelligence/pricing/estimate?${params}`, { signal });
+          setPriceData({
+            ...response.data,
+            isEstimate: true
+          });
+        }
+      } catch (err) {
+        // Ignore abort errors
+        if (err.name === 'CanceledError' || err.name === 'AbortError') {
+          return;
+        }
+        console.error('Error calculating price:', err);
+        setError('Erro ao calcular preço');
+        setPriceData(null);
+      } finally {
+        setLoading(false);
+      }
     }, 400);
 
-    return () => clearTimeout(timeoutId);
-  }, [calculatePrice, originLat, originLng, destLat, destLng, weightKg, lengthCm, widthCm, heightCm, category]);
+    // Cleanup: cancel timeout and abort request on unmount or dependency change
+    return () => {
+      clearTimeout(timeoutId);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  // Using primitive values directly ensures React detects changes correctly
+  }, [originLat, originLng, destLat, destLng, originCity, destinationCity, 
+      weightKg, lengthCm, widthCm, heightCm, category, transporterPricePerKm, token]);
 
   // Loading state
   if (loading) {
