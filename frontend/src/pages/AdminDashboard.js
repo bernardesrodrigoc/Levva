@@ -50,6 +50,11 @@ const AdminDashboard = () => {
   const [financeHistory, setFinanceHistory] = useState({ payments: [], total: 0 });
   const [escrowDetails, setEscrowDetails] = useState({ escrow_items: [], total_held: 0 });
   
+  // Payout states
+  const [pendingPayouts, setPendingPayouts] = useState({ payouts: [], total: 0, total_amount: 0 });
+  const [payoutStats, setPayoutStats] = useState(null);
+  const [executingPayouts, setExecutingPayouts] = useState(false);
+  
   // Estados de Seleção e Modais
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
