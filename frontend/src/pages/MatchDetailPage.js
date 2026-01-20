@@ -211,6 +211,7 @@ const MatchDetailPage = () => {
   useEffect(() => {
     fetchMatchDetails();
     fetchDeliveryStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId]);
 
   const fetchMatchDetails = async () => {
