@@ -1149,6 +1149,132 @@ const AdminDashboard = () => {
                 )}
               </>
             )}
+
+            {/* Global History Tab */}
+            {activeTab === 'history' && (
+              <>
+                {/* History Summary */}
+                {historySummary && (
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg text-center">
+                      <TruckIcon size={24} className="mx-auto text-purple-600 mb-2" />
+                      <p className="text-2xl font-bold text-purple-600">{historySummary.trips.total}</p>
+                      <p className="text-xs text-muted-foreground">Viagens no Histórico</p>
+                      <div className="text-xs mt-2 text-left">
+                        {Object.entries(historySummary.trips.by_status || {}).map(([status, count]) => (
+                          <p key={status} className="text-muted-foreground">• {status}: {count}</p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg text-center">
+                      <Package size={24} className="mx-auto text-purple-600 mb-2" />
+                      <p className="text-2xl font-bold text-purple-600">{historySummary.shipments.total}</p>
+                      <p className="text-xs text-muted-foreground">Envios no Histórico</p>
+                      <div className="text-xs mt-2 text-left">
+                        {Object.entries(historySummary.shipments.by_status || {}).map(([status, count]) => (
+                          <p key={status} className="text-muted-foreground">• {status}: {count}</p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg text-center">
+                      <CheckCircle size={24} className="mx-auto text-purple-600 mb-2" />
+                      <p className="text-2xl font-bold text-purple-600">{historySummary.matches.total}</p>
+                      <p className="text-xs text-muted-foreground">Matches no Histórico</p>
+                      <div className="text-xs mt-2 text-left">
+                        {Object.entries(historySummary.matches.by_status || {}).map(([status, count]) => (
+                          <p key={status} className="text-muted-foreground">• {status}: {count}</p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Trip History */}
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 mt-6">
+                  <TruckIcon size={20} className="text-purple-600" />
+                  Viagens ({globalHistory.trips?.length || 0})
+                </h3>
+                {globalHistory.trips?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">Nenhuma viagem no histórico</p>
+                ) : (
+                  <div className="space-y-2 mb-6">
+                    {globalHistory.trips?.slice(0, 10).map((trip) => (
+                      <div key={trip.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Badge className={
+                            trip.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            trip.status?.includes('cancelled') ? 'bg-red-100 text-red-700' :
+                            trip.status === 'expired' ? 'bg-gray-100 text-gray-700' : ''
+                          }>{trip.status}</Badge>
+                          <span className="ml-2 font-medium">{trip.origin?.city} → {trip.destination?.city}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <span>{trip.user_name}</span>
+                          <span className="ml-2">{trip.created_at && new Date(trip.created_at).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Shipment History */}
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Package size={20} className="text-purple-600" />
+                  Envios ({globalHistory.shipments?.length || 0})
+                </h3>
+                {globalHistory.shipments?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">Nenhum envio no histórico</p>
+                ) : (
+                  <div className="space-y-2 mb-6">
+                    {globalHistory.shipments?.slice(0, 10).map((shipment) => (
+                      <div key={shipment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Badge className={
+                            shipment.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                            shipment.status?.includes('cancelled') ? 'bg-red-100 text-red-700' :
+                            shipment.status === 'expired' ? 'bg-gray-100 text-gray-700' : ''
+                          }>{shipment.status}</Badge>
+                          <span className="ml-2 font-medium">{shipment.origin?.city} → {shipment.destination?.city}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <span>{shipment.user_name}</span>
+                          <span className="ml-2">{shipment.created_at && new Date(shipment.created_at).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Match History */}
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <CheckCircle size={20} className="text-purple-600" />
+                  Matches ({globalHistory.matches?.length || 0})
+                </h3>
+                {globalHistory.matches?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">Nenhum match no histórico</p>
+                ) : (
+                  <div className="space-y-2">
+                    {globalHistory.matches?.slice(0, 10).map((match) => (
+                      <div key={match.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <Badge className={
+                            match.status === 'delivered' || match.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            match.status?.includes('cancelled') ? 'bg-red-100 text-red-700' :
+                            match.status === 'expired' ? 'bg-gray-100 text-gray-700' :
+                            match.status === 'disputed' ? 'bg-orange-100 text-orange-700' : ''
+                          }>{match.status}</Badge>
+                          <span className="ml-2 font-medium">#{match.id.slice(-8)}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          <span>{match.sender_name} ↔ {match.carrier_name}</span>
+                          <span className="ml-2">{match.created_at && new Date(match.created_at).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
