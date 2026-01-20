@@ -11,13 +11,22 @@ from models import (
 )
 from auth import get_current_user_id
 from trust_service import check_shipment_allowed
+from services.unified_pricing_service import calculate_final_price
 
 router = APIRouter()
 
 
 @router.post("", response_model=ShipmentResponse)
 async def create_shipment(shipment_data: ShipmentCreate, user_id: str = Depends(get_current_user_id)):
-    """Create a new shipment."""
+    """
+    Create a new shipment with IMMUTABLE pricing.
+    
+    PRICING ARCHITECTURE:
+    - Price is calculated ONLY here at creation
+    - Result is stored as shipment.price
+    - All subsequent screens use this persisted value
+    - Price is NEVER recalculated
+    """
     user = await users_collection.find_one({"_id": ObjectId(user_id)})
     if user["role"] not in [UserRole.SENDER, UserRole.BOTH]:
         raise HTTPException(status_code=403, detail="Apenas remetentes podem criar envios")
@@ -39,12 +48,29 @@ async def create_shipment(shipment_data: ShipmentCreate, user_id: str = Depends(
     if not allowed:
         raise HTTPException(status_code=403, detail=reason)
     
+    # ============================================================
+    # CALCULATE FINAL PRICE - Single Source of Truth
+    # ============================================================
+    # This is the ONLY place where price is calculated for shipments.
+    # The result is stored and NEVER recalculated.
+    # ============================================================
+    
+    price_breakdown = await calculate_final_price(
+        origin_lat=shipment_data.origin.lat,
+        origin_lng=shipment_data.origin.lng,
+        dest_lat=shipment_data.destination.lat,
+        dest_lng=shipment_data.destination.lng,
+        weight_kg=shipment_data.package.weight_kg,
+        category=shipment_data.package.category
+    )
+    
     shipment_doc = {
         "sender_id": user_id,
         "sender_name": user["name"],
         "sender_rating": user.get("rating", 0.0),
         **shipment_data.model_dump(),
         "status": ShipmentStatus.PUBLISHED,
+        "price": price_breakdown,  # IMMUTABLE price breakdown
         "created_at": datetime.now(timezone.utc)
     }
     
