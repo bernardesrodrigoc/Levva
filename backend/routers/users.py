@@ -232,3 +232,31 @@ async def get_payout_method(user_id: str = Depends(get_current_user_id)):
         "pix_type": user.get("pix_type") if has_pix else None,
         "updated_at": user.get("pix_updated_at").isoformat() if user.get("pix_updated_at") else None
     }
+
+
+
+@router.get("/balance")
+async def get_carrier_balance(user_id: str = Depends(get_current_user_id)):
+    """
+    Retorna saldo pendente do transportador.
+    
+    Inclui:
+    - Valor pendente total
+    - Valor bloqueado (sem Pix)
+    - Total já recebido
+    - Status do Pix
+    """
+    from services.payout_service import get_payout_service
+    
+    service = get_payout_service()
+    balance = await service.get_carrier_pending_balance(user_id)
+    
+    return {
+        "pending_amount": balance["pending_amount"],
+        "blocked_amount": balance["blocked_amount"],
+        "total_received": balance["total_received"],
+        "pending_count": balance["pending_count"],
+        "has_pix": balance["has_pix"],
+        "pix_key": balance["pix_key"],
+        "message": "Configure seu Pix para receber pagamentos" if not balance["has_pix"] else None
+    }
