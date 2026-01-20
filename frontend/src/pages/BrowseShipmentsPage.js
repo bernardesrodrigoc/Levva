@@ -212,6 +212,23 @@ const BrowseShipmentsPage = () => {
                       {/* Description - Mobile Optimized */}
                       <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4 line-clamp-2">{shipment.package.description}</p>
 
+                      {/* PERSISTED PRICE - from shipment.price */}
+                      {shipment.price && (
+                        <div className="mb-3 md:mb-4 p-2 bg-lime/5 rounded-lg border border-lime/20">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Preço do envio</span>
+                            <span className="text-lg font-bold text-lime-700">
+                              R$ {shipment.price.final_price?.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                            <span>{shipment.price.distance_km?.toFixed(0)}km</span>
+                            <span>•</span>
+                            <span>Você recebe: R$ {shipment.price.base_price?.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Sender Info - Mobile Optimized */}
                       <div className="flex items-center gap-2 md:gap-3">
                         <div className="w-8 h-8 md:w-10 md:h-10 bg-lime/10 rounded-full flex items-center justify-center">
