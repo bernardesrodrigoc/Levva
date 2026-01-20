@@ -17,7 +17,8 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-from auth import get_current_user_id, get_current_admin_user
+from auth import get_current_user_id
+from core.dependencies import get_current_admin_user
 from services.unified_pricing_service import (
     estimate_price_range,
     calculate_final_price,
