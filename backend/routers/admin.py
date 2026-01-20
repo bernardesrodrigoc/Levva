@@ -7,7 +7,7 @@ from bson import ObjectId
 from database import (
     users_collection, trips_collection, shipments_collection,
     matches_collection, verifications_collection, flag_collection,
-    disputes_collection, messages_collection, db
+    disputes_collection, messages_collection, payments_collection, db
 )
 from models import (
     TripStatus, ShipmentStatus, UserRole, VerificationStatus,
