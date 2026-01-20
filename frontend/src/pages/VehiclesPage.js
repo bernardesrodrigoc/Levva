@@ -44,6 +44,12 @@ const VehiclesPage = () => {
   // Vehicle type defaults from API
   const [vehicleDefaults, setVehicleDefaults] = useState([]);
   
+  // Autocomplete state
+  const [popularBrands, setPopularBrands] = useState([]);
+  const [popularModels, setPopularModels] = useState([]);
+  const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
+  const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+  
   // Form state
   const [newVehicle, setNewVehicle] = useState({
     type: '',
@@ -65,6 +71,25 @@ const VehiclesPage = () => {
     fetchVehicles();
     fetchDefaults();
   }, []);
+
+  // Fetch popular brands/models when vehicle type changes
+  useEffect(() => {
+    if (newVehicle.type && ['car', 'motorcycle', 'van', 'truck'].includes(newVehicle.type)) {
+      fetchPopular(newVehicle.type);
+    }
+  }, [newVehicle.type]);
+
+  const fetchPopular = async (vehicleType) => {
+    try {
+      const res = await axios.get(`${API}/vehicles/intelligence/popular/${vehicleType}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPopularBrands(res.data.popular_brands || []);
+      setPopularModels(res.data.popular_models || []);
+    } catch (error) {
+      console.error("Erro ao buscar populares:", error);
+    }
+  };
 
   const fetchVehicles = async () => {
     try {
