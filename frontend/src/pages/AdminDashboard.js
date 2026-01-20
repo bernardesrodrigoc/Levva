@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Package, Users, TruckIcon, ShieldCheck, Warning, Check, X, Gavel, 
-  ChatCircle, MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsOut, Car, Flag
+  ChatCircle, MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsOut, Car, Flag,
+  Bank, CurrencyDollar, Clock, CheckCircle
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,20 +32,25 @@ const AdminDashboard = () => {
   const [disputes, setDisputes] = useState([]);
   const [flaggedVehicles, setFlaggedVehicles] = useState([]);
   const [vehicleStats, setVehicleStats] = useState(null);
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'approved', 'all-users', 'flagged-vehicles'
+  const [activeTab, setActiveTab] = useState('pending');
   const [userFilter, setUserFilter] = useState({ status: '', role: '' });
+  
+  // Payout states
+  const [payoutStats, setPayoutStats] = useState(null);
+  const [readyPayouts, setReadyPayouts] = useState([]);
+  const [blockedPayouts, setBlockedPayouts] = useState([]);
   
   // Estados de Seleção e Modais
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [showDialog, setShowDialog] = useState(false); // Modal de Confirmação de Verificação
-  const [showDisputeDialog, setShowDisputeDialog] = useState(false); // Modal de Detalhes da Disputa
-  const [showRevokeDialog, setShowRevokeDialog] = useState(false); // Modal de Revogar
-  const [showUserDetailDialog, setShowUserDetailDialog] = useState(false); // Modal de Detalhes do Usuário
-  const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false); // Modal de Excluir Usuário
+  const [showDialog, setShowDialog] = useState(false);
+  const [showDisputeDialog, setShowDisputeDialog] = useState(false);
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
+  const [showUserDetailDialog, setShowUserDetailDialog] = useState(false);
+  const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
   
-  // --- ESTADOS DO LIGHTBOX (NOVO) ---
+  // --- ESTADOS DO LIGHTBOX ---
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [previewImage, setPreviewImage] = useState({ url: '', title: '' });
   const [zoomLevel, setZoomLevel] = useState(1);
