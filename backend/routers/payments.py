@@ -345,6 +345,9 @@ async def get_delivery_status(match_id: str, user_id: str = Depends(get_current_
     
     time_remaining = None
     if auto_confirm_deadline:
+        # Ensure timezone-aware comparison
+        if auto_confirm_deadline.tzinfo is None:
+            auto_confirm_deadline = auto_confirm_deadline.replace(tzinfo=timezone.utc)
         remaining = auto_confirm_deadline - now
         if remaining.total_seconds() > 0:
             time_remaining = {
