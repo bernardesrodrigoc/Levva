@@ -182,7 +182,6 @@ async def get_platform_statistics(
     """
     from database import db
     
-    vehicle_type_norm = normalize_string(vehicle_type)
     brand_norm = normalize_string(brand)
     model_norm = normalize_string(model)
     
