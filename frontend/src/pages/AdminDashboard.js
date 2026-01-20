@@ -83,14 +83,17 @@ const AdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes, flaggedRes, vehicleStatsRes] = await Promise.all([
+      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes, flaggedRes, vehicleStatsRes, payoutStatsRes, readyPayoutsRes, blockedPayoutsRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/verifications/pending`, { headers }),
         axios.get(`${API}/admin/verifications/approved`, { headers }),
         axios.get(`${API}/admin/users`, { headers }),
         axios.get(`${API}/admin/disputes`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API}/admin/vehicles/flagged`, { headers }).catch(() => ({ data: { vehicles: [] } })),
-        axios.get(`${API}/admin/vehicles/statistics`, { headers }).catch(() => ({ data: null }))
+        axios.get(`${API}/admin/vehicles/statistics`, { headers }).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/payouts/statistics`, { headers }).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/payouts/ready`, { headers }).catch(() => ({ data: { payouts: [] } })),
+        axios.get(`${API}/admin/payouts/blocked`, { headers }).catch(() => ({ data: { blocked_payouts: [] } }))
       ]);
       
       setStats(statsRes.data);
@@ -100,12 +103,38 @@ const AdminDashboard = () => {
       setDisputes(disputesRes.data);
       setFlaggedVehicles(flaggedRes.data.vehicles || []);
       setVehicleStats(vehicleStatsRes.data);
+      setPayoutStats(payoutStatsRes.data);
+      setReadyPayouts(readyPayoutsRes.data.payouts || []);
+      setBlockedPayouts(blockedPayoutsRes.data.blocked_payouts || []);
       
     } catch (error) {
       console.error('Error fetching admin data:', error);
       toast.error('Erro ao carregar dados: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Payout management functions
+  const handleMarkPayoutComplete = async (paymentId) => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.post(`${API}/admin/payouts/${paymentId}/complete`, {}, { headers });
+      toast.success('Pagamento marcado como concluído');
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao marcar pagamento: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleRunAutoConfirm = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.post(`${API}/admin/payouts/run-auto-confirm`, {}, { headers });
+      toast.success(`Auto-confirmação executada: ${res.data.confirmed} confirmados, ${res.data.blocked} bloqueados`);
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao executar auto-confirmação: ' + (error.response?.data?.detail || error.message));
     }
   };
 
