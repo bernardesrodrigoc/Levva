@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Package, Users, TruckIcon, ShieldCheck, Warning, Check, X, Gavel, 
-  ChatCircle, MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsOut 
+  ChatCircle, MagnifyingGlassPlus, MagnifyingGlassMinus, ArrowsOut, Car, Flag
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +29,9 @@ const AdminDashboard = () => {
   const [approvedVerifications, setApprovedVerifications] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [disputes, setDisputes] = useState([]);
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'approved', 'all-users'
+  const [flaggedVehicles, setFlaggedVehicles] = useState([]);
+  const [vehicleStats, setVehicleStats] = useState(null);
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'approved', 'all-users', 'flagged-vehicles'
   const [userFilter, setUserFilter] = useState({ status: '', role: '' });
   
   // Estados de Seleção e Modais
