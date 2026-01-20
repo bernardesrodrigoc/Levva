@@ -868,6 +868,25 @@ async def trigger_expirations(user: dict = Depends(get_current_admin_user)):
 
 # ============ Global History Admin ============
 
+def serialize_doc(doc: dict) -> dict:
+    """Convert all ObjectId fields to strings in a document."""
+    result = {}
+    for key, value in doc.items():
+        if key == "_id":
+            result["id"] = str(value)
+        elif isinstance(value, ObjectId):
+            result[key] = str(value)
+        elif isinstance(value, dict):
+            result[key] = serialize_doc(value)
+        elif isinstance(value, list):
+            result[key] = [serialize_doc(v) if isinstance(v, dict) else (str(v) if isinstance(v, ObjectId) else v) for v in value]
+        elif isinstance(value, datetime):
+            result[key] = value.isoformat()
+        else:
+            result[key] = value
+    return result
+
+
 @router.get("/history/global")
 async def get_global_history(
     entity_type: Optional[str] = None,  # trip, shipment, match
@@ -919,26 +938,26 @@ async def get_global_history(
     if entity_type is None or entity_type == "trip":
         trips = await trips_collection.find(trip_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
         for trip in trips:
-            trip["id"] = str(trip.pop("_id"))
+            trip = serialize_doc(trip)
             trip["entity_type"] = "trip"
             # Get carrier info
             if trip.get("carrier_id"):
                 carrier = await users_collection.find_one({"_id": ObjectId(trip["carrier_id"])})
                 trip["user_name"] = carrier.get("name") if carrier else "Desconhecido"
                 trip["user_email"] = carrier.get("email") if carrier else ""
-        results["trips"] = trips
+            results["trips"].append(trip)
     
     if entity_type is None or entity_type == "shipment":
         shipments = await shipments_collection.find(shipment_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
         for shipment in shipments:
-            shipment["id"] = str(shipment.pop("_id"))
+            shipment = serialize_doc(shipment)
             shipment["entity_type"] = "shipment"
             # Get sender info
             if shipment.get("sender_id"):
                 sender = await users_collection.find_one({"_id": ObjectId(shipment["sender_id"])})
                 shipment["user_name"] = sender.get("name") if sender else "Desconhecido"
                 shipment["user_email"] = sender.get("email") if sender else ""
-        results["shipments"] = shipments
+            results["shipments"].append(shipment)
     
     if entity_type is None or entity_type == "match":
         # For matches with $or query, we need to handle it differently
@@ -950,7 +969,7 @@ async def get_global_history(
         
         matches = await matches_collection.find(match_query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
         for match in matches:
-            match["id"] = str(match.pop("_id"))
+            match = serialize_doc(match)
             match["entity_type"] = "match"
             # Get user info
             if match.get("sender_id"):
@@ -959,7 +978,7 @@ async def get_global_history(
             if match.get("carrier_id"):
                 carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
                 match["carrier_name"] = carrier.get("name") if carrier else "Desconhecido"
-        results["matches"] = matches
+            results["matches"].append(match)
     
     # Calculate totals
     results["total"] = len(results["trips"]) + len(results["shipments"]) + len(results["matches"])
