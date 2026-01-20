@@ -105,9 +105,48 @@ async def calculate_suggested_price(
 
 # IMPORTANT: my-trips must come BEFORE {trip_id} to avoid route conflicts
 @router.get("/my-trips")
-async def get_my_trips(user_id: str = Depends(get_current_user_id)):
-    """Get trips created by current user."""
-    trips = await trips_collection.find({"carrier_id": user_id}).to_list(100)
+async def get_my_trips(
+    user_id: str = Depends(get_current_user_id),
+    include_history: bool = False
+):
+    """
+    Get trips created by current user.
+    
+    Args:
+        include_history: If False, returns only active trips.
+                        If True, returns only history (completed/cancelled/expired).
+    """
+    from services.expiration_service import get_active_statuses, get_history_statuses
+    
+    if include_history:
+        statuses = get_history_statuses("trip")
+    else:
+        statuses = get_active_statuses("trip")
+    
+    trips = await trips_collection.find({
+        "carrier_id": user_id,
+        "status": {"$in": statuses}
+    }).sort("created_at", -1).to_list(100)
+    
+    for trip in trips:
+        trip["id"] = str(trip.pop("_id"))
+        if "corridor_radius_km" not in trip:
+            trip["corridor_radius_km"] = trip.get("max_deviation_km", 10.0)
+    
+    return trips
+
+
+@router.get("/my-trips/history")
+async def get_my_trips_history(user_id: str = Depends(get_current_user_id)):
+    """Get trips history (completed, cancelled, expired)."""
+    from services.expiration_service import get_history_statuses
+    
+    statuses = get_history_statuses("trip")
+    
+    trips = await trips_collection.find({
+        "carrier_id": user_id,
+        "status": {"$in": statuses}
+    }).sort("created_at", -1).to_list(100)
     
     for trip in trips:
         trip["id"] = str(trip.pop("_id"))
