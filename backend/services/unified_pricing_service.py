@@ -61,7 +61,7 @@ DEFAULT_PLATFORM_FEE_TIERS = [
     {"min": 0, "max": 50, "percentage": 18},
     {"min": 50, "max": 200, "percentage": 15},
     {"min": 200, "max": 500, "percentage": 13},
-    {"min": 500, "max": float('inf'), "percentage": 10},
+    {"min": 500, "max": 999999, "percentage": 10},
 ]
 
 CATEGORY_MULTIPLIERS = {
