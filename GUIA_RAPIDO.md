@@ -3,8 +3,8 @@
 ## 🚀 Acesso Rápido
 
 ### URLs
-- **Frontend**: https://smart-logistics-25.preview.emergentagent.com
-- **Backend API**: https://smart-logistics-25.preview.emergentagent.com/api
+- **Frontend**: https://levva-shipping.preview.emergentagent.com
+- **Backend API**: https://levva-shipping.preview.emergentagent.com/api
 
 ### Credenciais Admin
 ```
