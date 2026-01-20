@@ -110,10 +110,7 @@ export const ChatBox = ({ matchId, recipientName }) => {
                     <p className={`text-xs mt-1 ${
                       isMe ? 'text-white/70' : 'text-muted-foreground'
                     }`}>
-                      {new Date(msg.created_at).toLocaleTimeString('pt-BR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {formatMessageTime(msg.created_at)}
                     </p>
                   </div>
                 </div>
