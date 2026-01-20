@@ -90,7 +90,10 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - `SmartSuggestions.js` - Painel de sugestões inteligentes (atualizado para JSON body)
 - `MatchingTrips.js` - **NOVO** - Exibe viagens compatíveis com dados geoespaciais
 
-#### 4. Integração UI (Fase 2)
+#### 4. Componentes de Pricing
+- `IntelligentPricing.js` - Estimativa de preço, categorias, capacidade
+
+#### 5. Integração UI (Fase 2)
 - Sugestões integradas em `CreateShipmentPage.js`
 - Sugestões integradas em `CreateTripPage.js`
 - Capacidade e ganhos exibidos em `MatchSuggestionsPage.js`
