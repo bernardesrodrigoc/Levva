@@ -37,19 +37,19 @@ const SmartSuggestions = ({
     
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        origin_city: originCity,
-        destination_city: destinationCity,
-        origin_lat: originLat,
-        origin_lng: originLng,
-        dest_lat: destLat || originLat,
-        dest_lng: destLng || originLng,
-        is_shipment: isShipment
-      });
-
+      // GEOSPATIAL-FIRST: Send coordinates as primary matching criteria
       const response = await axios.post(
-        `${API}/intelligence/suggestions/comprehensive?${params}`,
-        {},
+        `${API}/intelligence/suggestions/comprehensive`,
+        {
+          origin_lat: parseFloat(originLat),
+          origin_lng: parseFloat(originLng),
+          dest_lat: parseFloat(destLat || originLat),
+          dest_lng: parseFloat(destLng || originLng),
+          origin_city: originCity,        // For display only
+          destination_city: destinationCity, // For display only
+          is_shipment: isShipment,
+          weight_kg: 1.0
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
