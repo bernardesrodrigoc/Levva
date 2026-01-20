@@ -31,10 +31,29 @@ class DisputeStatus:
 @router.get("/stats")
 async def get_admin_stats(user: dict = Depends(get_current_admin_user)):
     """Get platform statistics."""
+    from services.expiration_service import get_active_statuses, get_history_statuses
+    
     total_users = await users_collection.count_documents({})
-    active_trips = await trips_collection.count_documents({"status": TripStatus.PUBLISHED})
-    active_shipments = await shipments_collection.count_documents({"status": ShipmentStatus.PUBLISHED})
+    
+    # Count only ACTIVE items (not in history)
+    active_trip_statuses = get_active_statuses("trip")
+    active_shipment_statuses = get_active_statuses("shipment")
+    active_match_statuses = get_active_statuses("match")
+    
+    active_trips = await trips_collection.count_documents({"status": {"$in": active_trip_statuses}})
+    active_shipments = await shipments_collection.count_documents({"status": {"$in": active_shipment_statuses}})
+    active_matches = await matches_collection.count_documents({"status": {"$in": active_match_statuses}})
+    
+    # Total counts (for reference)
     total_matches = await matches_collection.count_documents({})
+    
+    # History counts
+    history_trip_statuses = get_history_statuses("trip")
+    history_shipment_statuses = get_history_statuses("shipment")
+    
+    completed_trips = await trips_collection.count_documents({"status": {"$in": history_trip_statuses}})
+    completed_shipments = await shipments_collection.count_documents({"status": {"$in": history_shipment_statuses}})
+    
     pending_verifications = await verifications_collection.count_documents({"status": "pending"})
     flagged_items = await flag_collection.count_documents({"status": "pending"})
     
@@ -42,7 +61,10 @@ async def get_admin_stats(user: dict = Depends(get_current_admin_user)):
         "total_users": total_users,
         "active_trips": active_trips,
         "active_shipments": active_shipments,
+        "active_matches": active_matches,
         "total_matches": total_matches,
+        "completed_trips": completed_trips,
+        "completed_shipments": completed_shipments,
         "pending_verifications": pending_verifications,
         "flagged_items": flagged_items
     }
