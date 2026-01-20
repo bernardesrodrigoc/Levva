@@ -82,9 +82,48 @@ async def create_shipment(shipment_data: ShipmentCreate, user_id: str = Depends(
 
 # IMPORTANT: my-shipments must come BEFORE {shipment_id} to avoid route conflicts
 @router.get("/my-shipments")
-async def get_my_shipments(user_id: str = Depends(get_current_user_id)):
-    """Get shipments created by current user."""
-    shipments = await shipments_collection.find({"sender_id": user_id}).to_list(100)
+async def get_my_shipments(
+    user_id: str = Depends(get_current_user_id),
+    include_history: bool = False
+):
+    """
+    Get shipments created by current user.
+    
+    Args:
+        include_history: If False, returns only active shipments.
+                        If True, returns only history (completed/cancelled/expired).
+    """
+    from services.expiration_service import get_active_statuses, get_history_statuses
+    
+    if include_history:
+        # Return only history items
+        statuses = get_history_statuses("shipment")
+    else:
+        # Return only active items
+        statuses = get_active_statuses("shipment")
+    
+    shipments = await shipments_collection.find({
+        "sender_id": user_id,
+        "status": {"$in": statuses}
+    }).sort("created_at", -1).to_list(100)
+    
+    for shipment in shipments:
+        shipment["id"] = str(shipment.pop("_id"))
+    
+    return shipments
+
+
+@router.get("/my-shipments/history")
+async def get_my_shipments_history(user_id: str = Depends(get_current_user_id)):
+    """Get shipments history (completed, cancelled, expired)."""
+    from services.expiration_service import get_history_statuses
+    
+    statuses = get_history_statuses("shipment")
+    
+    shipments = await shipments_collection.find({
+        "sender_id": user_id,
+        "status": {"$in": statuses}
+    }).sort("created_at", -1).to_list(100)
     
     for shipment in shipments:
         shipment["id"] = str(shipment.pop("_id"))
