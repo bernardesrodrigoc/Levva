@@ -579,6 +579,14 @@ const AdminDashboard = () => {
                 <Clock size={16} className="mr-1" />
                 Histórico Global ({historySummary ? historySummary.trips.total + historySummary.shipments.total + historySummary.matches.total : 0})
               </Button>
+              <Button
+                variant={activeTab === 'finance' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('finance')}
+                className={activeTab === 'finance' ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-emerald-400 text-emerald-700'}
+              >
+                <CurrencyDollar size={16} className="mr-1" />
+                Financeiro
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
