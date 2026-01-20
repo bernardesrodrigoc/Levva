@@ -294,6 +294,30 @@ async def confirm_delivery(
     except Exception as e:
         logger.warning(f"Failed to update reputation: {e}")
     
+    # ============================================================
+    # CREATE PAYOUT RECORD
+    # ============================================================
+    try:
+        from services.payout_service import get_payout_service
+        from models.payout import PayoutCreate, PayoutTrigger
+        
+        payout_service = get_payout_service()
+        payout_data = PayoutCreate(
+            match_id=match_id,
+            payment_id=str(payment["_id"]),
+            carrier_id=match["carrier_id"],
+            sender_id=match["sender_id"],
+            gross_amount=total_amount,
+            platform_fee=platform_fee,
+            net_amount=carrier_amount,
+            delivery_confirmed_at=now,
+            trigger=PayoutTrigger.SENDER_CONFIRMED
+        )
+        payout_id = await payout_service.create_payout(payout_data)
+        logger.info(f"Created payout {payout_id} for match {match_id}")
+    except Exception as e:
+        logger.error(f"Failed to create payout record: {e}")
+    
     return {
         "message": "Entrega confirmada com sucesso!",
         "status": new_status,
