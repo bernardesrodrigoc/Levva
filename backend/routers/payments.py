@@ -125,3 +125,244 @@ async def mercadopago_webhook(data: dict):
                 logger.error(f"Erro ao processar webhook: {e}")
     
     return {"status": "ok"}
+
+
+# ============ Delivery & Payout Flow ============
+
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import timedelta
+
+
+class DeliveryConfirmationRequest(BaseModel):
+    notes: Optional[str] = None
+
+
+class DisputeRequest(BaseModel):
+    reason: str
+    details: Optional[str] = None
+
+
+# Auto-confirmation timeout (7 days)
+AUTO_CONFIRM_DAYS = 7
+PLATFORM_FEE_PERCENT = 15  # 15% platform fee
+
+
+@router.post("/{match_id}/mark-delivered")
+async def mark_delivered(match_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Transporter marks shipment as delivered.
+    - Changes payment status to DELIVERED_BY_TRANSPORTER
+    - Starts 7-day confirmation countdown
+    """
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    if not match:
+        raise HTTPException(status_code=404, detail="Match não encontrado")
+    
+    if match["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Apenas o transportador pode marcar como entregue")
+    
+    payment = await payments_collection.find_one({"match_id": match_id})
+    if not payment:
+        raise HTTPException(status_code=400, detail="Pagamento não encontrado")
+    
+    current_status = str(payment.get("status", ""))
+    if current_status not in ["paid_escrow", "escrowed", "paid", PaymentStatus.PAID_ESCROW.value]:
+        raise HTTPException(status_code=400, detail=f"Pagamento não está em escrow. Status atual: {current_status}")
+    
+    now = datetime.now(timezone.utc)
+    auto_confirm_deadline = now + timedelta(days=AUTO_CONFIRM_DAYS)
+    
+    await payments_collection.update_one(
+        {"match_id": match_id},
+        {
+            "$set": {
+                "status": PaymentStatus.DELIVERED_BY_TRANSPORTER.value,
+                "delivered_at": now,
+                "auto_confirm_deadline": auto_confirm_deadline,
+                "delivered_by": user_id
+            }
+        }
+    )
+    
+    await matches_collection.update_one(
+        {"_id": ObjectId(match_id)},
+        {"$set": {"status": "delivered", "delivered_at": now}}
+    )
+    
+    return {
+        "message": "Entrega marcada com sucesso",
+        "status": PaymentStatus.DELIVERED_BY_TRANSPORTER.value,
+        "auto_confirm_deadline": auto_confirm_deadline.isoformat()
+    }
+
+
+@router.post("/{match_id}/confirm-delivery")
+async def confirm_delivery(
+    match_id: str, 
+    confirmation: DeliveryConfirmationRequest,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Sender confirms delivery.
+    - Changes status to CONFIRMED_BY_SENDER
+    - Then to PAYOUT_READY (if transporter has payout method)
+    """
+    from database import users_collection
+    
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    if not match:
+        raise HTTPException(status_code=404, detail="Match não encontrado")
+    
+    if match["sender_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Apenas o remetente pode confirmar entrega")
+    
+    payment = await payments_collection.find_one({"match_id": match_id})
+    if not payment:
+        raise HTTPException(status_code=400, detail="Pagamento não encontrado")
+    
+    current_status = str(payment.get("status", ""))
+    if current_status != PaymentStatus.DELIVERED_BY_TRANSPORTER.value:
+        raise HTTPException(status_code=400, detail=f"Entrega ainda não foi marcada pelo transportador")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Check if transporter has payout method
+    carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
+    has_payout_method = carrier and carrier.get("pix_key")
+    
+    # Calculate payout amounts
+    total_amount = payment.get("amount", 0)
+    platform_fee = round(total_amount * PLATFORM_FEE_PERCENT / 100, 2)
+    carrier_amount = round(total_amount - platform_fee, 2)
+    
+    if has_payout_method:
+        new_status = PaymentStatus.PAYOUT_READY.value
+    else:
+        new_status = PaymentStatus.PAYOUT_BLOCKED_NO_PAYOUT_METHOD.value
+    
+    await payments_collection.update_one(
+        {"match_id": match_id},
+        {
+            "$set": {
+                "status": new_status,
+                "confirmed_at": now,
+                "confirmed_by": user_id,
+                "confirmation_type": "manual",
+                "confirmation_notes": confirmation.notes,
+                "platform_fee": platform_fee,
+                "carrier_amount": carrier_amount,
+                "has_payout_method": has_payout_method
+            }
+        }
+    )
+    
+    await matches_collection.update_one(
+        {"_id": ObjectId(match_id)},
+        {"$set": {"status": "completed", "confirmed_at": now}}
+    )
+    
+    return {
+        "message": "Entrega confirmada com sucesso!",
+        "status": new_status,
+        "total_amount": total_amount,
+        "platform_fee": platform_fee,
+        "carrier_amount": carrier_amount,
+        "payout_blocked": not has_payout_method
+    }
+
+
+@router.post("/{match_id}/open-dispute")
+async def open_dispute(
+    match_id: str,
+    dispute: DisputeRequest,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Sender opens a dispute instead of confirming delivery.
+    """
+    from database import disputes_collection
+    
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    if not match:
+        raise HTTPException(status_code=404, detail="Match não encontrado")
+    
+    if match["sender_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Apenas o remetente pode abrir disputa")
+    
+    payment = await payments_collection.find_one({"match_id": match_id})
+    if not payment:
+        raise HTTPException(status_code=400, detail="Pagamento não encontrado")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Create dispute record
+    dispute_doc = {
+        "match_id": match_id,
+        "payment_id": str(payment["_id"]),
+        "opened_by": user_id,
+        "reason": dispute.reason,
+        "details": dispute.details,
+        "status": "open",
+        "created_at": now
+    }
+    
+    await disputes_collection.insert_one(dispute_doc)
+    
+    await payments_collection.update_one(
+        {"match_id": match_id},
+        {
+            "$set": {
+                "status": PaymentStatus.DISPUTE_OPENED.value,
+                "dispute_opened_at": now,
+                "dispute_reason": dispute.reason
+            }
+        }
+    )
+    
+    await matches_collection.update_one(
+        {"_id": ObjectId(match_id)},
+        {"$set": {"status": "disputed"}}
+    )
+    
+    return {
+        "message": "Disputa aberta. Nossa equipe irá analisar.",
+        "status": PaymentStatus.DISPUTE_OPENED.value
+    }
+
+
+@router.get("/{match_id}/delivery-status")
+async def get_delivery_status(match_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Get delivery and payout status for a match.
+    """
+    payment = await payments_collection.find_one({"match_id": match_id})
+    if not payment:
+        return {"status": "not_found"}
+    
+    now = datetime.now(timezone.utc)
+    auto_confirm_deadline = payment.get("auto_confirm_deadline")
+    
+    time_remaining = None
+    if auto_confirm_deadline:
+        remaining = auto_confirm_deadline - now
+        if remaining.total_seconds() > 0:
+            time_remaining = {
+                "days": remaining.days,
+                "hours": remaining.seconds // 3600
+            }
+    
+    return {
+        "match_id": match_id,
+        "status": str(payment.get("status")),
+        "amount": payment.get("amount"),
+        "platform_fee": payment.get("platform_fee"),
+        "carrier_amount": payment.get("carrier_amount"),
+        "delivered_at": payment.get("delivered_at").isoformat() if payment.get("delivered_at") else None,
+        "confirmed_at": payment.get("confirmed_at").isoformat() if payment.get("confirmed_at") else None,
+        "confirmation_type": payment.get("confirmation_type"),
+        "auto_confirm_deadline": auto_confirm_deadline.isoformat() if auto_confirm_deadline else None,
+        "time_remaining": time_remaining,
+        "payout_blocked": payment.get("status") == PaymentStatus.PAYOUT_BLOCKED_NO_PAYOUT_METHOD.value,
+        "payout_completed_at": payment.get("payout_completed_at").isoformat() if payment.get("payout_completed_at") else None
+    }
