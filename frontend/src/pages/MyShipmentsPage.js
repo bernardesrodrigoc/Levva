@@ -80,6 +80,18 @@ const MyShipmentsPage = () => {
                   <p className="text-sm text-muted-foreground">{ship.package.description}</p>
                 </div>
 
+                {/* PERSISTED PRICE - from shipment.price */}
+                {ship.price && (
+                  <div className="text-right min-w-[120px]">
+                    <p className="text-2xl font-bold text-lime-700">
+                      R$ {ship.price.final_price?.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {ship.price.distance_km?.toFixed(0)}km • {ship.price.platform_fee_percentage}% taxa
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   {/* Botão de Excluir só aparece se estiver Publicado */}
                   {ship.status === 'published' && (
