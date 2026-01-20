@@ -242,6 +242,91 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
+        {/* Pix Payout Method - For carriers */}
+        {(profile?.role === 'carrier' || profile?.role === 'both') && (
+          <Card className="mb-4 md:mb-8" data-testid="pix-card">
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                <Bank size={20} className="text-jungle" />
+                Método de Recebimento (Pix)
+              </CardTitle>
+              <CardDescription className="text-xs md:text-sm">
+                Configure sua chave Pix para receber pagamentos das entregas
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 pt-0">
+              {!payoutMethod?.has_payout_method && (
+                <Alert className="mb-4 border-yellow-400 bg-yellow-50">
+                  <Warning size={16} className="text-yellow-600" />
+                  <AlertDescription className="text-yellow-800 text-sm">
+                    <strong>Atenção:</strong> Você precisa cadastrar uma chave Pix para receber pagamentos.
+                    Sem isso, seus ganhos ficarão retidos na plataforma.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {payoutMethod?.has_payout_method && (
+                <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 text-green-700 mb-2">
+                    <Check size={18} weight="bold" />
+                    <span className="font-medium">Pix configurado</span>
+                  </div>
+                  <p className="text-sm text-green-600">
+                    Tipo: <span className="font-medium uppercase">{payoutMethod.pix_type}</span>
+                  </p>
+                  <p className="text-sm text-green-600">
+                    Chave: <span className="font-mono">{payoutMethod.pix_key}</span>
+                  </p>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <Label>Tipo de Chave Pix</Label>
+                  <Select value={pixType} onValueChange={setPixType}>
+                    <SelectTrigger className="mt-1" data-testid="pix-type-select">
+                      <SelectValue placeholder="Selecione o tipo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cpf">CPF</SelectItem>
+                      <SelectItem value="cnpj">CNPJ</SelectItem>
+                      <SelectItem value="email">E-mail</SelectItem>
+                      <SelectItem value="phone">Telefone</SelectItem>
+                      <SelectItem value="random">Chave Aleatória</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label>Chave Pix</Label>
+                  <Input
+                    className="mt-1"
+                    placeholder={
+                      pixType === 'cpf' ? '000.000.000-00' :
+                      pixType === 'cnpj' ? '00.000.000/0000-00' :
+                      pixType === 'email' ? 'seu@email.com' :
+                      pixType === 'phone' ? '+5511999999999' :
+                      'Cole sua chave aleatória'
+                    }
+                    value={pixKey}
+                    onChange={(e) => setPixKey(e.target.value)}
+                    data-testid="pix-key-input"
+                  />
+                </div>
+                
+                <Button
+                  className="w-full bg-jungle hover:bg-jungle-800"
+                  onClick={handleSavePix}
+                  disabled={savingPix || !pixKey || !pixType}
+                  data-testid="save-pix-btn"
+                >
+                  {savingPix ? 'Salvando...' : payoutMethod?.has_payout_method ? 'Atualizar Pix' : 'Cadastrar Pix'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Ratings Section - Mobile Optimized */}
         <Card>
           <CardHeader className="p-4 md:p-6">
