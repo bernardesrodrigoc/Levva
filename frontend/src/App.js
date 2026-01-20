@@ -101,6 +101,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Alias for /trip/:tripId for compatibility */}
+            <Route
+              path="/trip/:tripId"
+              element={
+                <ProtectedRoute>
+                  <TripDetailsPage />
+                </ProtectedRoute>
+              }
+            />
             {/* --------------------------------------- */}
 
             <Route
