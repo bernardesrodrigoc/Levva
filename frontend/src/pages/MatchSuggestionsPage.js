@@ -210,12 +210,26 @@ const MatchSuggestionsPage = () => {
                         </span>
                       )}
                     </div>
-                    <Button
-                      onClick={() => handleCreateMatch(suggestion.trip_id, suggestion.shipment_id)}
-                      disabled={creating === `${suggestion.trip_id}-${suggestion.shipment_id}`}
-                      className="bg-jungle hover:bg-jungle-800 w-full md:w-auto h-10 text-sm"
-                      data-testid={`create-match-${index}`}
-                    >
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const detailUrl = suggestion.type === 'trip_for_shipment' 
+                            ? `/trip/${suggestion.trip_id}`
+                            : `/shipment/${suggestion.shipment_id}`;
+                          navigate(detailUrl);
+                        }}
+                        className="flex-1 md:flex-none h-10 text-sm border-jungle text-jungle hover:bg-jungle/10"
+                        data-testid={`view-details-${index}`}
+                      >
+                        Ver Detalhes
+                      </Button>
+                      <Button
+                        onClick={() => handleCreateMatch(suggestion.trip_id, suggestion.shipment_id)}
+                        disabled={creating === `${suggestion.trip_id}-${suggestion.shipment_id}`}
+                        className="bg-jungle hover:bg-jungle-800 flex-1 md:flex-none h-10 text-sm"
+                        data-testid={`create-match-${index}`}
+                      >
                       {creating === `${suggestion.trip_id}-${suggestion.shipment_id}` 
                         ? 'Criando...' 
                         : 'Criar Combinação'
