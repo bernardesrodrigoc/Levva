@@ -410,17 +410,42 @@ async def create_match(
 
 
 @router.get("/my-matches")
-async def get_my_matches(user_id: str = Depends(get_current_user_id)):
-    """Get matches for current user."""
+async def get_my_matches(
+    user_id: str = Depends(get_current_user_id),
+    history: bool = Query(False, description="Include only history items")
+):
+    """Get matches for current user. By default returns only active matches."""
+    from services.expiration_service import get_active_statuses, get_history_statuses
+    
+    # Define which statuses to include
+    if history:
+        status_filter = get_history_statuses("match")
+    else:
+        status_filter = get_active_statuses("match")
+    
     matches = await matches_collection.find({
         "$or": [
             {"carrier_id": user_id},
             {"sender_id": user_id}
-        ]
-    }).to_list(100)
+        ],
+        "status": {"$in": status_filter}
+    }).sort("created_at", -1).to_list(100)
     
     for match in matches:
         match["id"] = str(match.pop("_id"))
+        
+        # Enrich with basic trip/shipment info
+        trip = await trips_collection.find_one({"_id": ObjectId(match["trip_id"])}, {"origin": 1, "destination": 1, "departure_date": 1})
+        shipment = await shipments_collection.find_one({"_id": ObjectId(match["shipment_id"])}, {"package": 1})
+        
+        if trip:
+            match["trip"] = {
+                "origin": trip.get("origin"),
+                "destination": trip.get("destination"),
+                "departure_date": trip.get("departure_date").isoformat() if trip.get("departure_date") else None
+            }
+        if shipment:
+            match["shipment"] = {"package": shipment.get("package")}
     
     return matches
 
