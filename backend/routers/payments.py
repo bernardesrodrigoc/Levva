@@ -262,6 +262,38 @@ async def confirm_delivery(
         {"$set": {"status": "completed", "confirmed_at": now}}
     )
     
+    # ============================================================
+    # UPDATE SHIPMENT AND TRIP STATUS TO HISTORY
+    # When match is completed, both entities move to history
+    # ============================================================
+    from database import shipments_collection, trips_collection
+    from models import ShipmentStatus, TripStatus
+    
+    # Update shipment to "delivered"
+    await shipments_collection.update_one(
+        {"_id": ObjectId(match["shipment_id"])},
+        {"$set": {
+            "status": ShipmentStatus.DELIVERED.value,
+            "delivered_at": now
+        }}
+    )
+    
+    # Update trip to "completed" 
+    await trips_collection.update_one(
+        {"_id": ObjectId(match["trip_id"])},
+        {"$set": {
+            "status": TripStatus.COMPLETED.value,
+            "completed_at": now
+        }}
+    )
+    
+    # Update reputation
+    try:
+        from services.reputation_service import record_delivery_completed
+        await record_delivery_completed(match["sender_id"], match["carrier_id"], match_id)
+    except Exception as e:
+        logger.warning(f"Failed to update reputation: {e}")
+    
     return {
         "message": "Entrega confirmada com sucesso!",
         "status": new_status,
