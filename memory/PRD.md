@@ -1,6 +1,13 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: PRODUCT ENGINEERING COMPLETE ✅
+## Status: PRODUCT ENGINEERING VALIDATED ✅
+
+### E2E Validation Completed (January 20, 2026)
+- ✅ Shipment Cancellation Flow - Items move to History
+- ✅ Trip Cancellation Flow - Items move to History
+- ✅ Expiration Service - 3 items expired via admin endpoint
+- ✅ Reputation System - Cancellation events recorded correctly
+- ✅ UI Visual Verification - Both pages show Active/History tabs
 
 ---
 
