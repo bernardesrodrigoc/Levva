@@ -620,3 +620,189 @@ async def verify_vehicle(
     
     return {"message": "Veículo verificado com sucesso"}
 
+
+
+# ============ Payout Admin Control ============
+
+@router.get("/payouts/ready")
+async def get_ready_payouts(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    List all PAYOUT_READY shipments for admin payout processing.
+    """
+    from models import PaymentStatus
+    from database import payments_collection
+    
+    query = {"status": {"$in": [
+        PaymentStatus.PAYOUT_READY.value,
+        "payout_ready"
+    ]}}
+    
+    skip = (page - 1) * limit
+    
+    payments = await payments_collection.find(query).sort("confirmed_at", 1).skip(skip).limit(limit).to_list(limit)
+    total = await payments_collection.count_documents(query)
+    
+    results = []
+    for p in payments:
+        # Get match info
+        match = await matches_collection.find_one({"_id": ObjectId(p["match_id"])}) if p.get("match_id") else None
+        
+        # Get carrier info
+        carrier = None
+        if match and match.get("carrier_id"):
+            carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
+        
+        results.append({
+            "payment_id": str(p["_id"]),
+            "match_id": p.get("match_id"),
+            "trip_id": match.get("trip_id") if match else None,
+            "shipment_id": match.get("shipment_id") if match else None,
+            "total_paid": p.get("amount"),
+            "platform_fee": p.get("platform_fee"),
+            "carrier_amount": p.get("carrier_amount"),
+            "carrier": {
+                "id": str(carrier["_id"]) if carrier else None,
+                "name": carrier.get("name") if carrier else "Desconhecido",
+                "email": carrier.get("email") if carrier else None,
+                "pix_key": carrier.get("pix_key") if carrier else None,
+                "pix_type": carrier.get("pix_type") if carrier else None
+            } if carrier else None,
+            "delivered_at": p.get("delivered_at").isoformat() if p.get("delivered_at") else None,
+            "confirmed_at": p.get("confirmed_at").isoformat() if p.get("confirmed_at") else None,
+            "confirmation_type": p.get("confirmation_type"),
+            "status": p.get("status")
+        })
+    
+    return {
+        "payouts": results,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+@router.get("/payouts/blocked")
+async def get_blocked_payouts(user: dict = Depends(get_current_admin_user)):
+    """
+    List payouts blocked due to missing payout method.
+    """
+    from models import PaymentStatus
+    from database import payments_collection
+    
+    query = {"status": {"$in": [
+        PaymentStatus.PAYOUT_BLOCKED_NO_PAYOUT_METHOD.value,
+        "payout_blocked_no_payout_method"
+    ]}}
+    
+    payments = await payments_collection.find(query).to_list(100)
+    
+    results = []
+    for p in payments:
+        match = await matches_collection.find_one({"_id": ObjectId(p["match_id"])}) if p.get("match_id") else None
+        carrier = None
+        if match and match.get("carrier_id"):
+            carrier = await users_collection.find_one({"_id": ObjectId(match["carrier_id"])})
+        
+        results.append({
+            "payment_id": str(p["_id"]),
+            "match_id": p.get("match_id"),
+            "carrier_amount": p.get("carrier_amount"),
+            "carrier": {
+                "id": str(carrier["_id"]) if carrier else None,
+                "name": carrier.get("name") if carrier else "Desconhecido",
+                "email": carrier.get("email") if carrier else None,
+            } if carrier else None,
+            "confirmed_at": p.get("confirmed_at").isoformat() if p.get("confirmed_at") else None,
+            "reason": "Transportador não cadastrou método de pagamento (Pix)"
+        })
+    
+    return {
+        "blocked_payouts": results,
+        "total": len(results)
+    }
+
+
+@router.post("/payouts/{payment_id}/complete")
+async def mark_payout_completed(
+    payment_id: str,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Admin marks a payout as completed after manual transfer.
+    """
+    from models import PaymentStatus
+    from database import payments_collection
+    
+    payment = await payments_collection.find_one({"_id": ObjectId(payment_id)})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pagamento não encontrado")
+    
+    current_status = str(payment.get("status", ""))
+    if current_status not in [PaymentStatus.PAYOUT_READY.value, "payout_ready"]:
+        raise HTTPException(status_code=400, detail=f"Pagamento não está pronto para payout. Status: {current_status}")
+    
+    now = datetime.now(timezone.utc)
+    
+    await payments_collection.update_one(
+        {"_id": ObjectId(payment_id)},
+        {
+            "$set": {
+                "status": PaymentStatus.PAYOUT_COMPLETED.value,
+                "payout_completed_at": now,
+                "payout_completed_by": str(user["_id"])
+            }
+        }
+    )
+    
+    return {
+        "message": "Payout marcado como concluído",
+        "payment_id": payment_id,
+        "completed_at": now.isoformat()
+    }
+
+
+@router.get("/payouts/statistics")
+async def get_payout_statistics(user: dict = Depends(get_current_admin_user)):
+    """
+    Get payout statistics for admin dashboard.
+    """
+    from models import PaymentStatus
+    from database import payments_collection
+    
+    total_payments = await payments_collection.count_documents({})
+    pending_delivery = await payments_collection.count_documents({"status": {"$in": ["paid_escrow", "escrowed", "paid"]}})
+    delivered_pending_confirm = await payments_collection.count_documents({"status": PaymentStatus.DELIVERED_BY_TRANSPORTER.value})
+    ready_for_payout = await payments_collection.count_documents({"status": {"$in": [PaymentStatus.PAYOUT_READY.value, "payout_ready"]}})
+    payout_blocked = await payments_collection.count_documents({"status": PaymentStatus.PAYOUT_BLOCKED_NO_PAYOUT_METHOD.value})
+    payouts_completed = await payments_collection.count_documents({"status": PaymentStatus.PAYOUT_COMPLETED.value})
+    disputes_open = await payments_collection.count_documents({"status": PaymentStatus.DISPUTE_OPENED.value})
+    
+    # Calculate totals
+    pipeline = [
+        {"$match": {"status": {"$in": [PaymentStatus.PAYOUT_READY.value, "payout_ready"]}}},
+        {"$group": {
+            "_id": None,
+            "total_carrier_amount": {"$sum": "$carrier_amount"},
+            "total_platform_fee": {"$sum": "$platform_fee"}
+        }}
+    ]
+    
+    totals = await payments_collection.aggregate(pipeline).to_list(1)
+    totals = totals[0] if totals else {"total_carrier_amount": 0, "total_platform_fee": 0}
+    
+    return {
+        "total_payments": total_payments,
+        "pending_delivery": pending_delivery,
+        "delivered_pending_confirm": delivered_pending_confirm,
+        "ready_for_payout": ready_for_payout,
+        "payout_blocked": payout_blocked,
+        "payouts_completed": payouts_completed,
+        "disputes_open": disputes_open,
+        "pending_payout_total": totals.get("total_carrier_amount", 0),
+        "pending_platform_fee": totals.get("total_platform_fee", 0)
+    }
