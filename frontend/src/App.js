@@ -22,6 +22,7 @@ import MatchSuggestionsPage from '@/pages/MatchSuggestionsPage';
 import { PaymentSuccessPage, PaymentFailurePage, PaymentPendingPage } from '@/pages/PaymentResultPage';
 import VehiclesPage from './pages/VehiclesPage';
 import TripDetailsPage from '@/pages/TripDetailsPage';
+import ShipmentDetailsPage from '@/pages/ShipmentDetailsPage';
 import MyTripsPage from '@/pages/MyTripsPage';
 import MyShipmentsPage from '@/pages/MyShipmentsPage';
 import MobileBottomNav from '@/components/MobileBottomNav'; // <--- IMPORTAÇÃO NOVA PARA MOBILE
