@@ -473,3 +473,150 @@ async def resolve_dispute(dispute_id: str, resolution_data: dict, user: dict = D
         "resolution": resolution,
         "new_status": new_status
     }
+
+
+
+# ============ Vehicle Intelligence Admin ============
+
+@router.get("/vehicles/flagged")
+async def get_flagged_vehicles(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    vehicle_type: Optional[str] = None,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Get vehicles with flagged capacity deviations.
+    
+    Useful for:
+    - Reviewing unusual capacity claims
+    - Trust scoring
+    - Manual verification
+    """
+    query = {"capacity_deviation_flagged": True}
+    
+    if vehicle_type:
+        query["type"] = vehicle_type
+    
+    skip = (page - 1) * limit
+    
+    vehicles = await db.vehicles.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    total = await db.vehicles.count_documents(query)
+    
+    # Enrich with owner info
+    results = []
+    for v in vehicles:
+        owner = await users_collection.find_one({"_id": ObjectId(v["owner_id"])}) if v.get("owner_id") else None
+        results.append({
+            "id": str(v["_id"]),
+            "name": v.get("name"),
+            "type": v.get("type"),
+            "brand": v.get("brand"),
+            "model": v.get("model"),
+            "year": v.get("year"),
+            "license_plate": v.get("license_plate"),
+            "capacity_weight_kg": v.get("capacity_weight_kg"),
+            "capacity_volume_liters": v.get("capacity_volume_liters"),
+            "deviation_details": v.get("capacity_deviation_details"),
+            "is_verified": v.get("is_verified", False),
+            "created_at": v.get("created_at"),
+            "owner": {
+                "id": str(owner["_id"]) if owner else None,
+                "name": owner.get("name") if owner else "Desconhecido",
+                "email": owner.get("email") if owner else None
+            } if owner else None
+        })
+    
+    return {
+        "vehicles": results,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit
+    }
+
+
+@router.get("/vehicles/statistics")
+async def get_vehicle_statistics(user: dict = Depends(get_current_admin_user)):
+    """
+    Get vehicle statistics for admin dashboard.
+    """
+    total_vehicles = await db.vehicles.count_documents({})
+    flagged_vehicles = await db.vehicles.count_documents({"capacity_deviation_flagged": True})
+    verified_vehicles = await db.vehicles.count_documents({"is_verified": True})
+    
+    # Count by type
+    type_pipeline = [
+        {"$group": {"_id": "$type", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    by_type = await db.vehicles.aggregate(type_pipeline).to_list(20)
+    
+    # Top brands
+    brand_pipeline = [
+        {"$match": {"brand": {"$exists": True, "$ne": None}}},
+        {"$group": {"_id": "$brand", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    top_brands = await db.vehicles.aggregate(brand_pipeline).to_list(10)
+    
+    return {
+        "total_vehicles": total_vehicles,
+        "flagged_vehicles": flagged_vehicles,
+        "verified_vehicles": verified_vehicles,
+        "flagged_percentage": round(flagged_vehicles / total_vehicles * 100, 1) if total_vehicles > 0 else 0,
+        "by_type": [{"type": t["_id"], "count": t["count"]} for t in by_type],
+        "top_brands": [{"brand": b["_id"], "count": b["count"]} for b in top_brands]
+    }
+
+
+@router.post("/vehicles/{vehicle_id}/clear-flag")
+async def clear_vehicle_flag(
+    vehicle_id: str,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Clear the deviation flag for a vehicle after manual review.
+    """
+    result = await db.vehicles.update_one(
+        {"_id": ObjectId(vehicle_id)},
+        {
+            "$set": {
+                "capacity_deviation_flagged": False,
+                "flag_cleared_by": str(user["_id"]),
+                "flag_cleared_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Veículo não encontrado")
+    
+    return {"message": "Flag removido com sucesso"}
+
+
+@router.post("/vehicles/{vehicle_id}/verify")
+async def verify_vehicle(
+    vehicle_id: str,
+    user: dict = Depends(get_current_admin_user)
+):
+    """
+    Manually verify a vehicle.
+    """
+    result = await db.vehicles.update_one(
+        {"_id": ObjectId(vehicle_id)},
+        {
+            "$set": {
+                "is_verified": True,
+                "verified_by": str(user["_id"]),
+                "verified_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Veículo não encontrado")
+    
+    return {"message": "Veículo verificado com sucesso"}
+
