@@ -144,31 +144,42 @@ const PriceEstimate = ({
   // No data yet
   if (!priceData) return null;
 
-  // Estimate view (no auth)
+  // Estimate view (always shows range now)
   if (priceData.isEstimate) {
     return (
       <Card className="border-jungle/20 bg-gradient-to-r from-jungle/5 to-transparent" data-testid="price-estimate">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-jungle" />
-              <span className="text-sm text-muted-foreground">Estimativa de Preço</span>
+              <span className="text-sm font-medium">Estimativa de Preço</span>
             </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-jungle">
-                R$ {priceData.min_price?.toFixed(2)} - R$ {priceData.max_price?.toFixed(2)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {priceData.distance_km?.toFixed(0)}km
-              </p>
-            </div>
+            <Badge variant="outline" className="text-jungle border-jungle/30 text-xs">
+              {priceData.distance_km?.toFixed(0)}km
+            </Badge>
+          </div>
+          
+          <div className="text-center py-2">
+            <p className="text-2xl font-bold text-jungle" data-testid="total-price">
+              R$ {priceData.estimated_min?.toFixed(2)} - R$ {priceData.estimated_max?.toFixed(2)}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Média: R$ {priceData.total_price?.toFixed(2)}
+            </p>
+          </div>
+          
+          <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-xs text-yellow-700">
+              <Info className="w-3 h-3 inline mr-1" />
+              {priceData.disclaimer || "O preço final será calculado ao criar o envio."}
+            </p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Full price view
+  // Full price view (legacy - shouldn't be reached with new architecture)
   return (
     <Card className="border-jungle/20 bg-gradient-to-r from-jungle/5 to-lime/5" data-testid="price-calculated">
       <CardContent className="p-4">
