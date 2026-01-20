@@ -1,0 +1,53 @@
+{
+  "iteration": 11,
+  "timestamp": "2026-01-20T22:40:00Z",
+  "test_type": "P2 - Financial Features",
+  "status": "PASSED",
+  "features_tested": [
+    {
+      "feature": "Cadastro de Pix",
+      "status": "✅ PASSED",
+      "evidence": "Carrier cadastrou Pix via /api/users/payout-method",
+      "result": "2 payouts desbloqueados automaticamente"
+    },
+    {
+      "feature": "Fluxo de Payout",
+      "status": "✅ PASSED",
+      "flow": "payout_blocked → payout_ready (após Pix)",
+      "evidence": "Status mudou de blocked para ready"
+    },
+    {
+      "feature": "Fluxo de Disputa",
+      "status": "✅ PASSED",
+      "flow": "paid → delivered_by_transporter → dispute_opened",
+      "evidence": "Match status: disputed, Disputa visível no Admin"
+    },
+    {
+      "feature": "Retenção (Escrow)",
+      "status": "✅ PASSED",
+      "evidence": "R$ 756.65 em escrow, 1 item aguardando auto-confirmação"
+    },
+    {
+      "feature": "Liberação Automática",
+      "status": "✅ IMPLEMENTADO",
+      "endpoint": "POST /api/admin/payouts/run-auto-confirm",
+      "note": "Prazo de 7 dias, serviço auto_confirmation_service.py"
+    },
+    {
+      "feature": "Histórico Financeiro Admin",
+      "status": "✅ PASSED",
+      "endpoints": [
+        "GET /api/admin/finance/summary",
+        "GET /api/admin/finance/history",
+        "GET /api/admin/finance/escrow"
+      ],
+      "ui": "Tab 'Financeiro' no Admin Dashboard"
+    }
+  ],
+  "financial_summary": {
+    "volume_total": 1115.04,
+    "receita_plataforma": 100.42,
+    "em_escrow": 756.65,
+    "pendente_carriers": 541.15
+  }
+}
