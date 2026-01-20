@@ -33,7 +33,49 @@ const ProfilePage = () => {
 
   useEffect(() => {
     fetchProfileData();
+    fetchPayoutMethod();
   }, []);
+
+  const fetchPayoutMethod = async () => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.get(`${API}/users/payout-method`, { headers });
+      setPayoutMethod(res.data);
+      if (res.data.pix_key) {
+        setPixKey(res.data.pix_key);
+        setPixType(res.data.pix_type);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar método de pagamento:', error);
+    }
+  };
+
+  const handleSavePix = async () => {
+    if (!pixKey || !pixType) {
+      toast.error('Preencha todos os campos');
+      return;
+    }
+    
+    setSavingPix(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.post(
+        `${API}/users/payout-method`,
+        { pix_key: pixKey, pix_type: pixType },
+        { headers }
+      );
+      
+      toast.success(res.data.message);
+      if (res.data.payouts_unblocked > 0) {
+        toast.info(`${res.data.payouts_unblocked} pagamento(s) desbloqueado(s)!`);
+      }
+      fetchPayoutMethod();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao salvar');
+    } finally {
+      setSavingPix(false);
+    }
+  };
 
   const fetchProfileData = async () => {
     try {
