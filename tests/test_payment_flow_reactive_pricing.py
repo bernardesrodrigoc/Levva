@@ -143,11 +143,13 @@ class TestReactivePricing:
         
         assert response.status_code == 200
         data = response.json()
-        assert "min_price" in data
-        assert "max_price" in data
-        assert data["min_price"] > 0
-        assert data["max_price"] >= data["min_price"]
-        print(f"Price estimate: R$ {data['min_price']:.2f} - R$ {data['max_price']:.2f}")
+        # API returns estimated_min/estimated_max
+        assert "estimated_min" in data or "min_price" in data
+        min_price = data.get("estimated_min") or data.get("min_price")
+        max_price = data.get("estimated_max") or data.get("max_price")
+        assert min_price > 0
+        assert max_price >= min_price
+        print(f"Price estimate: R$ {min_price:.2f} - R$ {max_price:.2f}")
 
 
 class TestPaymentFlowEndpoints:
