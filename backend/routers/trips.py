@@ -51,6 +51,7 @@ async def create_trip(trip_data: TripCreate, user_id: str = Depends(get_current_
         "route_polyline": route_polyline,
         "available_capacity_kg": trip_data.cargo_space.max_weight_kg,
         "price_per_kg": suggested_price,
+        "corridor_radius_km": trip_data.corridor_radius_km if hasattr(trip_data, 'corridor_radius_km') and trip_data.corridor_radius_km else 30.0,  # Default 30km corridor
         "is_recurring": trip_data.recurrence.is_recurring if trip_data.recurrence else False,
         "status": TripStatus.PUBLISHED,
         "created_at": datetime.now(timezone.utc)
