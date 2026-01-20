@@ -40,6 +40,11 @@ const AdminDashboard = () => {
   const [readyPayouts, setReadyPayouts] = useState([]);
   const [blockedPayouts, setBlockedPayouts] = useState([]);
   
+  // History states
+  const [historySummary, setHistorySummary] = useState(null);
+  const [globalHistory, setGlobalHistory] = useState({ trips: [], shipments: [], matches: [] });
+  const [historyFilter, setHistoryFilter] = useState({ entity_type: null, status: null });
+  
   // Estados de Seleção e Modais
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [selectedDispute, setSelectedDispute] = useState(null);
