@@ -55,22 +55,40 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 - `GET /api/intelligence/capacity/check-fit` - Verificar se envio cabe
 - `GET /api/intelligence/capacity/available-trips` - Viagens com capacidade
 
-#### 3. Sugestões Inteligentes
+#### 3. Sugestões Inteligentes - GEOSPATIAL-FIRST ✅ (20/01/2026)
 **Arquivo:** `/app/backend/services/suggestions_service.py`
-- Sugestões de datas com maior probabilidade de match
-- Pontos estratégicos de coleta/entrega por cidade
-- Agregação de envios próximos
-- Horários otimizados
 
-**Endpoints:**
-- `GET /api/intelligence/suggestions/dates` - Sugestões de data
-- `GET /api/intelligence/suggestions/locations` - Sugestões de local
-- `GET /api/intelligence/suggestions/time-slots` - Horários
+**PRINCÍPIO DE MATCHING:** Abordagem Geoespacial-Primeiro
+- **Critério Primário:** Coordenadas + raio do corredor
+- **Critério Secundário:** Desvio da rota via polyline
+- **Fallback apenas:** Nome da cidade (quando coordenadas indisponíveis)
+
+**Funcionalidades:**
+- Sugestões de datas com maior probabilidade de match (geoespacial)
+- Pontos estratégicos de coleta/entrega baseados em coordenadas
+- Agregação de envios próximos por proximidade geográfica
+- Horários otimizados
+- Suporte a rotas intra-cidade (bairro → bairro)
+
+**Lógica de Matching:**
+- `check_geospatial_match()` - Verifica se envio está no corredor da viagem
+- `haversine_distance()` - Cálculo de distância entre coordenadas
+- `point_to_polyline_distance()` - Distância mínima de ponto para rota
+
+**Endpoints (NOVOS - JSON body com coordenadas):**
+- `POST /api/intelligence/suggestions/matching-trips` - Viagens compatíveis por geolocalização
+- `POST /api/intelligence/suggestions/dates` - Sugestões de data (geoespacial)
+- `POST /api/intelligence/suggestions/locations` - Sugestões de local (geoespacial)
+- `POST /api/intelligence/suggestions/time-slots` - Horários (geoespacial)
 - `POST /api/intelligence/suggestions/comprehensive` - Tudo em uma chamada
 
+**Endpoints Legacy (backward compatible):**
+- `GET /api/intelligence/suggestions/dates` - Converte cidade para coordenadas
+- `GET /api/intelligence/suggestions/time-slots` - Converte cidade para coordenadas
+
 **Componentes Frontend:**
-- `SmartSuggestions.js` - Painel de sugestões inteligentes
-- `IntelligentPricing.js` - Estimativa de preço, categorias, capacidade
+- `SmartSuggestions.js` - Painel de sugestões inteligentes (atualizado para JSON body)
+- `MatchingTrips.js` - **NOVO** - Exibe viagens compatíveis com dados geoespaciais
 
 #### 4. Integração UI (Fase 2)
 - Sugestões integradas em `CreateShipmentPage.js`
