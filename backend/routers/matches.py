@@ -405,11 +405,7 @@ async def create_match(
         "estimated_price": total_price,
         "carrier_earnings": carrier_earnings,
         "platform_commission": platform_commission,
-        "pricing_details": {
-            "distance_km": price_result["_breakdown"]["distance_km"],
-            "category": price_result["_breakdown"]["category_name"],
-            "deviation_km": price_result["_breakdown"]["deviation_km"]
-        }
+        "pricing_breakdown": pricing_breakdown
     }
 
 
