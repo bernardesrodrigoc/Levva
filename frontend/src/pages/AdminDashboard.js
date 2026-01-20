@@ -809,6 +809,112 @@ const AdminDashboard = () => {
                 )}
               </>
             )}
+
+            {/* Flagged Vehicles Tab */}
+            {activeTab === 'flagged-vehicles' && (
+              <>
+                {/* Vehicle Statistics Summary */}
+                {vehicleStats && (
+                  <div className="grid grid-cols-4 gap-4 mb-6">
+                    <div className="bg-gray-50 dark:bg-zinc-800 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold">{vehicleStats.total_vehicles}</p>
+                      <p className="text-xs text-muted-foreground">Total de Veículos</p>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-yellow-600">{vehicleStats.flagged_vehicles}</p>
+                      <p className="text-xs text-muted-foreground">Flaggeados</p>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-green-600">{vehicleStats.verified_vehicles}</p>
+                      <p className="text-xs text-muted-foreground">Verificados</p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-blue-600">{vehicleStats.flagged_percentage}%</p>
+                      <p className="text-xs text-muted-foreground">Taxa de Desvio</p>
+                    </div>
+                  </div>
+                )}
+
+                {flaggedVehicles.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Car size={48} className="mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhum veículo com desvio de capacidade</p>
+                    <p className="text-xs text-muted-foreground mt-1">Ótimo! Todos os veículos estão dentro das expectativas.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {flaggedVehicles.map((vehicle) => (
+                      <Card key={vehicle.id} className="border-yellow-200 bg-yellow-50/30 dark:bg-yellow-900/10">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="h-12 w-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <Car size={24} className="text-yellow-600" />
+                              </div>
+                              <div>
+                                <p className="font-bold">{vehicle.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {vehicle.brand} {vehicle.model} {vehicle.year && `(${vehicle.year})`}
+                                </p>
+                                {vehicle.license_plate && (
+                                  <Badge variant="outline" className="mt-1 font-mono text-xs">
+                                    {vehicle.license_plate}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="text-center">
+                              <p className="text-lg font-bold">{vehicle.capacity_weight_kg}kg / {vehicle.capacity_volume_liters}L</p>
+                              <p className="text-xs text-muted-foreground">Capacidade informada</p>
+                            </div>
+
+                            {vehicle.deviation_details && (
+                              <div className="text-center bg-yellow-100 dark:bg-yellow-900/30 px-4 py-2 rounded-lg">
+                                <p className="text-sm font-bold text-yellow-700">
+                                  Peso: +{vehicle.deviation_details.weight_deviation_percent?.toFixed(0)}%
+                                </p>
+                                <p className="text-sm font-bold text-yellow-700">
+                                  Volume: +{vehicle.deviation_details.volume_deviation_percent?.toFixed(0)}%
+                                </p>
+                                <p className="text-xs text-muted-foreground">Desvio da mediana</p>
+                              </div>
+                            )}
+
+                            <div className="text-sm">
+                              <p className="text-xs text-muted-foreground">Proprietário</p>
+                              <p className="font-medium">{vehicle.owner?.name || 'Desconhecido'}</p>
+                              <p className="text-xs text-muted-foreground">{vehicle.owner?.email}</p>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-green-400 text-green-600 hover:bg-green-50"
+                                onClick={() => handleClearVehicleFlag(vehicle.id)}
+                              >
+                                <Check size={16} className="mr-1" />
+                                Aprovar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-400 text-blue-600 hover:bg-blue-50"
+                                onClick={() => handleVerifyVehicle(vehicle.id)}
+                              >
+                                <ShieldCheck size={16} className="mr-1" />
+                                Verificar
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
