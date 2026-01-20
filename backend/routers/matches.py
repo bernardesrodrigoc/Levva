@@ -1,5 +1,5 @@
 """Match management routes."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime, timezone
 from bson import ObjectId
 
