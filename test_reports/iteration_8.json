@@ -1,0 +1,83 @@
+{
+  "iteration": 8,
+  "timestamp": "2026-01-20T21:45:00Z",
+  "test_type": "E2E State Management & History",
+  "status": "PASSED",
+  "tests_executed": [
+    {
+      "name": "Shipment Cancellation Flow",
+      "status": "PASSED",
+      "steps": [
+        "Created shipment via API",
+        "Verified shipment in ACTIVE list",
+        "Checked can-cancel rules (libre cancellation)",
+        "Cancelled shipment without reason",
+        "Verified shipment moved to HISTORY list",
+        "Verified shipment removed from ACTIVE list"
+      ]
+    },
+    {
+      "name": "Trip Cancellation Flow",
+      "status": "PASSED",
+      "steps": [
+        "Created trip via API",
+        "Verified trip in ACTIVE list",
+        "Cancelled trip with reason",
+        "Verified trip moved to HISTORY list",
+        "Verified trip removed from ACTIVE list"
+      ]
+    },
+    {
+      "name": "Expiration Service",
+      "status": "PASSED",
+      "results": {
+        "matches_expired": 1,
+        "trips_expired": 2,
+        "shipments_expired": 0,
+        "total_expired": 3
+      }
+    },
+    {
+      "name": "Reputation System",
+      "status": "PASSED",
+      "results": {
+        "cancellation_event_recorded": true,
+        "event_type": "cancellation_before_payment",
+        "points_impact": 0.0
+      }
+    },
+    {
+      "name": "UI Visual Verification - Shipments",
+      "status": "PASSED",
+      "verified": [
+        "Tabs Ativos/Histórico displayed",
+        "History tab shows cancelled shipment",
+        "Badge 'Cancelado' displayed correctly",
+        "Price R$ 88.64 displayed",
+        "Ver Detalhes button available"
+      ]
+    },
+    {
+      "name": "UI Visual Verification - Trips",
+      "status": "PASSED",
+      "verified": [
+        "Tabs Ativas/Histórico displayed",
+        "History tab shows cancelled trip",
+        "Badge 'Cancelada' displayed correctly",
+        "Empty state for Active tab",
+        "Ver Detalhes button available"
+      ]
+    }
+  ],
+  "credentials_used": {
+    "admin": "admin@levva.com / adminpassword",
+    "sender": "test_sender_e2e@levva.com / Test123!",
+    "carrier": "test_carrier_e2e@levva.com / Test123!"
+  },
+  "issues_found": [],
+  "recommendations": [
+    "Schedule expiration jobs via cron for automatic execution",
+    "Test full delivery completion flow (match -> pay -> deliver -> confirm)",
+    "Add UI notifications for items moving to history"
+  ]
+}
