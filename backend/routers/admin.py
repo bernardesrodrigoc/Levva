@@ -806,3 +806,19 @@ async def get_payout_statistics(user: dict = Depends(get_current_admin_user)):
         "pending_payout_total": totals.get("total_carrier_amount", 0),
         "pending_platform_fee": totals.get("total_platform_fee", 0)
     }
+
+
+@router.post("/payouts/run-auto-confirm")
+async def trigger_auto_confirmation(user: dict = Depends(get_current_admin_user)):
+    """
+    Manually trigger the auto-confirmation job.
+    This processes all deliveries past their 7-day confirmation window.
+    """
+    from services.auto_confirmation_service import process_auto_confirmations
+    
+    result = await process_auto_confirmations()
+    
+    return {
+        "message": "Auto-confirmação executada",
+        **result
+    }
