@@ -567,6 +567,14 @@ const AdminDashboard = () => {
                 <Bank size={16} className="mr-1" />
                 Payouts ({readyPayouts.length})
               </Button>
+              <Button
+                variant={activeTab === 'history' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('history')}
+                className={activeTab === 'history' ? 'bg-purple-600 hover:bg-purple-700' : 'border-purple-400 text-purple-700'}
+              >
+                <Clock size={16} className="mr-1" />
+                Histórico Global ({historySummary ? historySummary.trips.total + historySummary.shipments.total + historySummary.matches.total : 0})
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
