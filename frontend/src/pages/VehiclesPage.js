@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Truck, Car, Motorcycle, Bus, Plus, Trash, CheckCircle, Warning, Package,
-  Lightbulb, TrendingUp
+  Lightbulb, TrendUp
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
