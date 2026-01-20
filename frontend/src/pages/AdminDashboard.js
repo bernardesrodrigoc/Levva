@@ -105,7 +105,10 @@ const AdminDashboard = () => {
         axios.get(`${API}/admin/payouts/ready`, { headers }).catch(() => ({ data: { payouts: [] } })),
         axios.get(`${API}/admin/payouts/blocked`, { headers }).catch(() => ({ data: { blocked_payouts: [] } })),
         axios.get(`${API}/admin/history/summary`, { headers }).catch(() => ({ data: null })),
-        axios.get(`${API}/admin/history/global`, { headers }).catch(() => ({ data: { trips: [], shipments: [], matches: [] } }))
+        axios.get(`${API}/admin/history/global`, { headers }).catch(() => ({ data: { trips: [], shipments: [], matches: [] } })),
+        axios.get(`${API}/admin/finance/summary`, { headers }).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/finance/history`, { headers }).catch(() => ({ data: { payments: [], total: 0 } })),
+        axios.get(`${API}/admin/finance/escrow`, { headers }).catch(() => ({ data: { escrow_items: [], total_held: 0 } }))
       ]);
       
       setStats(statsRes.data);
@@ -120,6 +123,9 @@ const AdminDashboard = () => {
       setBlockedPayouts(blockedPayoutsRes.data.blocked_payouts || []);
       setHistorySummary(historySummaryRes.data);
       setGlobalHistory(globalHistoryRes.data);
+      setFinanceSummary(financeSummaryRes.data);
+      setFinanceHistory(financeHistoryRes.data);
+      setEscrowDetails(escrowDetailsRes.data);
       
     } catch (error) {
       console.error('Error fetching admin data:', error);
