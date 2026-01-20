@@ -182,6 +182,25 @@ function App() {
 
             <Route path="/minhas-viagens" element={<ProtectedRoute><MyTripsPage /></ProtectedRoute>} />
             <Route path="/meus-envios" element={<ProtectedRoute><MyShipmentsPage /></ProtectedRoute>} />
+            
+            {/* Shipment Details */}
+            <Route
+              path="/envio/:shipmentId"
+              element={
+                <ProtectedRoute>
+                  <ShipmentDetailsPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Alias for /shipment/:id for compatibility */}
+            <Route
+              path="/shipment/:shipmentId"
+              element={
+                <ProtectedRoute>
+                  <ShipmentDetailsPage />
+                </ProtectedRoute>
+              }
+            />
 
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/payment/failure" element={<PaymentFailurePage />} />
