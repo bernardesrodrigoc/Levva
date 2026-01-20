@@ -275,6 +275,9 @@ class VehicleDB(VehicleBase):
     owner_id: str
     is_verified: bool = False # Requirement #8
     document_photo_url: Optional[str] = None
+    brand_normalized: Optional[str] = None  # For intelligent matching
+    model_normalized: Optional[str] = None  # For intelligent matching
+    capacity_deviation_flagged: bool = False  # Flag for unusual capacity
     created_at: datetime = datetime.utcnow()
 
     class Config:
