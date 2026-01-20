@@ -390,6 +390,21 @@ const CreateShipmentPage = () => {
             />
           )}
 
+          {/* Matching Trips - Geospatial Based */}
+          {pickup?.lat && dropoff?.lat && (
+            <MatchingTrips
+              originLat={pickup.lat}
+              originLng={pickup.lng}
+              destLat={dropoff.lat}
+              destLng={dropoff.lng}
+              weightKg={parseFloat(formData.weightKg) || 1}
+              showDetails={true}
+              onSelectTrip={(trip) => {
+                toast.info(`Viagem de ${trip.carrier_name} selecionada. Publique o envio para solicitar match.`);
+              }}
+            />
+          )}
+
           {/* Legal Acceptance - Mobile Optimized */}
           <Alert className="border-yellow-500 bg-yellow-50">
             <Warning size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
