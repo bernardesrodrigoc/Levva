@@ -1,6 +1,6 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: CORE STABILIZATION COMPLETE ✅
+## Status: P1 PAYMENT FLOW VALIDATED ✅
 
 ### P0 Stabilization Completed (January 20, 2026)
 
@@ -22,13 +22,27 @@
 #### 4. Cancelamento como Evento ✅ VERIFICADO
 - Cancela → Remove de telas ativas → Move para histórico → Atualiza métricas
 
-### Checklist de Validação (TODOS PASSARAM)
-- ✅ Criar viagem
-- ✅ Criar envio  
-- ✅ Cancelar viagem → some das telas ativas
-- ✅ Cancelar envio → some das telas ativas
-- ✅ Admin consegue ver tudo
-- ✅ Localização atual funciona (com feedback de erro)
+---
+
+### P1 Payment Flow Completed (January 20, 2026)
+
+#### Fluxo Completo Testado:
+1. ✅ Criar Envio (preço imutável)
+2. ✅ Criar Viagem compatível
+3. ✅ Criar Match (status: pending_payment)
+4. ✅ Iniciar Pagamento
+5. ✅ Simular Pagamento Aprovado (escrow)
+6. ✅ Marcar como Entregue (Carrier)
+7. ✅ Confirmar Entrega (Sender)
+
+#### Bug Corrigido:
+- **Problema**: Envio e Viagem não moviam para histórico após match completado
+- **Solução**: Adicionado update de status em `/api/payments/{match_id}/confirm-delivery`
+
+#### Payout Calculado:
+- Total: R$ 44.60
+- Taxa Plataforma (15%): R$ 6.69
+- Valor Transportador: R$ 37.91
 
 ---
 
