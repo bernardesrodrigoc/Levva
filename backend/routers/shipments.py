@@ -161,14 +161,23 @@ async def get_shipment_details(shipment_id: str, user_id: str = Depends(get_curr
             raise HTTPException(status_code=404, detail="Envio não encontrado")
         
         shipment["id"] = str(shipment.pop("_id"))
+        
+        # Add allowed actions based on status
+        from services.cancellation_rules_service import get_allowed_actions
+        shipment["allowed_actions"] = get_allowed_actions("shipment", shipment.get("status", ""))
+        
         return shipment
     except Exception:
         raise HTTPException(status_code=404, detail="ID de envio inválido")
 
 
-@router.delete("/{shipment_id}")
-async def delete_shipment(shipment_id: str, user_id: str = Depends(get_current_user_id)):
-    """Delete a shipment (only if not matched)."""
+@router.get("/{shipment_id}/can-cancel")
+async def check_can_cancel_shipment(shipment_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Check if a shipment can be cancelled and what rules apply.
+    """
+    from services.cancellation_rules_service import can_cancel_shipment, get_cancellation_impact
+    
     shipment = await shipments_collection.find_one({"_id": ObjectId(shipment_id)})
     if not shipment:
         raise HTTPException(status_code=404, detail="Envio não encontrado")
@@ -176,11 +185,131 @@ async def delete_shipment(shipment_id: str, user_id: str = Depends(get_current_u
     if shipment["sender_id"] != user_id:
         raise HTTPException(status_code=403, detail="Acesso negado")
     
-    # Business rule: Can only delete if published
-    if shipment["status"] != ShipmentStatus.PUBLISHED:
+    # Check if has match
+    match = await matches_collection.find_one({"shipment_id": shipment_id})
+    has_match = match is not None
+    match_status = match.get("status") if match else None
+    has_payment = match_status in ["paid", "in_transit", "delivered"] if match else False
+    
+    can_cancel, requires_reason, message = can_cancel_shipment(
+        shipment["status"], has_match, match_status
+    )
+    
+    impact = get_cancellation_impact("shipment", shipment["status"], has_payment)
+    
+    return {
+        "can_cancel": can_cancel,
+        "requires_reason": requires_reason,
+        "message": message,
+        "impact": impact,
+        "current_status": shipment["status"],
+        "has_match": has_match,
+        "match_status": match_status
+    }
+
+
+class CancelRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+@router.post("/{shipment_id}/cancel")
+async def cancel_shipment(
+    shipment_id: str, 
+    cancel_data: CancelRequest,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Cancel a shipment following business rules.
+    
+    Rules:
+    - PUBLISHED without match: free cancellation
+    - MATCHED without payment: requires reason
+    - With payment: cannot cancel (use dispute)
+    """
+    from services.cancellation_rules_service import can_cancel_shipment
+    from services.reputation_service import record_cancellation
+    
+    shipment = await shipments_collection.find_one({"_id": ObjectId(shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Envio não encontrado")
+    
+    if shipment["sender_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    # Check if has match
+    match = await matches_collection.find_one({"shipment_id": shipment_id})
+    has_match = match is not None
+    match_status = match.get("status") if match else None
+    
+    can_cancel, requires_reason, message = can_cancel_shipment(
+        shipment["status"], has_match, match_status
+    )
+    
+    if not can_cancel:
+        raise HTTPException(status_code=400, detail=message)
+    
+    if requires_reason and not cancel_data.reason:
         raise HTTPException(
             status_code=400, 
-            detail="Não é possível excluir um envio que já está em processo de entrega."
+            detail="Motivo obrigatório para cancelar este envio"
+        )
+    
+    # Update shipment status
+    await shipments_collection.update_one(
+        {"_id": ObjectId(shipment_id)},
+        {
+            "$set": {
+                "status": ShipmentStatus.CANCELLED_BY_SENDER.value,
+                "cancelled_at": datetime.now(timezone.utc),
+                "cancellation_reason": cancel_data.reason
+            }
+        }
+    )
+    
+    # If has match, cancel it too
+    if has_match and match:
+        await matches_collection.update_one(
+            {"_id": match["_id"]},
+            {
+                "$set": {
+                    "status": "cancelled_by_sender",
+                    "cancelled_at": datetime.now(timezone.utc),
+                    "cancellation_reason": cancel_data.reason
+                }
+            }
+        )
+    
+    # Record reputation event
+    has_payment = match_status in ["paid", "in_transit"] if match else False
+    await record_cancellation(
+        user_id, "shipment", shipment_id, has_payment, cancel_data.reason or "Sem motivo"
+    )
+    
+    return {
+        "message": "Envio cancelado com sucesso",
+        "new_status": ShipmentStatus.CANCELLED_BY_SENDER.value
+    }
+
+
+@router.delete("/{shipment_id}")
+async def delete_shipment(shipment_id: str, user_id: str = Depends(get_current_user_id)):
+    """
+    Delete a shipment (only DRAFT status).
+    
+    Note: For PUBLISHED or later, use /cancel instead.
+    """
+    shipment = await shipments_collection.find_one({"_id": ObjectId(shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Envio não encontrado")
+    
+    if shipment["sender_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
+    # Business rule: Can only delete if DRAFT
+    if shipment["status"] != ShipmentStatus.DRAFT.value:
+        raise HTTPException(
+            status_code=400, 
+            detail="Não é possível excluir. Use cancelamento para envios publicados."
         )
     
     await shipments_collection.delete_one({"_id": ObjectId(shipment_id)})
