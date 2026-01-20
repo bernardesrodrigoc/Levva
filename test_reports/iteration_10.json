@@ -1,0 +1,35 @@
+{
+  "iteration": 10,
+  "timestamp": "2026-01-20T22:20:00Z",
+  "test_type": "P1 - Complete Payment Flow E2E",
+  "status": "PASSED",
+  "flow_tested": [
+    {"step": 1, "action": "Create Shipment", "status": "✅ PASSED", "result": "Shipment created with immutable price"},
+    {"step": 2, "action": "Create Trip", "status": "✅ PASSED", "result": "Trip created for same route"},
+    {"step": 3, "action": "Create Match", "status": "✅ PASSED", "result": "Match created, status: pending_payment"},
+    {"step": 4, "action": "Initiate Payment", "status": "✅ PASSED", "result": "Payment record created"},
+    {"step": 5, "action": "Simulate Payment Approved", "status": "✅ PASSED", "result": "Status: paid_escrow"},
+    {"step": 6, "action": "Mark Delivered (Carrier)", "status": "✅ PASSED", "result": "Status: delivered_by_transporter"},
+    {"step": 7, "action": "Confirm Delivery (Sender)", "status": "✅ PASSED", "result": "Status: payout_ready/blocked"}
+  ],
+  "final_state": {
+    "shipment": {"status": "delivered", "in_history": true},
+    "trip": {"status": "completed", "in_history": true},
+    "match": {"status": "completed"},
+    "payment": {
+      "total_amount": 44.60,
+      "platform_fee": 6.69,
+      "carrier_amount": 37.91,
+      "status": "payout_blocked_no_payout_method"
+    }
+  },
+  "bug_fixed": {
+    "description": "Shipment and Trip were not moving to history when match completed",
+    "fix": "Added status update for shipment (delivered) and trip (completed) in confirm-delivery endpoint",
+    "file": "/app/backend/routers/payments.py"
+  },
+  "ui_verification": {
+    "sender_history": "Shows delivered items with green 'Entregue' badge",
+    "carrier_history": "Shows completed trips with green 'Concluída' badge"
+  }
+}
