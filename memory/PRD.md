@@ -93,7 +93,49 @@ Construir uma plataforma web completa (web-first, responsiva para mobile e deskt
 #### 4. Componentes de Pricing
 - `IntelligentPricing.js` - Estimativa de preço, categorias, capacidade
 
-#### 5. Integração UI (Fase 2)
+#### 5. Inteligência de Veículos ✅ NOVO (20/01/2026)
+**Arquivo:** `/app/backend/services/vehicle_intelligence_service.py`
+
+**OBJETIVO:** Sugestões de capacidade que evoluem com dados da plataforma.
+
+**Fontes de Dados (por prioridade):**
+1. **Estatísticas da plataforma** (primária)
+   - Agrupa veículos por: `type`, `brand`, `model`, `year_range (±2 anos)`
+   - Usa **MEDIANA** (não média) para evitar outliers
+   - Amostra mínima: 5 veículos
+   - Confiança: "high" (≥20 amostras), "medium" (5-19), "low" (fallback)
+
+2. **Banco de modelos conhecidos** (secundária)
+   - ~40 modelos brasileiros pré-cadastrados
+   - Motos: CG, Biz, Factor, Fazer
+   - Carros: Gol, Onix, Civic, Corolla, T-Cross, Strada, etc.
+   - Vans: Fiorino, Kangoo, Sprinter, Ducato
+
+3. **Defaults por tipo de veículo** (fallback)
+   - Moto: 25kg / 80L
+   - Carro: 250kg / 340L
+   - Van: 800kg / 2000L
+   - Caminhão: 3000kg / 15000L
+   - Passageiro ônibus: 23kg / 120L
+   - Carona: 30kg / 100L
+
+**Detecção de Desvios:**
+- Threshold: 50% de desvio da sugestão
+- Flag interno (não bloqueia o usuário)
+- Pode ser usado para trust scoring ou revisão manual
+
+**Endpoints:**
+- `POST /api/vehicles/intelligence/suggest-capacity` - Sugestão de capacidade
+- `GET /api/vehicles/intelligence/defaults` - Defaults por tipo de veículo
+- `GET /api/vehicles/intelligence/popular/{type}` - Marcas/modelos populares
+- `GET /api/vehicles/intelligence/statistics/{type}` - Estatísticas da plataforma
+- `POST /api/vehicles/intelligence/check-deviation` - Verificar desvio de capacidade
+
+**Modelo de Dados Atualizado:**
+- `VehicleBase`: Adicionados campos `brand`, `year`
+- `VehicleDB`: Adicionados `brand_normalized`, `model_normalized`, `capacity_deviation_flagged`
+
+#### 6. Integração UI (Fase 2)
 - Sugestões integradas em `CreateShipmentPage.js`
 - Sugestões integradas em `CreateTripPage.js`
 - Capacidade e ganhos exibidos em `MatchSuggestionsPage.js`
