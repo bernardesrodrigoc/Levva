@@ -9,17 +9,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../com
 const API = process.env.REACT_APP_BACKEND_URL + '/api';
 
 /**
- * PriceEstimate - Reactive pricing component
+ * PriceEstimate - Displays price ESTIMATE (Phase A - UX only)
  * 
- * PRICING FORMULA:
- * - Base = distance * (transporter_rate OR platform_default)
- * - Multipliers: weight (+2%/kg), volume, category
- * - Platform Fee = 10-18% added on top
+ * IMPORTANT: This component shows NON-BINDING estimates.
+ * The actual price is calculated at shipment creation time
+ * and stored in shipment.price (immutable).
  * 
- * REACTIVITY: Recalculates on ANY change to:
- * - originLat, originLng, destLat, destLng (distance)
- * - weightKg, lengthCm, widthCm, heightCm (package)
- * - category (package type)
+ * PRICING ARCHITECTURE:
+ * - Frontend NEVER calculates final prices
+ * - This component calls /api/pricing/estimate for display
+ * - Post-creation, all screens use shipment.price.final_price
  */
 const PriceEstimate = ({
   originLat,
@@ -42,8 +41,7 @@ const PriceEstimate = ({
   const [error, setError] = useState(null);
   const abortControllerRef = useRef(null);
 
-  // REACTIVE EFFECT - Recalculates price whenever ANY input changes
-  // Uses a stringified dependency key to ensure proper change detection
+  // REACTIVE EFFECT - Fetches estimate whenever inputs change
   useEffect(() => {
     // Parse all values to ensure consistent comparison
     const oLat = parseFloat(originLat);
@@ -51,9 +49,6 @@ const PriceEstimate = ({
     const dLat = parseFloat(destLat);
     const dLng = parseFloat(destLng);
     const weight = parseFloat(weightKg) || 0;
-    const length = parseFloat(lengthCm) || 20;
-    const width = parseFloat(widthCm) || 20;
-    const height = parseFloat(heightCm) || 20;
 
     // Validate required fields
     const hasValidLocation = !isNaN(oLat) && !isNaN(oLng) && !isNaN(dLat) && !isNaN(dLng) 
@@ -74,59 +69,40 @@ const PriceEstimate = ({
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    // Debounced price calculation
+    // Debounced price estimate request
     const timeoutId = setTimeout(async () => {
       setLoading(true);
       setError(null);
 
       try {
-        if (token) {
-          // Full calculation with authentication
-          const response = await axios.post(
-            `${API}/intelligence/pricing/calculate`,
-            {
-              origin_lat: oLat,
-              origin_lng: oLng,
-              dest_lat: dLat,
-              dest_lng: dLng,
-              origin_city: originCity || '',
-              destination_city: destinationCity || '',
-              weight_kg: weight,
-              length_cm: length,
-              width_cm: width,
-              height_cm: height,
-              category: category || 'medium',
-              transporter_price_per_km: transporterPricePerKm || null
-            },
-            { 
-              headers: { Authorization: `Bearer ${token}` },
-              signal 
-            }
-          );
-          setPriceData(response.data);
-        } else {
-          // Quick estimate without authentication
-          const params = new URLSearchParams({
-            origin_lat: oLat.toString(),
-            origin_lng: oLng.toString(),
-            dest_lat: dLat.toString(),
-            dest_lng: dLng.toString(),
-            weight_kg: weight.toString()
-          });
-          
-          const response = await axios.get(`${API}/intelligence/pricing/estimate?${params}`, { signal });
-          setPriceData({
-            ...response.data,
-            isEstimate: true
-          });
-        }
+        // Use the NEW unified pricing endpoint
+        const response = await axios.post(
+          `${API}/pricing/estimate`,
+          {
+            origin_lat: oLat,
+            origin_lng: oLng,
+            dest_lat: dLat,
+            dest_lng: dLng,
+            weight_kg: weight
+          },
+          { signal }
+        );
+        
+        setPriceData({
+          total_price: response.data.estimated_avg,
+          estimated_min: response.data.estimated_min,
+          estimated_max: response.data.estimated_max,
+          distance_km: response.data.distance_km,
+          isEstimate: true,
+          disclaimer: response.data.disclaimer
+        });
       } catch (err) {
         // Ignore abort errors
         if (err.name === 'CanceledError' || err.name === 'AbortError') {
           return;
         }
-        console.error('Error calculating price:', err);
-        setError('Erro ao calcular preço');
+        console.error('Error fetching price estimate:', err);
+        setError('Erro ao calcular estimativa');
         setPriceData(null);
       } finally {
         setLoading(false);
@@ -140,9 +116,7 @@ const PriceEstimate = ({
         abortControllerRef.current.abort();
       }
     };
-  // Using primitive values directly ensures React detects changes correctly
-  }, [originLat, originLng, destLat, destLng, originCity, destinationCity, 
-      weightKg, lengthCm, widthCm, heightCm, category, transporterPricePerKm, token]);
+  }, [originLat, originLng, destLat, destLng, weightKg]);
 
   // Loading state
   if (loading) {
