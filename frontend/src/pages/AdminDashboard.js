@@ -88,7 +88,7 @@ const AdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes, flaggedRes, vehicleStatsRes, payoutStatsRes, readyPayoutsRes, blockedPayoutsRes] = await Promise.all([
+      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes, flaggedRes, vehicleStatsRes, payoutStatsRes, readyPayoutsRes, blockedPayoutsRes, historySummaryRes, globalHistoryRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/verifications/pending`, { headers }),
         axios.get(`${API}/admin/verifications/approved`, { headers }),
@@ -98,7 +98,9 @@ const AdminDashboard = () => {
         axios.get(`${API}/admin/vehicles/statistics`, { headers }).catch(() => ({ data: null })),
         axios.get(`${API}/admin/payouts/statistics`, { headers }).catch(() => ({ data: null })),
         axios.get(`${API}/admin/payouts/ready`, { headers }).catch(() => ({ data: { payouts: [] } })),
-        axios.get(`${API}/admin/payouts/blocked`, { headers }).catch(() => ({ data: { blocked_payouts: [] } }))
+        axios.get(`${API}/admin/payouts/blocked`, { headers }).catch(() => ({ data: { blocked_payouts: [] } })),
+        axios.get(`${API}/admin/history/summary`, { headers }).catch(() => ({ data: null })),
+        axios.get(`${API}/admin/history/global`, { headers }).catch(() => ({ data: { trips: [], shipments: [], matches: [] } }))
       ]);
       
       setStats(statsRes.data);
@@ -111,6 +113,15 @@ const AdminDashboard = () => {
       setPayoutStats(payoutStatsRes.data);
       setReadyPayouts(readyPayoutsRes.data.payouts || []);
       setBlockedPayouts(blockedPayoutsRes.data.blocked_payouts || []);
+      setHistorySummary(historySummaryRes.data);
+      setGlobalHistory(globalHistoryRes.data);
+      
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+      toast.error('Erro ao carregar dados: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoading(false);
+    }
       
     } catch (error) {
       console.error('Error fetching admin data:', error);
