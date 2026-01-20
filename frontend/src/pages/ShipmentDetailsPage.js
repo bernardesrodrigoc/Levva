@@ -138,7 +138,7 @@ const ShipmentDetailsPage = () => {
             <div>
               <p className="text-xs text-muted-foreground mb-1">Peso</p>
               <div className="flex items-center gap-2">
-                <Scale size={18} className="text-jungle" />
+                <Scales size={18} className="text-jungle" />
                 <p className="font-medium">{shipment.package.weight_kg} kg</p>
               </div>
             </div>
