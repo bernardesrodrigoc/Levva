@@ -1,6 +1,6 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: P1 PAYMENT FLOW VALIDATED ✅
+## Status: P2 FINANCIAL FEATURES COMPLETE ✅
 
 ### P0 Stabilization Completed (January 20, 2026)
 
@@ -12,7 +12,7 @@
 #### 2. Filtragem de Status ✅ CORRIGIDO  
 - **Problema**: Admin stats contava todos os matches (incluindo cancelados)
 - **Solução**: Endpoint `/api/admin/stats` agora usa `get_active_statuses()`
-- **Evidência**: "Matches Ativos: 4 de 13 total"
+- **Evidência**: "Matches Ativos: 4 de 16 total"
 
 #### 3. Histórico Global ✅ IMPLEMENTADO
 - **Endpoints**: `/api/admin/history/global`, `/api/admin/history/summary`
@@ -35,14 +35,47 @@
 6. ✅ Marcar como Entregue (Carrier)
 7. ✅ Confirmar Entrega (Sender)
 
-#### Bug Corrigido:
-- **Problema**: Envio e Viagem não moviam para histórico após match completado
-- **Solução**: Adicionado update de status em `/api/payments/{match_id}/confirm-delivery`
+---
 
-#### Payout Calculado:
-- Total: R$ 44.60
-- Taxa Plataforma (15%): R$ 6.69
-- Valor Transportador: R$ 37.91
+### P2 Financial Features Completed (January 20, 2026)
+
+#### 1. Cadastro de Pix ✅
+- **Endpoint**: `POST /api/users/payout-method`
+- **Tipos**: CPF, CNPJ, email, telefone, aleatório
+- **Auto-desbloqueio**: Payouts bloqueados são liberados ao cadastrar Pix
+
+#### 2. Fluxo de Payout ✅
+- **Estados**: payout_blocked → payout_ready → payout_completed
+- **Bloqueio**: Sem Pix = payout_blocked_no_payout_method
+- **Admin**: Pode marcar payout como concluído
+
+#### 3. Disputa ✅
+- **Endpoint**: `POST /api/payments/{match_id}/open-dispute`
+- **Sender** pode abrir disputa se não confirmar entrega
+- **Admin** visualiza todas as disputas
+
+#### 4. Retenção (Escrow) ✅
+- Pagamento fica retido até confirmação
+- **Prazo**: 7 dias para auto-confirmação
+- **Admin** visualiza valores em escrow
+
+#### 5. Liberação Automática ✅
+- **Serviço**: `auto_confirmation_service.py`
+- **Endpoint Manual**: `POST /api/admin/payouts/run-auto-confirm`
+- Após 7 dias sem ação do sender, confirma automaticamente
+
+#### 6. Histórico Financeiro Admin ✅
+- **Endpoints**:
+  - `GET /api/admin/finance/summary` - Totais
+  - `GET /api/admin/finance/history` - Transações
+  - `GET /api/admin/finance/escrow` - Valores retidos
+- **UI**: Tab "Financeiro" no Admin Dashboard
+
+#### Métricas Financeiras:
+- Volume Total: R$ 1.115,04
+- Receita Plataforma: R$ 100,42
+- Em Escrow: R$ 756,65
+- Pendente Carriers: R$ 541,15
 
 ---
 
