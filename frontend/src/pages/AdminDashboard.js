@@ -1350,10 +1350,56 @@ const AdminDashboard = () => {
                     </div>
                     <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg text-center">
                       <p className="text-2xl font-bold text-green-600">
-                        R$ {(financeSummary.escrow?.pending_payout_to_carriers || 0).toFixed(2)}
+                        R$ {(payoutStats?.total_paid_out || 0).toFixed(2)}
                       </p>
-                      <p className="text-xs text-muted-foreground">Pendente Carriers</p>
+                      <p className="text-xs text-muted-foreground">Total Pago (Payouts)</p>
                     </div>
+                  </div>
+                )}
+
+                {/* Payouts Pendentes - Botão de Execução */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <Bank size={20} className="text-green-600" />
+                    Payouts Pendentes ({pendingPayouts.total})
+                  </h3>
+                  <Button
+                    onClick={handleExecuteDailyPayouts}
+                    disabled={executingPayouts || pendingPayouts.total === 0}
+                    className="bg-green-600 hover:bg-green-700"
+                    data-testid="execute-payouts-btn"
+                  >
+                    {executingPayouts ? (
+                      <>Processando...</>
+                    ) : (
+                      <>Executar Payouts do Dia (R$ {pendingPayouts.total_amount?.toFixed(2)})</>
+                    )}
+                  </Button>
+                </div>
+                
+                {pendingPayouts.total === 0 ? (
+                  <p className="text-muted-foreground text-center py-4 mb-6 bg-gray-50 rounded-lg">
+                    Nenhum payout pendente
+                  </p>
+                ) : (
+                  <div className="space-y-2 mb-6">
+                    {pendingPayouts.payouts?.map((payout) => (
+                      <div key={payout.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div>
+                          <Badge className="bg-green-100 text-green-700">{payout.status}</Badge>
+                          <span className="ml-2 font-medium">R$ {payout.net_amount?.toFixed(2)}</span>
+                          <span className="ml-2 text-sm text-muted-foreground">→ {payout.carrier_name}</span>
+                        </div>
+                        <div className="text-sm text-right">
+                          <p className="text-green-600">{payout.trip_origin} → {payout.trip_destination}</p>
+                          {payout.carrier_pix_key ? (
+                            <p className="text-xs text-green-600">Pix: {payout.carrier_pix_key}</p>
+                          ) : (
+                            <p className="text-xs text-red-600">Sem Pix cadastrado</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
