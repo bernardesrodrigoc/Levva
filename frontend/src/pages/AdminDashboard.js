@@ -480,6 +480,19 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
+          <Card data-testid="active-matches-card">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <CheckCircle size={16} />
+                Matches Ativos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-blue-600">{stats?.active_matches || 0}</p>
+              <p className="text-xs text-muted-foreground">de {stats?.total_matches || 0} total</p>
+            </CardContent>
+          </Card>
+
           <Card data-testid="pending-verifications-card">
             <CardHeader>
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
