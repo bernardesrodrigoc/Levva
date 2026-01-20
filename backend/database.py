@@ -26,6 +26,7 @@ messages_collection = db.messages
 notifications_collection = db.notifications
 location_tracking_collection = db.location_tracking
 delivery_routes_collection = db.delivery_routes
+config_collection = db.config  # Platform configuration (pricing, fees, etc.)
 
 async def init_indexes():
     """Initialize database indexes"""
