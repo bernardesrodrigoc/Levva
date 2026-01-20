@@ -822,3 +822,22 @@ async def trigger_auto_confirmation(user: dict = Depends(get_current_admin_user)
         "message": "Auto-confirmação executada",
         **result
     }
+
+
+@router.post("/run-expirations")
+async def trigger_expirations(user: dict = Depends(get_current_admin_user)):
+    """
+    Manually trigger the expiration job.
+    This expires:
+    - Matches pending payment > 48h
+    - Trips past departure date > 24h
+    - Shipments published > 30 days
+    """
+    from services.expiration_service import run_all_expirations
+    
+    result = await run_all_expirations()
+    
+    return {
+        "message": "Verificação de expiração executada",
+        **result
+    }
