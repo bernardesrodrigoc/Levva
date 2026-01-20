@@ -165,6 +165,30 @@ class ShipmentCreate(BaseModel):
             raise ValueError('Você deve aceitar a responsabilidade legal pelo conteúdo')
         return v
 
+
+# ============================================================
+# PRICING MODELS - Single Source of Truth
+# ============================================================
+# Price is calculated ONLY at shipment creation and then IMMUTABLE.
+# All screens (listing, match, payment) use the persisted value.
+# ============================================================
+
+class PriceBreakdown(BaseModel):
+    """
+    Immutable price breakdown stored with each shipment.
+    Calculated once at creation, never recalculated.
+    """
+    base_price: float              # Distance + weight + category price (goes to carrier)
+    platform_fee: float            # Platform commission amount
+    platform_fee_percentage: float # Commission % at time of creation (10-18%)
+    final_price: float             # Total sender pays (base_price + platform_fee)
+    distance_km: float             # Stored for reference
+    weight_kg: float               # Stored for reference
+    category: str                  # Cargo category at creation
+    currency: str = "BRL"
+    calculated_at: datetime        # Timestamp of calculation
+
+
 class ShipmentResponse(BaseModel):
     id: str
     sender_id: str
@@ -176,6 +200,7 @@ class ShipmentResponse(BaseModel):
     declared_value: float
     photos: Optional[ShipmentPhotos] = None
     status: ShipmentStatus
+    price: Optional[PriceBreakdown] = None  # IMMUTABLE price breakdown
     created_at: datetime
 
 # Match Models
