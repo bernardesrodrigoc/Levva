@@ -93,7 +93,7 @@ const AdminDashboard = () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes, flaggedRes, vehicleStatsRes, payoutStatsRes, readyPayoutsRes, blockedPayoutsRes, historySummaryRes, globalHistoryRes] = await Promise.all([
+      const [statsRes, verificationsRes, approvedRes, usersRes, disputesRes, flaggedRes, vehicleStatsRes, payoutStatsRes, readyPayoutsRes, blockedPayoutsRes, historySummaryRes, globalHistoryRes, financeSummaryRes, financeHistoryRes, escrowDetailsRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { headers }),
         axios.get(`${API}/admin/verifications/pending`, { headers }),
         axios.get(`${API}/admin/verifications/approved`, { headers }),
