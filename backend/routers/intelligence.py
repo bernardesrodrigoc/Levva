@@ -44,8 +44,8 @@ class PriceCalculationRequest(BaseModel):
     origin_lng: float
     dest_lat: float
     dest_lng: float
-    origin_city: str
-    destination_city: str
+    origin_city: Optional[str] = ""
+    destination_city: Optional[str] = ""
     weight_kg: float
     length_cm: float = 20
     width_cm: float = 20
@@ -54,7 +54,7 @@ class PriceCalculationRequest(BaseModel):
     departure_date: Optional[datetime] = None
     deviation_km: float = 0
     trip_used_capacity_percent: float = 0
-    transporter_price_per_km: Optional[float] = None  # NEW: Use transporter's rate
+    transporter_price_per_km: Optional[float] = None
 
 
 @router.post("/pricing/calculate")
