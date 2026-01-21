@@ -155,6 +155,89 @@ const DashboardPage = () => {
                 }
               }}
             />
+            
+            {/* Mobile Menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden" data-testid="mobile-menu-btn">
+                  <List size={24} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[280px]">
+                <SheetHeader>
+                  <SheetTitle className="text-left">Menu</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 space-y-2">
+                  <div className="p-3 bg-gray-50 rounded-lg mb-4">
+                    <p className="font-semibold">{user?.name}</p>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    <Badge className={`mt-2 ${getTrustBadge(user?.trust_level)}`}>
+                      {user?.trust_level?.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                  </div>
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start gap-3"
+                    onClick={() => { setMobileMenuOpen(false); navigate('/perfil'); }}
+                  >
+                    <User size={20} />
+                    Meu Perfil
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start gap-3"
+                    onClick={() => { setMobileMenuOpen(false); navigate('/meus-envios'); }}
+                  >
+                    <Package size={20} />
+                    Meus Envios
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start gap-3"
+                    onClick={() => { setMobileMenuOpen(false); navigate('/minhas-viagens'); }}
+                  >
+                    <TruckIcon size={20} />
+                    Minhas Viagens
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start gap-3"
+                    onClick={() => { setMobileMenuOpen(false); navigate('/veiculos'); }}
+                  >
+                    <Car size={20} />
+                    Meus Veículos
+                  </Button>
+                  
+                  {user?.role === 'admin' && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start gap-3 text-jungle"
+                      onClick={() => { setMobileMenuOpen(false); navigate('/admin'); }}
+                    >
+                      <Lightning size={20} />
+                      Painel Admin
+                    </Button>
+                  )}
+                  
+                  <div className="border-t pt-4 mt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                      data-testid="mobile-logout-btn"
+                    >
+                      <SignOut size={20} />
+                      Sair
+                    </Button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+            
             <div className="hidden md:flex items-center gap-3">
               <div className="text-right cursor-pointer" onClick={() => navigate('/perfil')} data-testid="profile-link">
                 <p className="font-semibold text-sm">{user?.name}</p>
