@@ -25,6 +25,12 @@ from services.capacity_service import (
 class PhotoConfirmationRequest(BaseModel):
     photo_url: str
 
+
+class LocationPermissionRequest(BaseModel):
+    granted: bool
+    initial_lat: Optional[float] = None
+    initial_lng: Optional[float] = None
+
 router = APIRouter()
 
 
