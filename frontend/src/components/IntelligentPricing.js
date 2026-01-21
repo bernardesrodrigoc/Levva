@@ -144,7 +144,7 @@ const PriceEstimate = ({
   // No data yet
   if (!priceData) return null;
 
-  // Estimate view (always shows range now)
+  // Estimate view - Shows FINAL price (not range) for MVP
   if (priceData.isEstimate) {
     return (
       <Card className="border-jungle/20 bg-gradient-to-r from-jungle/5 to-transparent" data-testid="price-estimate">
@@ -152,7 +152,7 @@ const PriceEstimate = ({
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-jungle" />
-              <span className="text-sm font-medium">Estimativa de Preço</span>
+              <span className="text-sm font-medium">Preço do Envio</span>
             </div>
             <Badge variant="outline" className="text-jungle border-jungle/30 text-xs">
               {priceData.distance_km?.toFixed(0)}km
@@ -160,18 +160,18 @@ const PriceEstimate = ({
           </div>
           
           <div className="text-center py-2">
-            <p className="text-2xl font-bold text-jungle" data-testid="total-price">
-              R$ {priceData.estimated_min?.toFixed(2)} - R$ {priceData.estimated_max?.toFixed(2)}
+            <p className="text-3xl font-bold text-jungle" data-testid="total-price">
+              R$ {priceData.total_price?.toFixed(2)}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Média: R$ {priceData.total_price?.toFixed(2)}
+              Este é o valor que você pagará
             </p>
           </div>
           
-          <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-xs text-yellow-700">
+          <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-xs text-green-700">
               <Info className="w-3 h-3 inline mr-1" />
-              {priceData.disclaimer || "O preço final será calculado ao criar o envio."}
+              Preço calculado com base na distância ({priceData.distance_km?.toFixed(0)}km) e peso da carga.
             </p>
           </div>
         </CardContent>
