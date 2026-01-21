@@ -512,13 +512,24 @@ async def confirm_pickup(
     if match["carrier_id"] != user_id:
         raise HTTPException(status_code=403, detail="Apenas o transportador pode confirmar coleta")
     
+    # Check if location permission was granted
+    if not match.get("location_permission_granted"):
+        raise HTTPException(
+            status_code=400, 
+            detail="Você precisa permitir o acesso à localização antes de confirmar a coleta"
+        )
+    
+    now = datetime.now(timezone.utc)
+    
     await matches_collection.update_one(
         {"_id": ObjectId(match_id)},
         {
             "$set": {
-                "pickup_confirmed_at": datetime.now(timezone.utc),
+                "pickup_confirmed_at": now,
                 "pickup_photo_url": request.photo_url,
-                "status": "in_transit"
+                "status": "in_transit",
+                "tracking_required": True,
+                "tracking_started_at": now
             }
         }
     )
