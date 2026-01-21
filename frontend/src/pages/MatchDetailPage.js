@@ -763,18 +763,23 @@ const MatchDetailPage = () => {
           <CardHeader className="p-4 md:p-6 pb-2 md:pb-4">
             <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <MapTrifold size={20} weight="duotone" className="text-jungle" />
-              {match.status === 'in_transit' ? 'Rastreamento' : 'Mapa da Rota'}
+              {(match.status === 'in_transit' || (match.status === 'paid' && isCarrier)) 
+                ? 'Rastreamento' 
+                : 'Mapa da Rota'
+              }
             </CardTitle>
             <CardDescription className="text-xs md:text-sm">
               {match.status === 'in_transit' 
                 ? 'Acompanhe em tempo real'
-                : 'Visualize o trajeto'
+                : (match.status === 'paid' && isCarrier)
+                  ? 'Autorize a localização para iniciar a coleta'
+                  : 'Visualize o trajeto'
               }
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
-            {/* Live Tracking for in_transit status */}
-            {match.status === 'in_transit' ? (
+            {/* Live Tracking for in_transit status OR paid status (carrier needs to grant permission) */}
+            {(match.status === 'in_transit' || (match.status === 'paid' && isCarrier)) ? (
               <LiveTrackingSection 
                 matchId={matchId} 
                 match={match} 
