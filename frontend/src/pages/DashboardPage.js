@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Package, TruckIcon, User, SignOut, Plus, MapTrifold, Lightning, Car,
-  Clock, CheckCircle, X, Warning, ArrowRight, CurrencyDollar
+  Clock, CheckCircle, X, Warning, ArrowRight, CurrencyDollar, List
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { VerificationAlert } from '@/components/VerificationAlert';
 import TrustLevelCard from '@/components/TrustLevelCard';
 import NotificationBell from '@/components/NotificationBell';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 
