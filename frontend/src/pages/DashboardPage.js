@@ -28,6 +28,7 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [verificationStatus, setVerificationStatus] = useState(null);
   const [adminStats, setAdminStats] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
