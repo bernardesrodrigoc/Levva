@@ -24,6 +24,8 @@ const API = `${BACKEND_URL}/api`;
 // Live Tracking Section Component
 const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
   const [trackingStatus, setTrackingStatus] = useState(null);
+  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   
   // For sender watching
   const watcherTracking = useGPSTracking(matchId, token, false);
@@ -31,20 +33,52 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
   // For carrier sending location
   const carrierGPS = useCarrierGPS(matchId, token, 15);
 
+  // Fetch tracking status periodically
+  const fetchTrackingStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/matches/${matchId}/tracking-status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTrackingStatus(response.data);
+      setLocationPermissionGranted(response.data.location_permission_granted);
+    } catch (error) {
+      console.error('Error fetching tracking status:', error);
+    }
+  };
+
   useEffect(() => {
-    // Fetch initial tracking status
-    const fetchStatus = async () => {
-      try {
-        const response = await axios.get(`${API}/tracking/${matchId}/status`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setTrackingStatus(response.data);
-      } catch (error) {
-        console.error('Error fetching tracking status:', error);
-      }
+    fetchTrackingStatus();
+    
+    // Poll for updates every 30 seconds for sender
+    let interval;
+    if (!isCarrier) {
+      interval = setInterval(fetchTrackingStatus, 30000);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
     };
-    fetchStatus();
-  }, [matchId, token]);
+  }, [matchId, token, isCarrier]);
+
+  // Auto-update location to backend when carrier is tracking
+  useEffect(() => {
+    if (isCarrier && carrierGPS.isTracking && carrierGPS.lastSentLocation) {
+      // Send location update to backend for persistence
+      axios.post(
+        `${API}/matches/${matchId}/update-location`,
+        null,
+        {
+          params: {
+            lat: carrierGPS.lastSentLocation.latitude,
+            lng: carrierGPS.lastSentLocation.longitude,
+            accuracy: carrierGPS.lastSentLocation.accuracy,
+            speed: carrierGPS.lastSentLocation.speed
+          },
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      ).catch(err => console.error('Error updating location:', err));
+    }
+  }, [carrierGPS.lastSentLocation, carrierGPS.isTracking, isCarrier, matchId, token]);
 
   // Connect watcher when component mounts (for sender)
   useEffect(() => {
@@ -61,59 +95,158 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
     };
   }, [isCarrier]);
 
+  // Handle location permission grant (carrier)
+  const handleGrantLocationPermission = async () => {
+    setIsRequestingPermission(true);
+    
+    try {
+      // First, request browser permission
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+      });
+      
+      // Send to backend
+      await axios.post(
+        `${API}/matches/${matchId}/grant-location-permission`,
+        {
+          granted: true,
+          initial_lat: position.coords.latitude,
+          initial_lng: position.coords.longitude
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setLocationPermissionGranted(true);
+      
+      // Auto-start tracking
+      carrierGPS.startTracking();
+      
+      toast.success('Localização autorizada! Rastreamento iniciado automaticamente.');
+      
+    } catch (error) {
+      if (error.code === 1) { // Permission denied
+        toast.error('Permissão de localização negada. Habilite nas configurações do navegador.');
+      } else if (error.code === 2) { // Position unavailable
+        toast.error('Não foi possível obter sua localização. Tente novamente.');
+      } else if (error.code === 3) { // Timeout
+        toast.error('Tempo esgotado ao obter localização. Tente novamente.');
+      } else {
+        toast.error(error.response?.data?.detail || 'Erro ao autorizar localização');
+      }
+    } finally {
+      setIsRequestingPermission(false);
+    }
+  };
+
+  // Format time ago
+  const formatTimeAgo = (minutes) => {
+    if (minutes === null || minutes === undefined) return 'Nunca';
+    if (minutes < 1) return 'Agora';
+    if (minutes < 60) return `${minutes} min atrás`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${minutes % 60}min atrás`;
+  };
+
   if (isCarrier) {
-    // Carrier view - controls to start/stop tracking
+    // Carrier view
     return (
       <div className="space-y-4">
-        {/* Permission Alert */}
-        {carrierGPS.permissionStatus === 'denied' && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertDescription className="text-red-700">
-              Permissão de localização negada. Habilite nas configurações do navegador para usar o rastreamento.
+        {/* Location Permission Required Alert */}
+        {!locationPermissionGranted && (
+          <Alert className="border-amber-200 bg-amber-50">
+            <Warning size={20} className="text-amber-600" />
+            <AlertDescription className="text-amber-800 ml-2">
+              <strong>Atenção:</strong> Você precisa autorizar o acesso à localização para realizar esta entrega.
+              O remetente precisa acompanhar o trajeto em tempo real.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Tracking Controls */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-          <div>
-            <h4 className="font-medium">Rastreamento GPS</h4>
-            <p className="text-sm text-muted-foreground">
-              {carrierGPS.isTracking 
-                ? 'Sua localização está sendo enviada ao remetente'
-                : 'Inicie o rastreamento para que o remetente acompanhe a entrega'
-              }
-            </p>
-          </div>
-          
-          {carrierGPS.isTracking ? (
-            <Button
-              variant="outline"
-              onClick={carrierGPS.stopTracking}
-              className="gap-2"
-              data-testid="stop-tracking-btn"
-            >
-              <Pause size={18} />
-              Parar
-            </Button>
+        {/* Permission Button or Tracking Status */}
+        <div className="p-4 bg-gray-50 rounded-lg">
+          {!locationPermissionGranted ? (
+            <div className="text-center space-y-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-jungle/10 mx-auto">
+                <MapPin size={32} className="text-jungle" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-lg">Autorização de Localização</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Para confirmar a coleta e realizar a entrega, você precisa permitir o acesso à sua localização.
+                </p>
+              </div>
+              <Button
+                onClick={handleGrantLocationPermission}
+                disabled={isRequestingPermission}
+                className="w-full sm:w-auto bg-jungle hover:bg-jungle-800 gap-2"
+                data-testid="grant-location-btn"
+              >
+                {isRequestingPermission ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Solicitando permissão...
+                  </>
+                ) : (
+                  <>
+                    <MapPin size={18} />
+                    Permitir acesso à localização para esta entrega
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Sua localização será compartilhada apenas durante o transporte
+              </p>
+            </div>
           ) : (
-            <Button
-              onClick={carrierGPS.startTracking}
-              className="gap-2 bg-jungle hover:bg-jungle-800"
-              data-testid="start-tracking-btn"
-            >
-              <Play size={18} />
-              Iniciar
-            </Button>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${carrierGPS.isTracking ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                  <h4 className="font-medium">
+                    {carrierGPS.isTracking ? 'Rastreamento Ativo' : 'Rastreamento Pausado'}
+                  </h4>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {carrierGPS.isTracking 
+                    ? 'Sua localização está sendo enviada ao remetente'
+                    : 'Retome o rastreamento para continuar a entrega'
+                  }
+                </p>
+              </div>
+              
+              {carrierGPS.isTracking ? (
+                <Button
+                  variant="outline"
+                  onClick={carrierGPS.stopTracking}
+                  className="gap-2"
+                  data-testid="pause-tracking-btn"
+                >
+                  <Pause size={18} />
+                  Pausar
+                </Button>
+              ) : (
+                <Button
+                  onClick={carrierGPS.startTracking}
+                  className="gap-2 bg-jungle hover:bg-jungle-800"
+                  data-testid="resume-tracking-btn"
+                >
+                  <Play size={18} />
+                  Retomar
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Status Info */}
-        {carrierGPS.isTracking && carrierGPS.lastSentLocation && (
+        {/* Current Location Status */}
+        {locationPermissionGranted && carrierGPS.isTracking && carrierGPS.lastSentLocation && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center gap-2 text-green-700">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium">Rastreamento ativo</span>
+              <span className="text-sm font-medium">Localização atualizada</span>
             </div>
             <p className="text-xs text-green-600 mt-1">
               Última atualização: {new Date().toLocaleTimeString('pt-BR')}
@@ -121,28 +254,136 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
           </div>
         )}
 
-        {/* RESPONSIVIDADE: Wrapper para controlar altura do mapa */}
+        {/* Map */}
         <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
-            <LiveTrackingMap
+          <LiveTrackingMap
             carrierLocation={carrierGPS.lastSentLocation ? {
-                lat: carrierGPS.lastSentLocation.latitude,
-                lng: carrierGPS.lastSentLocation.longitude
+              lat: carrierGPS.lastSentLocation.latitude,
+              lng: carrierGPS.lastSentLocation.longitude
             } : null}
             pickupLocation={match.shipment?.origin ? {
-                lat: match.shipment.origin.latitude || match.shipment.origin.lat,
-                lng: match.shipment.origin.longitude || match.shipment.origin.lng,
-                address: match.shipment.origin.address || match.shipment.origin.city
+              lat: match.shipment.origin.latitude || match.shipment.origin.lat,
+              lng: match.shipment.origin.longitude || match.shipment.origin.lng,
+              address: match.shipment.origin.address || match.shipment.origin.city
             } : null}
             dropoffLocation={match.shipment?.destination ? {
-                lat: match.shipment.destination.latitude || match.shipment.destination.lat,
-                lng: match.shipment.destination.longitude || match.shipment.destination.lng,
-                address: match.shipment.destination.address || match.shipment.destination.city
+              lat: match.shipment.destination.latitude || match.shipment.destination.lat,
+              lng: match.shipment.destination.longitude || match.shipment.destination.lng,
+              address: match.shipment.destination.address || match.shipment.destination.city
             } : null}
             routePolyline={match.trip?.route_polyline}
             isTracking={carrierGPS.isTracking}
-            height="100%" // Ocupa a altura do pai
-            />
+            height="100%"
+          />
         </div>
+      </div>
+    );
+  }
+
+  // Sender view - watch carrier location
+  return (
+    <div className="space-y-4">
+      {/* Connection Status */}
+      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${
+            watcherTracking.isConnected 
+              ? (trackingStatus?.location_stale ? 'bg-amber-500' : 'bg-green-500 animate-pulse')
+              : 'bg-gray-400'
+          }`} />
+          <span className="text-sm font-medium">
+            {watcherTracking.isConnected 
+              ? (trackingStatus?.location_stale ? 'Localização desatualizada' : 'Conectado ao rastreamento')
+              : 'Aguardando conexão...'
+            }
+          </span>
+        </div>
+        {watcherTracking.isTracking && (
+          <Badge className="bg-green-100 text-green-700">
+            <NavigationArrow size={12} className="mr-1" />
+            Em movimento
+          </Badge>
+        )}
+      </div>
+
+      {/* Last Known Location Info */}
+      {trackingStatus && (
+        <div className={`p-3 rounded-lg border ${
+          trackingStatus.location_stale 
+            ? 'bg-amber-50 border-amber-200' 
+            : 'bg-blue-50 border-blue-200'
+        }`}>
+          {trackingStatus.location_stale ? (
+            <div className="flex items-start gap-2">
+              <Warning size={20} className="text-amber-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">
+                  Localização não atualizada há {trackingStatus.minutes_since_update} minutos
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                  O transportador pode estar em área sem sinal. A última posição conhecida está no mapa.
+                </p>
+              </div>
+            </div>
+          ) : trackingStatus.last_known_location ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-800">Última posição conhecida</p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Atualizado: {formatTimeAgo(trackingStatus.minutes_since_update)}
+                </p>
+              </div>
+              <Badge variant="outline" className="text-blue-700">
+                <Clock size={12} className="mr-1" />
+                {trackingStatus.minutes_since_update !== null 
+                  ? `${trackingStatus.minutes_since_update} min`
+                  : 'N/A'
+                }
+              </Badge>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-gray-600">
+              <Clock size={18} />
+              <p className="text-sm">Aguardando primeira atualização de localização...</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Map */}
+      <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
+        <LiveTrackingMap
+          carrierLocation={watcherTracking.currentLocation || (trackingStatus?.last_known_location ? {
+            lat: trackingStatus.last_known_location.lat,
+            lng: trackingStatus.last_known_location.lng
+          } : null)}
+          pickupLocation={match.shipment?.origin ? {
+            lat: match.shipment.origin.latitude || match.shipment.origin.lat,
+            lng: match.shipment.origin.longitude || match.shipment.origin.lng,
+            address: match.shipment.origin.address || match.shipment.origin.city
+          } : null}
+          dropoffLocation={match.shipment?.destination ? {
+            lat: match.shipment.destination.latitude || match.shipment.destination.lat,
+            lng: match.shipment.destination.longitude || match.shipment.destination.lng,
+            address: match.shipment.destination.address || match.shipment.destination.city
+          } : null}
+          routePolyline={match.trip?.route_polyline}
+          routeHistory={watcherTracking.routeHistory}
+          isTracking={watcherTracking.isTracking}
+          followCarrier={true}
+          height="100%"
+        />
+      </div>
+
+      {/* Last Update Info */}
+      {watcherTracking.currentLocation && (
+        <div className="text-xs text-muted-foreground text-center">
+          Última atualização em tempo real: {new Date(watcherTracking.currentLocation.timestamp || Date.now()).toLocaleTimeString('pt-BR')}
+        </div>
+      )}
+    </div>
+  );
+};
       </div>
     );
   }
