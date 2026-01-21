@@ -122,6 +122,7 @@ const AdminDashboard = () => {
       setDisputes(disputesRes.data);
       setFlaggedVehicles(flaggedRes.data.vehicles || []);
       setVehicleStats(vehicleStatsRes.data);
+      setPayoutStats(payoutStatsRes.data);
       setReadyPayouts(readyPayoutsRes.data.payouts || []);
       setBlockedPayouts(blockedPayoutsRes.data.blocked_payouts || []);
       setHistorySummary(historySummaryRes.data);
@@ -130,13 +131,9 @@ const AdminDashboard = () => {
       setFinanceHistory(financeHistoryRes.data);
       setEscrowDetails(escrowDetailsRes.data);
       
-      // Fetch new payout data
-      const [pendingPayoutsRes, payoutStatsRes] = await Promise.all([
-        axios.get(`${API}/admin/payouts/pending`, { headers }).catch(() => ({ data: { payouts: [], total: 0, total_amount: 0 } })),
-        axios.get(`${API}/admin/payouts/stats`, { headers }).catch(() => ({ data: null }))
-      ]);
+      // Fetch pending payouts data
+      const pendingPayoutsRes = await axios.get(`${API}/admin/payouts/pending`, { headers }).catch(() => ({ data: { payouts: [], total: 0, total_amount: 0 } }));
       setPendingPayouts(pendingPayoutsRes.data);
-      setPayoutStats(payoutStatsRes.data);
       
     } catch (error) {
       console.error('Error fetching admin data:', error);
