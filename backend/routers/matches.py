@@ -684,6 +684,9 @@ async def get_tracking_status(
         "location_stale": location_stale,
         "pickup_confirmed_at": match.get("pickup_confirmed_at").isoformat() if match.get("pickup_confirmed_at") else None
     }
+
+
+@router.post("/{match_id}/confirm-delivery")
 async def confirm_delivery(
     match_id: str, 
     request: PhotoConfirmationRequest,
@@ -698,13 +701,30 @@ async def confirm_delivery(
     if match["carrier_id"] != user_id:
         raise HTTPException(status_code=403, detail="Apenas o transportador pode confirmar entrega")
     
+    # Check if tracking was active during delivery
+    if not match.get("location_permission_granted"):
+        raise HTTPException(
+            status_code=400,
+            detail="Rastreamento de localização é obrigatório para confirmar entrega"
+        )
+    
+    # Check if we have at least one location update
+    if not match.get("last_known_location"):
+        raise HTTPException(
+            status_code=400,
+            detail="Nenhuma localização foi registrada durante o transporte. O rastreamento deve estar ativo."
+        )
+    
+    now = datetime.now(timezone.utc)
+    
     await matches_collection.update_one(
         {"_id": ObjectId(match_id)},
         {
             "$set": {
-                "delivery_confirmed_at": datetime.now(timezone.utc),
+                "delivery_confirmed_at": now,
                 "delivery_photo_url": request.photo_url,
-                "status": "delivered"
+                "status": "delivered",
+                "tracking_ended_at": now
             }
         }
     )
