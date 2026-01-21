@@ -542,10 +542,148 @@ async def confirm_pickup(
         match_id
     )
     
-    return {"message": "Coleta confirmada com sucesso"}
+    return {"message": "Coleta confirmada com sucesso", "tracking_started": True}
 
 
-@router.post("/{match_id}/confirm-delivery")
+@router.post("/{match_id}/grant-location-permission")
+async def grant_location_permission(
+    match_id: str,
+    request: LocationPermissionRequest,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Carrier grants location permission for this delivery.
+    This must be done before confirming pickup.
+    """
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    if match["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Apenas o transportador pode autorizar localização")
+    
+    if not request.granted:
+        raise HTTPException(
+            status_code=400, 
+            detail="Permissão de localização é obrigatória para realizar entregas"
+        )
+    
+    now = datetime.now(timezone.utc)
+    
+    update_data = {
+        "location_permission_granted": True,
+        "location_permission_granted_at": now
+    }
+    
+    # Store initial location if provided
+    if request.initial_lat and request.initial_lng:
+        update_data["last_known_location"] = {
+            "lat": request.initial_lat,
+            "lng": request.initial_lng,
+            "timestamp": now.isoformat(),
+            "source": "permission_grant"
+        }
+    
+    await matches_collection.update_one(
+        {"_id": ObjectId(match_id)},
+        {"$set": update_data}
+    )
+    
+    return {
+        "message": "Permissão de localização concedida",
+        "can_confirm_pickup": True
+    }
+
+
+@router.post("/{match_id}/update-location")
+async def update_carrier_location(
+    match_id: str,
+    lat: float,
+    lng: float,
+    accuracy: Optional[float] = None,
+    speed: Optional[float] = None,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Update carrier's last known location.
+    Called periodically by the frontend during tracking.
+    """
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    if match["carrier_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    now = datetime.now(timezone.utc)
+    
+    await matches_collection.update_one(
+        {"_id": ObjectId(match_id)},
+        {
+            "$set": {
+                "last_known_location": {
+                    "lat": lat,
+                    "lng": lng,
+                    "accuracy": accuracy,
+                    "speed": speed,
+                    "timestamp": now.isoformat()
+                },
+                "last_location_update": now
+            }
+        }
+    )
+    
+    return {"status": "ok"}
+
+
+@router.get("/{match_id}/tracking-status")
+async def get_tracking_status(
+    match_id: str,
+    user_id: str = Depends(get_current_user_id)
+):
+    """
+    Get tracking status for a match.
+    Returns last known location and permission status.
+    """
+    match = await matches_collection.find_one({"_id": ObjectId(match_id)})
+    
+    if not match:
+        raise HTTPException(status_code=404, detail="Combinação não encontrada")
+    
+    # Allow both sender and carrier to view
+    if match["carrier_id"] != user_id and match["sender_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Não autorizado")
+    
+    now = datetime.now(timezone.utc)
+    
+    last_location = match.get("last_known_location")
+    last_update = match.get("last_location_update")
+    
+    # Calculate time since last update
+    location_stale = False
+    minutes_since_update = None
+    
+    if last_update:
+        if last_update.tzinfo is None:
+            last_update = last_update.replace(tzinfo=timezone.utc)
+        delta = now - last_update
+        minutes_since_update = int(delta.total_seconds() / 60)
+        # Consider stale if no update in 5+ minutes
+        location_stale = minutes_since_update >= 5
+    
+    return {
+        "match_id": match_id,
+        "status": match.get("status"),
+        "location_permission_granted": match.get("location_permission_granted", False),
+        "tracking_started_at": match.get("tracking_started_at").isoformat() if match.get("tracking_started_at") else None,
+        "last_known_location": last_location,
+        "last_location_update": last_update.isoformat() if last_update else None,
+        "minutes_since_update": minutes_since_update,
+        "location_stale": location_stale,
+        "pickup_confirmed_at": match.get("pickup_confirmed_at").isoformat() if match.get("pickup_confirmed_at") else None
+    }
 async def confirm_delivery(
     match_id: str, 
     request: PhotoConfirmationRequest,
