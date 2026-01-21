@@ -963,6 +963,16 @@ const MatchDetailPage = () => {
 
         {/* Actions */}
         <div className="flex flex-col gap-4">
+          {/* Warning: Location permission required */}
+          {needsLocationPermission && (
+            <Alert className="border-amber-200 bg-amber-50">
+              <Warning size={20} className="text-amber-600" />
+              <AlertDescription className="ml-2 text-amber-800">
+                <strong>Ação necessária:</strong> Autorize o acesso à localização na seção de Rastreamento acima para confirmar coleta/entrega.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {canConfirmPickup && (
             <Button
               onClick={() => openPhotoDialog('pickup')}
