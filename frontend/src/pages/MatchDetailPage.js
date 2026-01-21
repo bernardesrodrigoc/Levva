@@ -170,8 +170,16 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
       <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
         <LiveTrackingMap
             carrierLocation={watcherTracking.currentLocation}
-            pickupLocation={match.shipment?.origin}
-            dropoffLocation={match.shipment?.destination}
+            pickupLocation={match.shipment?.origin ? {
+                lat: match.shipment.origin.latitude || match.shipment.origin.lat,
+                lng: match.shipment.origin.longitude || match.shipment.origin.lng,
+                address: match.shipment.origin.address || match.shipment.origin.city
+            } : null}
+            dropoffLocation={match.shipment?.destination ? {
+                lat: match.shipment.destination.latitude || match.shipment.destination.lat,
+                lng: match.shipment.destination.longitude || match.shipment.destination.lng,
+                address: match.shipment.destination.address || match.shipment.destination.city
+            } : null}
             routePolyline={match.trip?.route_polyline}
             routeHistory={watcherTracking.routeHistory}
             isTracking={watcherTracking.isTracking}
