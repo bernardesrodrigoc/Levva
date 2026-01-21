@@ -1,33 +1,65 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: P3 HYBRID PAYOUT SYSTEM COMPLETE ✅
+## Status: P0 MERCADO PAGO REAL INTEGRATION COMPLETE ✅
 
-### P3 Hybrid Payout System Completed (January 21, 2026)
+### P0 Mercado Pago Integration (January 21, 2026)
 
-#### Sistema Semi-Automático de Pagamentos ✅
-- **Arquitetura**: Provider Pattern para abstração de gateways de pagamento
-- **Coleção DB**: `payouts` para rastrear ciclo de vida dos pagamentos aos transportadores
-- **Estados**: ELIGIBLE_FOR_RELEASE → PENDING_EXECUTION → PAID_OUT / FAILED
+#### Integração REAL com Mercado Pago ✅
+- **SDK**: mercadopago v2.3.0 (oficial)
+- **Credenciais**: ACCESS_TOKEN e PUBLIC_KEY configurados em .env
+- **Checkout**: URLs reais geradas para pagamento (PIX/Cartão)
 
-#### Endpoints Implementados:
-- `POST /api/admin/payouts/execute-daily` - Executa batch de payouts elegíveis
-- `GET /api/admin/payouts/pending` - Lista payouts prontos para execução
-- `GET /api/admin/financial/summary` - Métricas financeiras de alto nível
-- `GET /api/admin/financial/history` - Auditoria detalhada de transações
-- `GET /api/users/me/balance` - Saldo do transportador (pendente + recebido)
+#### Fluxo de Pagamento Completo:
+1. ✅ **Initiate Payment** → Cria preferência no MP → Retorna `checkout_url`
+2. ✅ **Webhook** → Recebe notificações de status (approved/pending/rejected/refunded)
+3. ✅ **Status Update** → Atualiza payment e match no MongoDB
+4. ✅ **Financial Record** → Registra em `financial_events` para auditoria
 
-#### UI Admin - Aba Financeiro ✅
-- **Métricas**: Volume Total, Receita Plataforma, Escrow, Total Pago
-- **Payouts Pendentes**: Lista com botão "Executar Payouts do Dia"
-- **Em Retenção**: Items aguardando confirmação (com countdown)
-- **Histórico de Transações**: Log completo de todas as transações
+#### Endpoints de Pagamento:
+- `POST /api/payments/initiate` - Cria preferência e retorna checkout_url
+- `POST /api/payments/webhook/mercadopago` - Webhook real do MP
+- `GET /api/payments/{match_id}/status` - Status do pagamento
+- `GET /api/payments/{match_id}/refresh-status` - Força consulta na API do MP
+- `POST /api/payments/{match_id}/refund` - Reembolso (admin only)
+- `POST /api/payments/{match_id}/simulate-approved` - [DEV] Simular aprovação
 
-#### Arquitetura Técnica:
-- `/app/backend/providers/base.py` - Interface abstrata PaymentProvider
-- `/app/backend/providers/mock_provider.py` - MockProvider para testes
-- `/app/backend/providers/mercado_pago.py` - Placeholder para integração real
-- `/app/backend/services/payout_service.py` - Lógica core de processamento
-- `/app/backend/models/payout.py` - Modelo Pydantic para payouts
+#### Registro Financeiro Consistente:
+- **Total Amount**: Valor total pago pelo sender
+- **Platform Fee**: 15% de comissão (configurável)
+- **Carrier Amount**: Valor líquido para o transportador
+- **Mercado Pago Fee**: Taxa cobrada pelo gateway (registrada)
+
+#### Arquitetura Provider Pattern:
+```
+/app/backend/providers/
+├── base.py            # Interface abstrata PaymentProvider
+├── mercado_pago.py    # IMPLEMENTAÇÃO REAL do Mercado Pago
+└── mock_provider.py   # MockProvider para testes de payout
+```
+
+#### Status Mapping:
+| MP Status | Internal Status | Match Status |
+|-----------|-----------------|--------------|
+| approved | paid_escrow | paid |
+| pending | payment_pending | - |
+| rejected | payment_pending | - |
+| refunded | refunded | cancelled |
+| charged_back | dispute_opened | disputed |
+
+---
+
+### P3 Hybrid Payout System Complete ✅
+
+#### Sistema Semi-Automático de Payouts
+- **Payout Registration**: Automático ao confirmar entrega
+- **Execution**: Manual pelo admin (botão "Executar Payouts do Dia")
+- **Audit Trail**: Cada ação registrada no `audit_log` do payout
+
+#### Endpoints de Payout:
+- `POST /api/admin/payouts/execute-daily` - Executa batch de payouts
+- `GET /api/admin/payouts/pending` - Lista payouts elegíveis
+- `GET /api/admin/finance/summary` - Métricas financeiras
+- `GET /api/users/me/balance` - Saldo do transportador
 
 ---
 
