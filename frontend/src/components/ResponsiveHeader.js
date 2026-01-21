@@ -59,25 +59,16 @@ const ResponsiveHeader = ({
           <div className="flex items-center justify-between">
             {/* Left: Logo or Back Button */}
             <div className="flex items-center gap-3">
-              {showBackButton ? (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate(backPath)}
-                  className="md:hidden -ml-2"
-                >
-                  <X size={20} />
-                </Button>
-              ) : (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setMobileMenuOpen(true)}
-                  className="md:hidden -ml-2"
-                >
-                  <List size={24} />
-                </Button>
-              )}
+              {/* Mobile Menu Button - Always visible on mobile */}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setMobileMenuOpen(true)}
+                className="md:hidden -ml-2"
+                data-testid="mobile-menu-btn"
+              >
+                <List size={24} />
+              </Button>
               
               <div 
                 className="flex items-center gap-2 cursor-pointer" 
