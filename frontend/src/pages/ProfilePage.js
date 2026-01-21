@@ -215,13 +215,14 @@ const ProfilePage = () => {
                     {profile?.name?.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <Button 
+                              <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => navigate('/verificacao')}
+                  onClick={openEditDialog}
                   data-testid="edit-profile-btn"
-                  className="text-sm"
+                  className="text-sm gap-2"
                 >
+                  <Pencil size={16} />
                   Editar Perfil
                 </Button>
               </div>
