@@ -12,7 +12,40 @@ from trust_service import (
     get_next_level_requirements
 )
 
+from pydantic import BaseModel
+from typing import Optional
+
 router = APIRouter()
+
+
+class ProfileUpdate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+
+
+@router.put("/profile")
+async def update_profile(
+    profile_data: ProfileUpdate,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Update basic user profile information (name, phone)."""
+    if not profile_data.name.strip():
+        raise HTTPException(status_code=400, detail="Nome é obrigatório")
+    
+    update_data = {
+        "name": profile_data.name.strip(),
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    if profile_data.phone:
+        update_data["phone"] = profile_data.phone.strip()
+    
+    await users_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Perfil atualizado com sucesso"}
 
 
 @router.post("/verify")
