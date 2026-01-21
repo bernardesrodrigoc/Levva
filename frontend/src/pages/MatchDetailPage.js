@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChatBox } from '@/components/ChatBox';
 import RouteMap from '@/components/RouteMap';
 import LiveTrackingMap from '@/components/LiveTrackingMap';
+import ImageUploadWithCamera from '@/components/ImageUploadWithCamera';
 import { useGPSTracking, useCarrierGPS } from '@/hooks/useGPSTracking';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
