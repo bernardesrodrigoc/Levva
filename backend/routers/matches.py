@@ -529,7 +529,11 @@ async def confirm_pickup(
 
 
 @router.post("/{match_id}/confirm-delivery")
-async def confirm_delivery(match_id: str, photo_url: str, user_id: str = Depends(get_current_user_id)):
+async def confirm_delivery(
+    match_id: str, 
+    request: PhotoConfirmationRequest,
+    user_id: str = Depends(get_current_user_id)
+):
     """Confirm package delivery with photo evidence."""
     match = await matches_collection.find_one({"_id": ObjectId(match_id)})
     
@@ -544,7 +548,7 @@ async def confirm_delivery(match_id: str, photo_url: str, user_id: str = Depends
         {
             "$set": {
                 "delivery_confirmed_at": datetime.now(timezone.utc),
-                "delivery_photo_url": photo_url,
+                "delivery_photo_url": request.photo_url,
                 "status": "delivered"
             }
         }
