@@ -424,8 +424,7 @@ const MatchDetailPage = () => {
 
   const openPhotoDialog = (action) => {
     setPhotoAction(action);
-    setPhotoFile(null);
-    setPhotoPreview(null);
+    setUploadedPhotoUrl(null);
     setShowPhotoDialog(true);
   };
 
