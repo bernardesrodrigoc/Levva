@@ -195,8 +195,7 @@ const MatchDetailPage = () => {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [photoAction, setPhotoAction] = useState(null);
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState(null);
   const [rating, setRating] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
   
