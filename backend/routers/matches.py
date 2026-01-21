@@ -1,5 +1,7 @@
 """Match management routes."""
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -17,6 +19,11 @@ from services.capacity_service import (
     update_trip_available_capacity,
     calculate_volume_liters
 )
+
+
+# Request models for photo confirmation
+class PhotoConfirmationRequest(BaseModel):
+    photo_url: str
 
 router = APIRouter()
 
