@@ -1,6 +1,54 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: P0 MERCADO PAGO REAL INTEGRATION COMPLETE ✅
+## Status: P0 RASTREAMENTO OBRIGATÓRIO COMPLETE ✅
+
+### P0 Rastreamento Obrigatório - Sistema de Confiança (January 21, 2026)
+
+#### Problema Resolvido:
+- Após confirmação de coleta, rastreamento dependia de ação manual do carrier
+- Sender ficava sem visibilidade se carrier não ativasse rastreamento
+- Impacto direto em confiança, suporte e reputação da plataforma
+
+#### Nova Arquitetura de Fluxo:
+
+**1. Antes da Coleta (status: paid)**
+- Carrier DEVE autorizar localização antes de confirmar coleta
+- Botão: "Permitir acesso à localização para esta entrega"
+- Localização inicial salva no backend ao conceder permissão
+- Sem autorização → Botão de confirmar coleta não aparece
+
+**2. Durante o Transporte (status: in_transit)**
+- Rastreamento inicia automaticamente após autorização
+- Localização enviada via WebSocket + persistida no backend
+- Sender sempre vê: última posição conhecida + timestamp
+- Aviso claro se localização parar de atualizar (>5 min = stale)
+
+**3. Na Entrega**
+- Sem localização registrada → Não pode confirmar entrega
+- Payout bloqueado se tracking não foi ativo
+
+#### Novos Endpoints:
+```
+POST /api/matches/{id}/grant-location-permission
+POST /api/matches/{id}/update-location?lat=X&lng=Y
+GET  /api/matches/{id}/tracking-status
+```
+
+#### Campos Adicionados no Match:
+- `location_permission_granted`: boolean
+- `location_permission_granted_at`: datetime
+- `last_known_location`: { lat, lng, accuracy, speed, timestamp }
+- `last_location_update`: datetime
+- `tracking_started_at`: datetime
+- `tracking_ended_at`: datetime
+
+#### UI para Sender (Acompanhamento):
+- Indicador de conexão (verde = conectado, âmbar = stale, cinza = desconectado)
+- "Localização não atualizada há X minutos" (aviso quando stale)
+- "O transportador pode estar em área sem sinal"
+- Última posição sempre visível no mapa
+
+---
 
 ### Bug Fix: Upload de Foto na Confirmação de Coleta/Entrega (January 21, 2026)
 
