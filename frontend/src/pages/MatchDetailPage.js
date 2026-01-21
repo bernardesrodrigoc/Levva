@@ -384,50 +384,6 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
     </div>
   );
 };
-      </div>
-    );
-  }
-
-  // Sender view - watch carrier location
-  return (
-    <div className="space-y-4">
-      {/* Connection Status */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${watcherTracking.isConnected ? 'bg-green-500' : 'bg-gray-400'}`} />
-          <span className="text-sm">
-            {watcherTracking.isConnected ? 'Conectado' : 'Conectando...'}
-          </span>
-        </div>
-        {watcherTracking.isTracking && (
-          <Badge className="bg-green-100 text-green-700">
-            <NavigationArrow size={12} className="mr-1" />
-            Em movimento
-          </Badge>
-        )}
-      </div>
-
-      {/* RESPONSIVIDADE: Wrapper para altura do mapa */}
-      <div className="h-[300px] md:h-[500px] w-full rounded-lg overflow-hidden border">
-        <LiveTrackingMap
-            carrierLocation={watcherTracking.currentLocation}
-            pickupLocation={match.shipment?.origin ? {
-                lat: match.shipment.origin.latitude || match.shipment.origin.lat,
-                lng: match.shipment.origin.longitude || match.shipment.origin.lng,
-                address: match.shipment.origin.address || match.shipment.origin.city
-            } : null}
-            dropoffLocation={match.shipment?.destination ? {
-                lat: match.shipment.destination.latitude || match.shipment.destination.lat,
-                lng: match.shipment.destination.longitude || match.shipment.destination.lng,
-                address: match.shipment.destination.address || match.shipment.destination.city
-            } : null}
-            routePolyline={match.trip?.route_polyline}
-            routeHistory={watcherTracking.routeHistory}
-            isTracking={watcherTracking.isTracking}
-            followCarrier={true}
-            height="100%" // Ocupa a altura do pai
-        />
-      </div>
 
       {/* Last Update Info */}
       {watcherTracking.currentLocation && (
