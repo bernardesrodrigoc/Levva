@@ -385,18 +385,6 @@ const LiveTrackingSection = ({ matchId, match, isCarrier, token }) => {
   );
 };
 
-      {/* Last Update Info */}
-      {watcherTracking.currentLocation && (
-        <div className="text-xs text-muted-foreground text-center">
-          Última atualização: {watcherTracking.currentLocation.timestamp 
-            ? new Date(watcherTracking.currentLocation.timestamp).toLocaleTimeString('pt-BR')
-            : 'Agora'
-          }
-        </div>
-      )}
-    </div>
-  );
-};
 
 const MatchDetailPage = () => {
   const { matchId } = useParams();
