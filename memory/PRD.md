@@ -1,6 +1,35 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: P2 FINANCIAL FEATURES COMPLETE ✅
+## Status: P3 HYBRID PAYOUT SYSTEM COMPLETE ✅
+
+### P3 Hybrid Payout System Completed (January 21, 2026)
+
+#### Sistema Semi-Automático de Pagamentos ✅
+- **Arquitetura**: Provider Pattern para abstração de gateways de pagamento
+- **Coleção DB**: `payouts` para rastrear ciclo de vida dos pagamentos aos transportadores
+- **Estados**: ELIGIBLE_FOR_RELEASE → PENDING_EXECUTION → PAID_OUT / FAILED
+
+#### Endpoints Implementados:
+- `POST /api/admin/payouts/execute-daily` - Executa batch de payouts elegíveis
+- `GET /api/admin/payouts/pending` - Lista payouts prontos para execução
+- `GET /api/admin/financial/summary` - Métricas financeiras de alto nível
+- `GET /api/admin/financial/history` - Auditoria detalhada de transações
+- `GET /api/users/me/balance` - Saldo do transportador (pendente + recebido)
+
+#### UI Admin - Aba Financeiro ✅
+- **Métricas**: Volume Total, Receita Plataforma, Escrow, Total Pago
+- **Payouts Pendentes**: Lista com botão "Executar Payouts do Dia"
+- **Em Retenção**: Items aguardando confirmação (com countdown)
+- **Histórico de Transações**: Log completo de todas as transações
+
+#### Arquitetura Técnica:
+- `/app/backend/providers/base.py` - Interface abstrata PaymentProvider
+- `/app/backend/providers/mock_provider.py` - MockProvider para testes
+- `/app/backend/providers/mercado_pago.py` - Placeholder para integração real
+- `/app/backend/services/payout_service.py` - Lógica core de processamento
+- `/app/backend/models/payout.py` - Modelo Pydantic para payouts
+
+---
 
 ### P0 Stabilization Completed (January 20, 2026)
 
