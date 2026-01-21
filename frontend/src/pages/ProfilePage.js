@@ -420,6 +420,68 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+            <DialogDescription>
+              Atualize suas informações básicas
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nome completo</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Seu nome"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Telefone</Label>
+              <Input
+                id="edit-phone"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="(XX) XXXXX-XXXX"
+              />
+            </div>
+            
+            {profile?.verification_status !== 'verified' && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <Warning size={18} className="text-amber-600" />
+                <AlertDescription className="ml-2 text-amber-800 text-sm">
+                  Para alterar outros dados (documentos, foto), acesse a{' '}
+                  <button 
+                    className="underline font-medium"
+                    onClick={() => {
+                      setShowEditDialog(false);
+                      navigate('/verificacao');
+                    }}
+                  >
+                    página de verificação
+                  </button>.
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveProfile}
+              disabled={savingProfile}
+              className="bg-jungle hover:bg-jungle-800"
+            >
+              {savingProfile ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
