@@ -301,13 +301,28 @@ async def calculate_intelligent_price(
     
     category_config = CARGO_CATEGORY_CONFIG[cargo_category]
     
-    # 3. Base distance price - USE TRANSPORTER RATE IF PROVIDED
+    # 3. Base distance price - Platform default pricing (progressive tiers)
+    base_distance_price = calculate_distance_price(distance_km)
+    
+    # 3b. Apply transporter adjustment if provided
+    # Transporter price_per_km acts as a PERCENTAGE ADJUSTMENT (+10%, +20%, etc.)
+    # This rewards transporters who set competitive rates while keeping prices stable
+    transporter_adjustment = 1.0
     if transporter_price_per_km and transporter_price_per_km > 0:
-        # Transporter-defined pricing: price_per_km * distance
-        base_distance_price = distance_km * transporter_price_per_km
-    else:
-        # Platform default pricing (progressive tiers)
-        base_distance_price = calculate_distance_price(distance_km)
+        # Base rate is R$0.30/km for short distances
+        # If transporter charges R$0.36/km, that's +20% adjustment
+        base_rate_per_km = 0.30
+        if transporter_price_per_km > base_rate_per_km:
+            # Transporter wants more: apply positive adjustment (max +30%)
+            adjustment_percent = min((transporter_price_per_km - base_rate_per_km) / base_rate_per_km, 0.30)
+            transporter_adjustment = 1.0 + adjustment_percent
+        elif transporter_price_per_km < base_rate_per_km:
+            # Transporter willing to charge less: apply discount (max -15%)
+            adjustment_percent = min((base_rate_per_km - transporter_price_per_km) / base_rate_per_km, 0.15)
+            transporter_adjustment = 1.0 - adjustment_percent
+    
+    # Apply transporter adjustment to base price
+    base_distance_price = base_distance_price * transporter_adjustment
     
     # 4. Apply multipliers
     category_multiplier = category_config["multiplier"]
