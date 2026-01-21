@@ -673,8 +673,13 @@ const MatchDetailPage = () => {
   const isCarrier = user?.id === match?.carrier_id;
   const isSender = user?.id === match?.sender_id;
   const canPay = isSender && match?.status === 'pending_payment';
-  const canConfirmPickup = isCarrier && match?.status === 'paid' && !match?.pickup_confirmed_at;
-  const canConfirmDelivery = isCarrier && match?.status === 'in_transit' && !match?.delivery_confirmed_at;
+  
+  // Location permission required for pickup/delivery
+  const hasLocationPermission = match?.location_permission_granted;
+  const canConfirmPickup = isCarrier && match?.status === 'paid' && !match?.pickup_confirmed_at && hasLocationPermission;
+  const canConfirmDelivery = isCarrier && match?.status === 'in_transit' && !match?.delivery_confirmed_at && hasLocationPermission;
+  const needsLocationPermission = isCarrier && (match?.status === 'paid' || match?.status === 'in_transit') && !hasLocationPermission;
+  
   const canRate = match?.status === 'delivered' && !match?.rated;
   
   // New payment flow conditions
