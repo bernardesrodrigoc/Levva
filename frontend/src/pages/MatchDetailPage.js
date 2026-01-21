@@ -891,8 +891,11 @@ const MatchDetailPage = () => {
       </div>
 
       {/* Photo Dialog */}
-      <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
-        <DialogContent>
+      <Dialog open={showPhotoDialog} onOpenChange={(open) => {
+        if (!open) setUploadedPhotoUrl(null);
+        setShowPhotoDialog(open);
+      }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {photoAction === 'pickup' ? 'Confirmar Coleta' : 'Confirmar Entrega'}
@@ -902,32 +905,24 @@ const MatchDetailPage = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Foto *</Label>
-              {photoPreview ? (
-                <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover rounded-lg mt-2" />
-              ) : (
-                <div className="mt-2 border-2 border-dashed rounded-lg p-8 text-center">
-                  <Camera size={32} className="mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Tire ou selecione uma foto</p>
-                </div>
-              )}
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handlePhotoChange(e.target.files[0])}
-                className="mt-2"
-                data-testid="photo-input"
-              />
-            </div>
+            <ImageUploadWithCamera
+              onUploadComplete={handlePhotoUploadComplete}
+              fileType={photoAction === 'pickup' ? 'pickup_confirmation' : 'delivery_confirmation'}
+              label="Foto do Pacote *"
+              maxSizeMB={10}
+              showPreview={true}
+            />
             <div className="flex gap-4">
-              <Button variant="outline" className="flex-1" onClick={() => setShowPhotoDialog(false)}>
+              <Button variant="outline" className="flex-1" onClick={() => {
+                setShowPhotoDialog(false);
+                setUploadedPhotoUrl(null);
+              }}>
                 Cancelar
               </Button>
               <Button
                 onClick={photoAction === 'pickup' ? handleConfirmPickup : handleConfirmDelivery}
                 className="flex-1 bg-jungle hover:bg-jungle-800"
-                disabled={!photoFile}
+                disabled={!uploadedPhotoUrl}
                 data-testid="confirm-photo-btn"
               >
                 Confirmar
