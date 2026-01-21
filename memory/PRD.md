@@ -2,6 +2,27 @@
 
 ## Status: P0 MERCADO PAGO REAL INTEGRATION COMPLETE ✅
 
+### Bug Fix: Upload de Foto na Confirmação de Coleta/Entrega (January 21, 2026)
+
+#### Problema Resolvido:
+- **Erro**: "Objects are not valid as a React child" ao fazer upload de foto
+- **Causa**: Backend esperava `photo_url` como query parameter, frontend enviava como body JSON
+- **Solução**: 
+  1. Corrigido endpoints `/confirm-pickup` e `/confirm-delivery` para aceitar JSON body
+  2. Substituído input básico por `ImageUploadWithCamera` component (upload real para R2)
+  3. Corrigido formato de coordenadas no `LiveTrackingMap` (latitude/longitude → lat/lng)
+
+#### Endpoints Corrigidos:
+```python
+@router.post("/{match_id}/confirm-pickup")
+async def confirm_pickup(match_id: str, request: PhotoConfirmationRequest, ...)
+
+@router.post("/{match_id}/confirm-delivery")
+async def confirm_delivery(match_id: str, request: PhotoConfirmationRequest, ...)
+```
+
+---
+
 ### P0 Mercado Pago Integration (January 21, 2026)
 
 #### Integração REAL com Mercado Pago ✅
