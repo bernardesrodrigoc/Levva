@@ -31,6 +31,12 @@ const ProfilePage = () => {
   const [pixKey, setPixKey] = useState('');
   const [pixType, setPixType] = useState('');
   const [savingPix, setSavingPix] = useState(false);
+  
+  // Edit profile state
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     fetchProfileData();
