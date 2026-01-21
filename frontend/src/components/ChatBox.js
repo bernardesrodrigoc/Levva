@@ -16,6 +16,8 @@ export const ChatBox = ({ matchId, recipientName }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
+  const prevMessageCountRef = useRef(0);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     fetchMessages();
@@ -23,8 +25,23 @@ export const ChatBox = ({ matchId, recipientName }) => {
     return () => clearInterval(interval);
   }, [matchId]);
 
+  // Only scroll to bottom when new messages are added (not on every fetch)
   useEffect(() => {
-    scrollToBottom();
+    const currentCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+    
+    // Scroll only on:
+    // 1. Initial load (first time messages appear)
+    // 2. When a new message is added (count increased)
+    if (isInitialLoadRef.current && currentCount > 0) {
+      scrollToBottom();
+      isInitialLoadRef.current = false;
+    } else if (currentCount > prevCount && prevCount > 0) {
+      // New message received or sent
+      scrollToBottom();
+    }
+    
+    prevMessageCountRef.current = currentCount;
   }, [messages]);
 
   const scrollToBottom = () => {
