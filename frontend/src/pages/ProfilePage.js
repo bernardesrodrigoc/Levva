@@ -84,6 +84,37 @@ const ProfilePage = () => {
     }
   };
 
+  const openEditDialog = () => {
+    setEditName(profile?.name || '');
+    setEditPhone(profile?.phone || '');
+    setShowEditDialog(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+    
+    setSavingProfile(true);
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.put(
+        `${API}/users/profile`,
+        { name: editName.trim(), phone: editPhone.trim() },
+        { headers }
+      );
+      
+      toast.success('Perfil atualizado com sucesso!');
+      setShowEditDialog(false);
+      fetchProfileData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Erro ao salvar perfil');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const fetchProfileData = async () => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
