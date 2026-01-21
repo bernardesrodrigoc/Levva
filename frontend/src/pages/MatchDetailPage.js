@@ -339,59 +339,63 @@ const MatchDetailPage = () => {
     }
   };
 
-  const handlePhotoChange = (file) => {
-    if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result);
-      reader.readAsDataURL(file);
-    }
+  const handlePhotoUploadComplete = (url, key) => {
+    setUploadedPhotoUrl(url);
   };
 
   const handleConfirmPickup = async () => {
-    if (!photoFile) {
+    if (!uploadedPhotoUrl) {
       toast.error('Foto é obrigatória');
       return;
     }
 
     try {
-      // In production, upload to R2 first
-      const photoUrl = 'https://via.placeholder.com/400x300?text=Pickup+Photo';
-
       await axios.post(
         `${API}/matches/${matchId}/confirm-pickup`,
-        { photo_url: photoUrl },
+        { photo_url: uploadedPhotoUrl },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       toast.success('Coleta confirmada!');
       setShowPhotoDialog(false);
+      setUploadedPhotoUrl(null);
       fetchMatchDetails();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erro ao confirmar coleta');
+      const errorDetail = error.response?.data?.detail;
+      // Handle validation error objects
+      if (typeof errorDetail === 'object' && errorDetail !== null) {
+        toast.error('Erro de validação. Verifique os dados.');
+      } else {
+        toast.error(errorDetail || 'Erro ao confirmar coleta');
+      }
     }
   };
 
   const handleConfirmDelivery = async () => {
-    if (!photoFile) {
+    if (!uploadedPhotoUrl) {
       toast.error('Foto é obrigatória');
       return;
     }
 
     try {
-      const photoUrl = 'https://via.placeholder.com/400x300?text=Delivery+Photo';
-
       await axios.post(
         `${API}/matches/${matchId}/confirm-delivery`,
-        { photo_url: photoUrl },
+        { photo_url: uploadedPhotoUrl },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       toast.success('Entrega confirmada!');
       setShowPhotoDialog(false);
+      setUploadedPhotoUrl(null);
       fetchMatchDetails();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Erro ao confirmar entrega');
+      const errorDetail = error.response?.data?.detail;
+      // Handle validation error objects
+      if (typeof errorDetail === 'object' && errorDetail !== null) {
+        toast.error('Erro de validação. Verifique os dados.');
+      } else {
+        toast.error(errorDetail || 'Erro ao confirmar entrega');
+      }
     }
   };
 
