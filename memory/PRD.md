@@ -1,6 +1,49 @@
 # Levva - Plataforma de Logística de Frete
 
-## Status: P0 RASTREAMENTO OBRIGATÓRIO COMPLETE ✅
+## Status: P0 UX CRÍTICOS CORRIGIDOS ✅
+
+### Correções UX Críticas (January 21, 2026)
+
+#### 1. Logout no Mobile ✅
+- **Problema**: Não havia opção de logout visível no mobile
+- **Solução**: Adicionado Sheet menu lateral no DashboardPage com:
+  - Perfil do usuário (nome, email, badge)
+  - Links: Meu Perfil, Meus Envios, Minhas Viagens, Meus Veículos
+  - Botão "Sair" em vermelho
+- **Arquivo**: `/app/frontend/src/pages/DashboardPage.js`
+
+#### 2. Editar Perfil sem Redirect para Verificação ✅
+- **Problema**: Usuário verificado era redirecionado para página de verificação ao clicar em "Editar Perfil"
+- **Solução**: Criado Dialog inline para editar nome e telefone
+  - Novo endpoint: `PUT /api/users/profile`
+  - Dialog com campos Nome e Telefone
+  - Link para verificação apenas se usuário NÃO verificado
+- **Arquivos**: 
+  - `/app/frontend/src/pages/ProfilePage.js`
+  - `/app/backend/routers/users.py`
+
+#### 3. Scroll Automático do Chat Corrigido ✅
+- **Problema**: Tela descia sozinha para o chat de forma persistente (a cada poll de 5s)
+- **Solução**: Scroll automático apenas quando:
+  - Carga inicial de mensagens
+  - Nova mensagem recebida/enviada (count aumentou)
+- **Arquivo**: `/app/frontend/src/components/ChatBox.js`
+
+#### 4. Preço como Valor Único (não range) ✅
+- **Problema**: Preço mostrado como faixa "R$ X - R$ Y"
+- **Solução**: Alterado para mostrar valor único "R$ X.XX"
+  - Texto: "Este é o valor que você pagará"
+  - Info: "Preço calculado com base na distância e peso"
+- **Arquivo**: `/app/frontend/src/components/IntelligentPricing.js`
+
+#### 5. Price per KM como Ajuste Percentual ✅
+- **Problema**: `price_per_km` do transportador substituía completamente o preço base
+- **Solução**: Agora atua como multiplicador (+/- 30% max)
+  - Transportador cobra mais: ajuste positivo (max +30%)
+  - Transportador cobra menos: desconto (max -15%)
+- **Arquivo**: `/app/backend/services/pricing_service.py`
+
+---
 
 ### P0 Rastreamento Obrigatório - Sistema de Confiança (January 21, 2026)
 
