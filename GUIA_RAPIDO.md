@@ -3,8 +3,8 @@
 ## 🚀 Acesso Rápido
 
 ### URLs
-- **Frontend**: https://logistic-mvp.preview.emergentagent.com
-- **Backend API**: https://logistic-mvp.preview.emergentagent.com/api
+- **Frontend**: https://matchntrade.preview.emergentagent.com
+- **Backend API**: https://matchntrade.preview.emergentagent.com/api
 
 ### Credenciais Admin
 ```
